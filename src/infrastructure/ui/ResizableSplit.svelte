@@ -154,6 +154,11 @@
   }
   .pane.left {
     background: var(--color-surface);
+    overflow-x: hidden;
+  }
+  .pane.left > :global(*) {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .divider {
