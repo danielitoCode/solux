@@ -34,6 +34,22 @@
 
   function time(value: string | null) { return value ? value.slice(0, 5) : ''; }
 
+  let mapEmbedUrl = $derived.by(() => {
+    const query = [contact.address, contact.city, contact.country].filter(Boolean).join(', ');
+    if (!contact.map_url && !query) return '';
+    try {
+      const url = new URL(contact.map_url || '');
+      if (url.hostname.includes('google.') || url.hostname === 'maps.app.goo.gl') {
+        const params = url.searchParams;
+        const placeQuery = params.get('q') || params.get('query') || params.get('destination');
+        const coords = url.pathname.match(/@(-?\\d+(?:\\.\\d+)?),(-?\\d+(?:\\.\\d+)?)/);
+        const target = placeQuery || (coords ? `${coords[1]},${coords[2]}` : query) || url.href;
+        return `https://maps.google.com/maps?q=${encodeURIComponent(target)}&output=embed`;
+      }
+    } catch { /* URL ausente o no estándar: usar dirección guardada. */ }
+    return query ? `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed` : '';
+  });
+
   async function send(event: SubmitEvent) {
     event.preventDefault();
     sending = true; error = ''; toastText = ''; toastShow = false;
@@ -67,7 +83,14 @@
         <div class="contact-item"><span>✉</span><div><strong>Correo</strong><br /><small>{contact.email || 'No configurado'}</small></div></div>
         <div class="contact-item"><span>◷</span><div><strong>Horario</strong><br /><small>{#if hours.length}{#each hours as hour, i}{#if i > 0} · {/if}{dayNames[hour.day] || hour.day}: {hour.is_closed ? 'Cerrado' : `${time(hour.open_time)}–${time(hour.close_time)}`}{/each}{:else}No configurado{/if}</small></div></div>
       </div>
-      {#if contact.map_url}<a class="map" href={contact.map_url} target="_blank" rel="noreferrer">Abrir ubicación en el mapa</a>{:else}<div class="map">{[contact.city, contact.country].filter(Boolean).join(', ') || 'Ubicación no configurada'}</div>{/if}
+      {#if mapEmbedUrl}
+        <div class="map-preview">
+          <iframe src={mapEmbedUrl} title="Mapa de ubicación de SOLUX" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          <a class="map-open" href={contact.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([contact.address, contact.city, contact.country].filter(Boolean).join(', '))}`} target="_blank" rel="noreferrer">Abrir en Google Maps ↗</a>
+        </div>
+      {:else}
+        <div class="map">{[contact.city, contact.country].filter(Boolean).join(', ') || 'Ubicación no configurada'}</div>
+      {/if}
     </div>
     <form class="card" onsubmit={send}>
       <h3>Envíanos un mensaje</h3><p style="margin-bottom:22px">¿Tienes una idea, una duda o quieres un presupuesto?</p>
@@ -82,5 +105,5 @@
   </div>
 </section>
 <style>
-.contact-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:18px}.contact-list{display:grid;gap:10px;margin-top:25px}.contact-item{display:flex;gap:14px;align-items:center;padding:15px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px}.contact-item span:first-child{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:var(--color-surface-2)}.map{min-height:100px;border-radius:20px;background:linear-gradient(135deg,var(--color-surface-2),var(--color-surface));border:1px solid var(--color-border);display:grid;place-items:center;color:var(--color-muted);margin-top:18px;padding:20px;text-align:center}.form-error{color:#b91c1c}.form-success{color:#15803d}@media(max-width:900px){.contact-grid{grid-template-columns:1fr}}
+.contact-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:18px;align-items:start}.contact-list{display:grid;gap:10px;margin-top:25px}.contact-item{display:flex;gap:14px;align-items:center;padding:15px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px}.contact-item span:first-child{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:var(--color-surface-2)}.map-preview{margin-top:18px;border:1px solid var(--color-border);border-radius:20px;overflow:hidden;background:var(--color-surface)}.map-preview iframe{display:block;width:100%;height:260px;border:0}.map-open{display:flex;justify-content:center;align-items:center;padding:13px 16px;font-weight:600;color:var(--color-primary,#087b43);text-decoration:none}.map-open:hover{text-decoration:underline}.map{min-height:100px;border-radius:20px;background:linear-gradient(135deg,var(--color-surface-2),var(--color-surface));border:1px solid var(--color-border);display:grid;place-items:center;color:var(--color-muted);margin-top:18px;padding:20px;text-align:center}.form-error{color:#b91c1c}.form-success{color:#15803d}@media(max-width:900px){.contact-grid{grid-template-columns:1fr}}
 </style>
