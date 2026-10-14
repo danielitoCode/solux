@@ -36,19 +36,33 @@
 
   let mapEmbedUrl = $derived.by(() => {
     const query = [contact.address, contact.city, contact.country].filter(Boolean).join(', ');
-    if (!contact.map_url && !query) return '';
-    try {
-      const url = new URL(contact.map_url || '');
-      if (url.hostname.includes('google.') || url.hostname === 'maps.app.goo.gl') {
-        const params = url.searchParams;
-        const placeQuery = params.get('q') || params.get('query') || params.get('destination');
-        const dataCoords = url.pathname.match(/!3d(-?\\d+(?:\\.\\d+)?)!4d(-?\\d+(?:\\.\\d+)?)/);
-        const coords = url.pathname.match(/@(-?\\d+(?:\\.\\d+)?),(-?\\d+(?:\\.\\d+)?)/);
-        const target = placeQuery || (dataCoords ? `${dataCoords[1]},${dataCoords[2]}` : coords ? `${coords[1]},${coords[2]}` : query) || url.href;
-        return `https://maps.google.com/maps?q=${encodeURIComponent(target)}&output=embed`;
+    const rawUrl = contact.map_url?.trim();
+    if (rawUrl) {
+      try {
+        const url = new URL(rawUrl);
+        const host = url.hostname.toLowerCase();
+        if (host.includes('google.') || host === 'maps.app.goo.gl') {
+          // Conservar URL de incrustación generada por Google Maps: incluye pin y zoom exactos.
+          if (url.pathname.includes('/maps/embed')) return url.href;
+
+          const dataCoords = url.href.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+          const viewCoords = url.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+          const queryCoords = url.searchParams.get('q')?.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+          const coords = dataCoords || queryCoords || viewCoords;
+          if (coords) {
+            const [, lat, lng] = coords;
+            return `https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3745.98726253228!2d${lng}!3d${lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjDCsDA4JzA0LjUiTiA3NcKwMTInNTAuNSJX!5e0!3m2!1ses-419!2snl`;
+          }
+
+          const place = url.pathname.match(/\/maps\/place\/([^/]+)/)?.[1];
+          const target = url.searchParams.get('q') || url.searchParams.get('query') || (place ? decodeURIComponent(place.replace(/\+/g, ' ')) : '') || query;
+          if (target) return `https://www.google.com/maps?q=${encodeURIComponent(target)}&output=embed`;
+        }
+      } catch {
+        // Si URL no es válida, usar dirección configurada.
       }
-    } catch { /* URL ausente o no estándar: usar dirección guardada. */ }
-    return query ? `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed` : '';
+    }
+    return query ? `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed` : '';
   });
 
   async function send(event: SubmitEvent) {
