@@ -81,7 +81,7 @@
   .bo-shell {
     display: grid;
     grid-template-columns: 240px 1fr;
-    min-height: calc(100vh - var(--header-height));
+    min-height: 100vh;
   }
   .bo-sidebar {
     background: var(--color-surface);
@@ -90,8 +90,8 @@
     flex-direction: column;
     padding: 24px 16px;
     position: sticky;
-    top: var(--header-height);
-    height: calc(100vh - var(--header-height));
+    top: 0;
+    height: 100vh;
   }
   .bo-brand {
     display: flex;
@@ -208,7 +208,6 @@
   .bo-main {
     min-width: 0;
   }
-  /* Ocultar header/footer del sitio en backoffice se puede hacer después con layout groups */
   @media (max-width: 800px) {
     .bo-shell {
       grid-template-columns: 1fr;
