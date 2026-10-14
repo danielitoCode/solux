@@ -1,7 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { getSupportRepository } from '$features/support/di';
-  import type { SupportTicket, TicketMessage, TicketStatus } from '$features/support/domain/entities';
+  import type {
+    SupportTicket,
+    TicketMessage,
+    TicketStatus,
+    TicketPriority
+  } from '$features/support/domain/entities';
   import { getAuthUser } from '$features/auth/ui/stores/auth.store.svelte';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
 
@@ -21,10 +26,18 @@
     closed: 'Cerrado'
   };
 
+  const priorityLabel: Record<TicketPriority, string> = {
+    low: 'Baja',
+    medium: 'Media',
+    high: 'Alta',
+    urgent: 'Urgente'
+  };
+
   let items = $state<SupportTicket[]>([]);
   let loading = $state(true);
   let error = $state('');
   let filter = $state<'all' | TicketStatus>('all');
+  let search = $state('');
   let updatingId = $state<string | null>(null);
 
   let selected = $state<SupportTicket | null>(null);
@@ -34,9 +47,30 @@
   let replyInternal = $state(false);
   let sending = $state(false);
 
-  const filtered = $derived(
-    filter === 'all' ? items : items.filter((t) => t.status === filter)
+  const counts = $derived(
+    STATUSES.reduce(
+      (acc, s) => {
+        acc[s] = items.filter((t) => t.status === s).length;
+        return acc;
+      },
+      {} as Record<TicketStatus, number>
+    )
   );
+
+  const filtered = $derived.by(() => {
+    let list = filter === 'all' ? items : items.filter((t) => t.status === filter);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (t) =>
+          t.trackingCode.toLowerCase().includes(q) ||
+          t.subject.toLowerCase().includes(q) ||
+          t.customerName.toLowerCase().includes(q) ||
+          t.customerEmail.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  });
 
   async function load() {
     loading = true;
@@ -44,6 +78,10 @@
     try {
       items = await getSupportRepository().listAll();
       devLog('bo-support', `loaded ${items.length}`);
+      if (selected) {
+        const fresh = items.find((t) => t.id === selected!.id);
+        if (fresh) selected = fresh;
+      }
     } catch (e) {
       devError('bo-support', 'listAll failed', e, { file: 'BackofficeSupportPage.svelte' });
       error = e instanceof Error ? e.message : 'Error al cargar tickets';
@@ -56,6 +94,8 @@
     selected = t;
     loadingThread = true;
     messages = [];
+    reply = '';
+    replyInternal = false;
     try {
       messages = await getSupportRepository().listMessages(t.id);
     } catch (e) {
@@ -116,386 +156,769 @@
     }
   }
 
+  function relativeHint(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `hace ${Math.max(1, mins)} min`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `hace ${hrs} h`;
+    const days = Math.floor(hrs / 24);
+    return `hace ${days} d`;
+  }
+
   onMount(load);
 </script>
 
-<section class="page bo-page">
-  <div class="section-head">
-    <div>
-      <div class="eyebrow">Backoffice</div>
-      <h2>Soporte</h2>
-    </div>
-    <div class="head-actions">
-      <select bind:value={filter} aria-label="Filtrar por estado">
-        <option value="all">Todos ({items.length})</option>
-        {#each STATUSES as s}
-          <option value={s}
-            >{statusLabel[s]} ({items.filter((i) => i.status === s).length})</option
-          >
-        {/each}
-      </select>
-      <button type="button" class="btn btn-small btn-ghost" onclick={load} disabled={loading}>
-        {loading ? 'Cargando…' : 'Actualizar'}
-      </button>
-    </div>
-  </div>
-
-  {#if error}
-    <div class="banner-error" role="alert">{error}</div>
-  {/if}
-
-  {#if loading && items.length === 0}
-    <p class="muted">Cargando tickets…</p>
-  {:else if filtered.length === 0}
-    <div class="card empty">
-      <p>No hay tickets{filter !== 'all' ? ` “${statusLabel[filter]}”` : ''}.</p>
-      <p class="muted">Prueba insertando uno en SQL o desde el canal público (cuando exista).</p>
-    </div>
-  {:else}
-    <div class="table-wrap card">
-      <table>
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Asunto</th>
-            <th>Cliente</th>
-            <th>Prioridad</th>
-            <th>Estado</th>
-            <th>Creado</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each filtered as t (t.id)}
-            <tr>
-              <td><code>{t.trackingCode}</code></td>
-              <td><strong>{t.subject}</strong></td>
-              <td>
-                {t.customerName}
-                <div class="sub">{t.customerEmail}</div>
-              </td>
-              <td class="prio">{t.priority}</td>
-              <td>
-                <select
-                  class="status-select"
-                  value={t.status}
-                  disabled={updatingId === t.id}
-                  onchange={(e) =>
-                    changeStatus(t, (e.currentTarget as HTMLSelectElement).value as TicketStatus)}
-                >
-                  {#each STATUSES as s}
-                    <option value={s}>{statusLabel[s]}</option>
-                  {/each}
-                </select>
-              </td>
-              <td class="sub">{formatDate(t.createdAt)}</td>
-              <td>
-                <button type="button" class="link-btn" onclick={() => openTicket(t)}>Abrir</button>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
-
-  {#if selected}
-    <div class="drawer-backdrop" role="presentation" onclick={() => (selected = null)}></div>
-    <aside class="drawer card">
-      <div class="drawer-head">
-        <div>
-          <h3>{selected.subject}</h3>
-          <code>{selected.trackingCode}</code>
-        </div>
-        <button type="button" class="link-btn" onclick={() => (selected = null)}>Cerrar</button>
+<div class="support-shell">
+  <!-- LISTA -->
+  <section class="list-pane">
+    <header class="pane-header">
+      <div>
+        <p class="eyebrow">Backoffice</p>
+        <h1>Soporte</h1>
       </div>
+      <button type="button" class="icon-btn" onclick={load} disabled={loading} title="Actualizar">
+        {loading ? '…' : '↻'}
+      </button>
+    </header>
 
-      <dl class="detail">
-        <div><dt>Cliente</dt><dd>{selected.customerName} · {selected.customerEmail}</dd></div>
-        {#if selected.customerPhone}
-          <div><dt>Teléfono</dt><dd>{selected.customerPhone}</dd></div>
-        {/if}
-        <div><dt>Prioridad</dt><dd>{selected.priority}</dd></div>
-        <div><dt>Estado</dt><dd>{statusLabel[selected.status]}</dd></div>
-        <div><dt>Descripción</dt><dd class="desc">{selected.description}</dd></div>
-      </dl>
+    <div class="search-row">
+      <input
+        type="search"
+        placeholder="Buscar código, cliente, asunto…"
+        bind:value={search}
+      />
+    </div>
 
-      <label class="field">
-        <span>Cambiar estado</span>
-        <select
-          value={selected.status}
-          disabled={updatingId === selected.id}
-          onchange={(e) =>
-            changeStatus(
-              selected!,
-              (e.currentTarget as HTMLSelectElement).value as TicketStatus
-            )}
-        >
-          {#each STATUSES as s}
-            <option value={s}>{statusLabel[s]}</option>
-          {/each}
-        </select>
-      </label>
-
-      <h4 class="thread-title">Hilo</h4>
-      {#if loadingThread}
-        <p class="muted">Cargando mensajes…</p>
-      {:else if messages.length === 0}
-        <p class="muted">Sin mensajes aún. La descripción es el reporte inicial.</p>
-      {:else}
-        <ul class="thread">
-          {#each messages as m (m.id)}
-            <li class:agent={m.author === 'agent'} class:internal={m.isInternal}>
-              <div class="msg-meta">
-                <strong>{m.authorName}</strong>
-                <span>{m.author}{m.isInternal ? ' · interno' : ''}</span>
-                <time>{formatDate(m.createdAt)}</time>
-              </div>
-              <p>{m.body}</p>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-
-      <div class="reply">
-        <textarea
-          rows="3"
-          placeholder="Respuesta al cliente…"
-          bind:value={reply}
-        ></textarea>
-        <label class="check">
-          <input type="checkbox" bind:checked={replyInternal} />
-          Nota interna (no visible al cliente)
-        </label>
+    <div class="chips" role="tablist">
+      <button
+        type="button"
+        class="chip"
+        class:active={filter === 'all'}
+        onclick={() => (filter = 'all')}
+      >
+        Todos <span>{items.length}</span>
+      </button>
+      {#each STATUSES as s}
         <button
           type="button"
-          class="btn btn-primary btn-small"
-          disabled={sending || !reply.trim()}
-          onclick={sendReply}
+          class="chip"
+          class:active={filter === s}
+          data-status={s}
+          onclick={() => (filter = s)}
         >
-          {sending ? 'Enviando…' : 'Enviar'}
+          {statusLabel[s]} <span>{counts[s] ?? 0}</span>
         </button>
+      {/each}
+    </div>
+
+    {#if error}
+      <div class="banner-error" role="alert">{error}</div>
+    {/if}
+
+    <div class="ticket-list">
+      {#if loading && items.length === 0}
+        <div class="skeleton-stack">
+          {#each [1, 2, 3, 4] as _}
+            <div class="skeleton-card"></div>
+          {/each}
+        </div>
+      {:else if filtered.length === 0}
+        <div class="empty-state">
+          <div class="empty-icon">◈</div>
+          <p>No hay tickets aquí</p>
+          <small>Cambia el filtro o crea uno de prueba en Supabase</small>
+        </div>
+      {:else}
+        {#each filtered as t (t.id)}
+          <button
+            type="button"
+            class="ticket-card"
+            class:selected={selected?.id === t.id}
+            onclick={() => openTicket(t)}
+          >
+            <div class="ticket-top">
+              <code>{t.trackingCode}</code>
+              <span class="time">{relativeHint(t.createdAt)}</span>
+            </div>
+            <strong class="subject">{t.subject}</strong>
+            <div class="ticket-meta">
+              <span class="who">{t.customerName}</span>
+              <span class="badge status" data-status={t.status}>{statusLabel[t.status]}</span>
+              <span class="badge prio" data-prio={t.priority}>{priorityLabel[t.priority]}</span>
+            </div>
+          </button>
+        {/each}
+      {/if}
+    </div>
+  </section>
+
+  <!-- DETALLE -->
+  <section class="detail-pane" class:empty={!selected}>
+    {#if !selected}
+      <div class="empty-detail">
+        <div class="empty-icon big">✉</div>
+        <h2>Selecciona un ticket</h2>
+        <p>Revisa el hilo, cambia el estado y responde al cliente.</p>
       </div>
-    </aside>
-  {/if}
-</section>
+    {:else}
+      <header class="detail-header">
+        <div class="detail-title">
+          <div class="code-row">
+            <code>{selected.trackingCode}</code>
+            <span class="badge status" data-status={selected.status}
+              >{statusLabel[selected.status]}</span
+            >
+            <span class="badge prio" data-prio={selected.priority}
+              >{priorityLabel[selected.priority]}</span
+            >
+          </div>
+          <h2>{selected.subject}</h2>
+        </div>
+        <div class="status-control">
+          <label for="status-select">Estado</label>
+          <select
+            id="status-select"
+            value={selected.status}
+            disabled={updatingId === selected.id}
+            onchange={(e) =>
+              changeStatus(
+                selected!,
+                (e.currentTarget as HTMLSelectElement).value as TicketStatus
+              )}
+          >
+            {#each STATUSES as s}
+              <option value={s}>{statusLabel[s]}</option>
+            {/each}
+          </select>
+        </div>
+      </header>
+
+      <div class="customer-card">
+        <div class="avatar">{selected.customerName.slice(0, 1).toUpperCase()}</div>
+        <div>
+          <strong>{selected.customerName}</strong>
+          <div class="contact-line">{selected.customerEmail}</div>
+          {#if selected.customerPhone}
+            <div class="contact-line">{selected.customerPhone}</div>
+          {/if}
+        </div>
+        <div class="dates">
+          <span>Creado {formatDate(selected.createdAt)}</span>
+          <span>Act. {formatDate(selected.updatedAt)}</span>
+        </div>
+      </div>
+
+      <div class="report-box">
+        <h3>Reporte inicial</h3>
+        <p>{selected.description}</p>
+      </div>
+
+      <div class="thread-wrap">
+        <h3>Conversación</h3>
+        {#if loadingThread}
+          <div class="skeleton-stack compact">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+          </div>
+        {:else if messages.length === 0}
+          <p class="muted-hint">Aún no hay mensajes. Escribe la primera respuesta abajo.</p>
+        {:else}
+          <ul class="thread">
+            {#each messages as m (m.id)}
+              <li
+                class:from-agent={m.author === 'agent'}
+                class:from-customer={m.author === 'customer'}
+                class:internal={m.isInternal}
+              >
+                <div class="bubble">
+                  <div class="bubble-head">
+                    <strong>{m.authorName}</strong>
+                    {#if m.isInternal}<em>interno</em>{/if}
+                    <time>{formatDate(m.createdAt)}</time>
+                  </div>
+                  <p>{m.body}</p>
+                </div>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+
+      <footer class="composer">
+        <textarea
+          rows="3"
+          placeholder={replyInternal
+            ? 'Nota interna (solo staff)…'
+            : 'Escribe una respuesta al cliente…'}
+          bind:value={reply}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendReply();
+          }}
+        ></textarea>
+        <div class="composer-bar">
+          <label class="toggle">
+            <input type="checkbox" bind:checked={replyInternal} />
+            <span>Nota interna</span>
+          </label>
+          <button
+            type="button"
+            class="btn btn-primary"
+            disabled={sending || !reply.trim()}
+            onclick={sendReply}
+          >
+            {sending ? 'Enviando…' : replyInternal ? 'Guardar nota' : 'Enviar respuesta'}
+          </button>
+        </div>
+      </footer>
+    {/if}
+  </section>
+</div>
 
 <style>
-  .bo-page {
-    padding-top: 32px;
+  .support-shell {
+    display: grid;
+    grid-template-columns: minmax(300px, 380px) 1fr;
+    min-height: 100vh;
+    background: var(--color-bg);
   }
-  .head-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .head-actions select {
-    border: 1px solid var(--color-border);
+
+  /* —— Lista —— */
+  .list-pane {
+    border-right: 1px solid var(--color-border);
     background: var(--color-surface);
-    color: var(--color-text);
-    padding: 8px 12px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-height: 100vh;
   }
+  .pane-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 22px 20px 12px;
+  }
+  .pane-header h1 {
+    margin: 4px 0 0;
+    font-size: 22px;
+    letter-spacing: -0.04em;
+  }
+  .eyebrow {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 16px;
+  }
+  .icon-btn:disabled {
+    opacity: 0.5;
+  }
+
+  .search-row {
+    padding: 0 16px 12px;
+  }
+  .search-row input {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    padding: 11px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    outline: none;
+  }
+  .search-row input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+  }
+
+  .chips {
+    display: flex;
+    gap: 6px;
+    padding: 0 16px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar {
+    display: none;
+  }
+  .chip {
+    flex-shrink: 0;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-muted);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: 0.15s;
+  }
+  .chip span {
+    background: var(--color-surface-2);
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 10px;
+  }
+  .chip.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+  .chip.active span {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+
   .banner-error {
+    margin: 0 16px 10px;
     background: color-mix(in srgb, #c0392b 12%, var(--color-surface));
     border: 1px solid color-mix(in srgb, #c0392b 35%, var(--color-border));
     color: #a93226;
-    padding: 12px 14px;
-    border-radius: var(--radius-sm);
-    margin-bottom: 16px;
-    font-size: 13px;
-  }
-  .muted {
-    color: var(--color-muted);
-    font-size: 13px;
-  }
-  .empty {
-    text-align: center;
-    padding: 40px 24px;
-  }
-  .table-wrap {
-    padding: 0;
-    overflow: auto;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  th,
-  td {
-    text-align: left;
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--color-border);
-    vertical-align: top;
-  }
-  th {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-muted);
-    background: var(--color-surface-2);
-  }
-  code {
+    padding: 10px 12px;
+    border-radius: 10px;
     font-size: 12px;
-    font-weight: 700;
-    color: var(--color-primary);
   }
-  .sub {
-    font-size: 11px;
-    color: var(--color-muted);
-    margin-top: 2px;
-  }
-  .prio {
-    text-transform: uppercase;
-    font-size: 11px;
-    font-weight: 700;
-  }
-  .status-select {
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 6px 8px;
-    font-size: 12px;
-    font-weight: 700;
-    background: var(--color-bg);
-    color: var(--color-text);
-  }
-  .link-btn {
-    border: 0;
-    background: none;
-    color: var(--color-primary);
-    font-weight: 700;
-    font-size: 12px;
-    padding: 0;
-  }
-  .drawer-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    z-index: 40;
-  }
-  .drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(440px, 100vw);
-    z-index: 50;
-    border-radius: 0;
-    overflow: auto;
-    padding: 24px;
+
+  .ticket-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 10px 16px;
     display: flex;
     flex-direction: column;
+    gap: 6px;
   }
-  .drawer-head {
+  .ticket-card {
+    text-align: left;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 14px;
+    padding: 12px 14px;
+    color: var(--color-text);
+    transition: 0.15s;
+    cursor: pointer;
+  }
+  .ticket-card:hover {
+    background: var(--color-surface-2);
+  }
+  .ticket-card.selected {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  }
+  .ticket-top {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 16px;
+    align-items: center;
+    margin-bottom: 4px;
   }
-  .drawer-head h3 {
-    margin: 0 0 4px;
-    font-size: 16px;
+  .ticket-top code {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--color-primary);
   }
-  .detail {
-    margin: 0 0 16px;
+  .time {
+    font-size: 10px;
+    color: var(--color-muted);
+  }
+  .subject {
+    display: block;
+    font-size: 13.5px;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .ticket-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .who {
+    font-size: 11px;
+    color: var(--color-muted);
+    margin-right: 4px;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+  .badge.status[data-status='open'] {
+    background: color-mix(in srgb, #3498db 18%, transparent);
+    color: #2980b9;
+  }
+  .badge.status[data-status='in_progress'] {
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    color: var(--color-primary);
+  }
+  .badge.status[data-status='waiting_customer'] {
+    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    color: #b8860b;
+  }
+  .badge.status[data-status='resolved'] {
+    background: color-mix(in srgb, #27ae60 16%, transparent);
+    color: #1e8449;
+  }
+  .badge.status[data-status='closed'] {
+    background: var(--color-surface-2);
+    color: var(--color-muted);
+  }
+  .badge.prio[data-prio='low'] {
+    background: var(--color-surface-2);
+    color: var(--color-muted);
+  }
+  .badge.prio[data-prio='medium'] {
+    background: color-mix(in srgb, #3498db 14%, transparent);
+    color: #2980b9;
+  }
+  .badge.prio[data-prio='high'] {
+    background: color-mix(in srgb, #e67e22 18%, transparent);
+    color: #d35400;
+  }
+  .badge.prio[data-prio='urgent'] {
+    background: color-mix(in srgb, #e74c3c 18%, transparent);
+    color: #c0392b;
+  }
+
+  .empty-state,
+  .empty-detail {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--color-muted);
+  }
+  .empty-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 12px;
+    border-radius: 14px;
+    background: var(--color-surface-2);
     display: grid;
-    gap: 10px;
+    place-items: center;
+    font-size: 20px;
+    color: var(--color-primary);
   }
-  .detail dt {
+  .empty-icon.big {
+    width: 64px;
+    height: 64px;
+    font-size: 28px;
+    border-radius: 18px;
+  }
+  .empty-detail h2 {
+    margin: 12px 0 8px;
+    color: var(--color-text);
+    font-size: 20px;
+  }
+  .empty-detail p {
+    margin: 0;
+    max-width: 280px;
+  }
+
+  .skeleton-stack {
+    display: grid;
+    gap: 8px;
+    padding: 4px;
+  }
+  .skeleton-stack.compact {
+    padding: 0;
+  }
+  .skeleton-card {
+    height: 72px;
+    border-radius: 12px;
+    background: linear-gradient(
+      90deg,
+      var(--color-surface-2) 25%,
+      color-mix(in srgb, var(--color-surface-2) 60%, white) 50%,
+      var(--color-surface-2) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* —— Detalle —— */
+  .detail-pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+  .detail-pane.empty {
+    align-items: center;
+    justify-content: center;
+  }
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 22px 28px 16px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  .detail-title h2 {
+    margin: 8px 0 0;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+  }
+  .code-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .code-row code {
+    font-weight: 800;
+    color: var(--color-primary);
+    font-size: 13px;
+  }
+  .status-control {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 160px;
+  }
+  .status-control label {
     font-size: 11px;
     font-weight: 700;
     color: var(--color-muted);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
   }
-  .detail dd {
-    margin: 2px 0 0;
-    font-size: 14px;
-  }
-  .desc {
-    white-space: pre-wrap;
-  }
-  .field span {
-    display: block;
-    font-size: 12px;
-    font-weight: 700;
-    margin-bottom: 6px;
-  }
-  .field select {
-    width: 100%;
+  .status-control select {
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     color: var(--color-text);
     padding: 10px 12px;
     border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
   }
-  .thread-title {
-    margin: 20px 0 10px;
+
+  .customer-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 14px;
+    align-items: center;
+    margin: 16px 28px 0;
+    padding: 14px 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+  }
+  .avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, var(--color-primary), var(--color-primary-2));
+    color: white;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 16px;
+  }
+  .contact-line {
+    font-size: 12px;
+    color: var(--color-muted);
+  }
+  .dates {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+    color: var(--color-muted);
+    text-align: right;
+  }
+
+  .report-box {
+    margin: 14px 28px 0;
+    padding: 14px 16px;
+    background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, var(--color-border));
+    border-radius: 14px;
+  }
+  .report-box h3 {
+    margin: 0 0 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+  }
+  .report-box p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+
+  .thread-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 28px;
+  }
+  .thread-wrap h3 {
+    margin: 0 0 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+  }
+  .muted-hint {
+    color: var(--color-muted);
     font-size: 13px;
   }
   .thread {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: grid;
-    gap: 10px;
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
   .thread li {
-    padding: 12px;
-    border-radius: 12px;
-    background: var(--color-surface-2);
+    display: flex;
+  }
+  .thread li.from-agent {
+    justify-content: flex-end;
+  }
+  .thread li.from-customer {
+    justify-content: flex-start;
+  }
+  .bubble {
+    max-width: min(420px, 92%);
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--color-surface);
     border: 1px solid var(--color-border);
   }
-  .thread li.agent {
-    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  .from-agent .bubble {
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+    border-color: color-mix(in srgb, var(--color-primary) 25%, var(--color-border));
+    border-bottom-right-radius: 4px;
   }
-  .thread li.internal {
+  .from-customer .bubble {
+    border-bottom-left-radius: 4px;
+  }
+  .thread li.internal .bubble {
     border-style: dashed;
-    opacity: 0.9;
+    background: var(--color-surface-2);
+    opacity: 0.95;
   }
-  .msg-meta {
+  .bubble-head {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    align-items: baseline;
+    margin-bottom: 6px;
     font-size: 11px;
     color: var(--color-muted);
-    margin-bottom: 6px;
   }
-  .msg-meta strong {
+  .bubble-head strong {
     color: var(--color-text);
+    font-size: 12px;
   }
-  .thread p {
+  .bubble-head em {
+    font-style: normal;
+    font-weight: 800;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #b8860b;
+  }
+  .bubble p {
     margin: 0;
-    font-size: 13px;
+    font-size: 13.5px;
+    line-height: 1.5;
     white-space: pre-wrap;
   }
-  .reply {
-    margin-top: 16px;
-    display: grid;
-    gap: 8px;
+
+  .composer {
     border-top: 1px solid var(--color-border);
-    padding-top: 16px;
+    background: var(--color-surface);
+    padding: 14px 28px 18px;
   }
-  .reply textarea {
+  .composer textarea {
     width: 100%;
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     color: var(--color-text);
-    padding: 10px 12px;
-    border-radius: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
     resize: vertical;
+    min-height: 72px;
+    font-size: 14px;
+    outline: none;
   }
-  .check {
+  .composer textarea:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+  .composer-bar {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .toggle {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
     font-size: 12px;
+    font-weight: 600;
     color: var(--color-muted);
+    cursor: pointer;
+  }
+  .composer .btn:disabled {
+    opacity: 0.55;
+    transform: none;
+  }
+
+  @media (max-width: 900px) {
+    .support-shell {
+      grid-template-columns: 1fr;
+    }
+    .list-pane {
+      max-height: none;
+      min-height: auto;
+      border-right: 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .detail-pane {
+      min-height: 70vh;
+      max-height: none;
+    }
+    .customer-card {
+      grid-template-columns: auto 1fr;
+    }
+    .dates {
+      grid-column: 1 / -1;
+      text-align: left;
+      flex-direction: row;
+      gap: 12px;
+    }
   }
 </style>
