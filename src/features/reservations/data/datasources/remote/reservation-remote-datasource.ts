@@ -1,9 +1,12 @@
-import { supabase } from '$infrastructure/di/supabase';
+import { assertSupabaseConfigured, supabase } from '$infrastructure/data/supabase-client';
+import { devLog, devError } from '$infrastructure/ui/dev-logger';
 import type { ReservationDto } from '../../dto/reservation.dto';
 import type { CreateReservationInput } from '../../../domain/repository/reservation-repository';
 
 export class ReservationRemoteDataSource {
   async create(input: CreateReservationInput): Promise<ReservationDto> {
+    assertSupabaseConfigured();
+    devLog('reservations-remote', 'create');
     const { data, error } = await supabase
       .from('reservations')
       .insert({
@@ -18,36 +21,53 @@ export class ReservationRemoteDataSource {
       })
       .select()
       .single();
-    if (error) throw error;
+    if (error) {
+      devError('reservations-remote', 'create failed', error);
+      throw error;
+    }
     return data as ReservationDto;
   }
 
   async getByTrackingCode(code: string): Promise<ReservationDto | null> {
+    assertSupabaseConfigured();
     const { data, error } = await supabase.rpc('get_reservation_by_tracking', {
       p_code: code
     });
-    if (error) throw error;
+    if (error) {
+      devError('reservations-remote', 'getByTracking failed', error);
+      throw error;
+    }
     const row = Array.isArray(data) ? data[0] : data;
     return (row as ReservationDto) ?? null;
   }
 
   async listAll(): Promise<ReservationDto[]> {
+    assertSupabaseConfigured();
+    devLog('reservations-remote', 'listAll');
     const { data, error } = await supabase
       .from('reservations')
       .select('*')
       .order('created_at', { ascending: false });
-    if (error) throw error;
+    if (error) {
+      devError('reservations-remote', 'listAll failed', error);
+      throw error;
+    }
     return (data ?? []) as ReservationDto[];
   }
 
   async updateStatus(id: string, status: string): Promise<ReservationDto> {
+    assertSupabaseConfigured();
+    devLog('reservations-remote', 'updateStatus', { id, status });
     const { data, error } = await supabase
       .from('reservations')
       .update({ status })
       .eq('id', id)
       .select()
       .single();
-    if (error) throw error;
+    if (error) {
+      devError('reservations-remote', 'updateStatus failed', error);
+      throw error;
+    }
     return data as ReservationDto;
   }
 }
