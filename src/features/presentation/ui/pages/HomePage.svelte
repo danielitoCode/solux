@@ -1,5 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { supabase } from '$infrastructure/data/supabase-client';
+
+  let company = $state({ name: 'SOLUX', tagline: 'Energía limpia para un mejor mañana.', about: 'Diseñamos e instalamos soluciones solares y eléctricas para hogares, negocios e industrias. Ingeniería cercana, tecnología y resultados medibles.', years_of_experience: 5, completed_projects: 120 });
+
+  onMount(async () => {
+    const { data } = await supabase.from('company_profile').select('name,tagline,about,years_of_experience,completed_projects').limit(1).maybeSingle();
+    if (data) company = { ...company, ...data };
+  });
 
   const services = [
     { icon: '☀', title: 'Paneles solares', text: 'Generación fotovoltaica a medida para hogares y negocios.' },
@@ -22,8 +30,8 @@
 <section class="page">
   <div class="hero">
     <div>
-      <div class="eyebrow">SOLUX · Guantánamo, Cuba</div>
-      <h1>Energía limpia para un mejor mañana.</h1>
+      <div class="eyebrow">{company.name} · Guantánamo, Cuba</div>
+      <h1>{company.tagline}</h1>
       <p class="lead">
         Diseñamos e instalamos soluciones solares y eléctricas para hogares, negocios e industrias.
         Ingeniería cercana, tecnología y resultados medibles.
@@ -33,8 +41,8 @@
         <a class="btn btn-ghost" href="/servicios">Ver nuestros servicios</a>
       </div>
       <div class="stats">
-        <div class="stat"><strong>120+</strong><span>proyectos realizados</span></div>
-        <div class="stat"><strong>5+</strong><span>años de experiencia</span></div>
+        <div class="stat"><strong>{company.completed_projects}+</strong><span>proyectos realizados</span></div>
+        <div class="stat"><strong>{company.years_of_experience}+</strong><span>años de experiencia</span></div>
         <div class="stat"><strong>24/7</strong><span>energía pensada para ti</span></div>
       </div>
     </div>
