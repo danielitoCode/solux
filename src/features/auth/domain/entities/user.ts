@@ -1,7 +1,5 @@
-/**
- * Domain entity: Authenticated user (client or staff).
- */
-export type UserRole = 'admin' | 'support' | 'sales' | 'client';
+/** Staff only — clients do not authenticate */
+export type UserRole = 'admin' | 'support' | 'sales';
 
 export interface User {
   id: string;

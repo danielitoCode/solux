@@ -1,6 +1,3 @@
-/**
- * Domain entity: Reservation / booking for a solar or electrical service.
- */
 export type ReservationStatus =
   | 'pending'
   | 'confirmed'
@@ -10,15 +7,17 @@ export type ReservationStatus =
 
 export interface Reservation {
   id: string;
+  trackingCode: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
   serviceCategory: string;
-  preferredDate: string; // ISO date
+  preferredDate: string;
   preferredTimeSlot: string;
   address: string;
   notes?: string;
   status: ReservationStatus;
-  createdAt: string; // ISO date
-  updatedAt: string; // ISO date
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
 }

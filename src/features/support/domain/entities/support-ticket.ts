@@ -1,6 +1,3 @@
-/**
- * Domain entity: Technical support ticket.
- */
 export type TicketStatus =
   | 'open'
   | 'in_progress'
@@ -12,6 +9,7 @@ export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface SupportTicket {
   id: string;
+  trackingCode: string;
   customerName: string;
   customerEmail: string;
   customerPhone?: string;
@@ -20,7 +18,8 @@ export interface SupportTicket {
   status: TicketStatus;
   priority: TicketPriority;
   relatedReservationId?: string;
-  createdAt: string; // ISO date
-  updatedAt: string; // ISO date
-  resolvedAt?: string; // ISO date
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
 }
