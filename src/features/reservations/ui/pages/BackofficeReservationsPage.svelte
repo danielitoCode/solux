@@ -3,6 +3,7 @@
   import { getReservationRepository } from '$features/reservations/di';
   import type { Reservation, ReservationStatus } from '$features/reservations/domain/entities';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
+  import ResizableSplit from '$infrastructure/ui/ResizableSplit.svelte';
 
   const STATUSES: ReservationStatus[] = [
     'pending',
@@ -118,202 +119,175 @@
   onMount(load);
 </script>
 
-<div class="res-shell">
-  <!-- LISTA -->
-  <section class="list-pane">
-    <header class="pane-header">
-      <div>
-        <p class="eyebrow">Backoffice</p>
-        <h1>Reservaciones</h1>
-      </div>
-      <button type="button" class="icon-btn" onclick={load} disabled={loading} title="Actualizar">
-        {loading ? '…' : '↻'}
-      </button>
-    </header>
-
-    <div class="search-row">
-      <input
-        type="search"
-        placeholder="Buscar código, cliente, servicio…"
-        bind:value={search}
-      />
-    </div>
-
-    <div class="chips" role="tablist">
-      <button
-        type="button"
-        class="chip"
-        class:active={filter === 'all'}
-        onclick={() => (filter = 'all')}
-      >
-        Todas <span>{items.length}</span>
-      </button>
-      {#each STATUSES as s}
-        <button
-          type="button"
-          class="chip"
-          class:active={filter === s}
-          onclick={() => (filter = s)}
-        >
-          {statusLabel[s]} <span>{counts[s] ?? 0}</span>
+<ResizableSplit storageKey="solux-bo-reservas-split" initialLeft={360} minLeft={280} maxLeft={560}>
+  {#snippet left()}
+    <section class="list-pane">
+      <header class="pane-header">
+        <div>
+          <p class="eyebrow">Backoffice</p>
+          <h1>Reservaciones</h1>
+        </div>
+        <button type="button" class="icon-btn" onclick={load} disabled={loading} title="Actualizar">
+          {loading ? '…' : '↻'}
         </button>
-      {/each}
-    </div>
-
-    {#if error}
-      <div class="banner-error" role="alert">{error}</div>
-    {/if}
-
-    <div class="item-list">
-      {#if loading && items.length === 0}
-        <div class="skeleton-stack">
-          {#each [1, 2, 3, 4] as _}
-            <div class="skeleton-card"></div>
-          {/each}
-        </div>
-      {:else if filtered.length === 0}
-        <div class="empty-state">
-          <div class="empty-icon">◈</div>
-          <p>No hay reservas aquí</p>
-          <small>Cambia el filtro o inserta una de prueba en Supabase</small>
-        </div>
-      {:else}
-        {#each filtered as r (r.id)}
-          <button
-            type="button"
-            class="item-card"
-            class:selected={selected?.id === r.id}
-            onclick={() => openReservation(r)}
-          >
-            <div class="item-top">
-              <code>{r.trackingCode}</code>
-              <span class="time">{relativeHint(r.createdAt)}</span>
-            </div>
-            <strong class="subject">{r.customerName}</strong>
-            <div class="item-meta">
-              <span class="who">{r.serviceCategory}</span>
-              <span class="badge status" data-status={r.status}>{statusLabel[r.status]}</span>
-            </div>
-            <div class="item-sub">
-              {r.preferredDate} · {r.preferredTimeSlot}
-            </div>
-          </button>
-        {/each}
-      {/if}
-    </div>
-  </section>
-
-  <!-- DETALLE -->
-  <section class="detail-pane" class:empty={!selected}>
-    {#if !selected}
-      <div class="empty-detail">
-        <div class="empty-icon big">📅</div>
-        <h2>Selecciona una reserva</h2>
-        <p>Revisa los datos del cliente y actualiza el estado de la visita.</p>
-      </div>
-    {:else}
-      <header class="detail-header">
-        <div class="detail-title">
-          <div class="code-row">
-            <code>{selected.trackingCode}</code>
-            <span class="badge status" data-status={selected.status}
-              >{statusLabel[selected.status]}</span
-            >
-          </div>
-          <h2>{selected.customerName}</h2>
-        </div>
-        <div class="status-control">
-          <label for="res-status">Estado</label>
-          <select
-            id="res-status"
-            value={selected.status}
-            disabled={updatingId === selected.id}
-            onchange={(e) =>
-              changeStatus(
-                selected!,
-                (e.currentTarget as HTMLSelectElement).value as ReservationStatus
-              )}
-          >
-            {#each STATUSES as s}
-              <option value={s}>{statusLabel[s]}</option>
-            {/each}
-          </select>
-        </div>
       </header>
 
-      <div class="customer-card">
-        <div class="avatar">{selected.customerName.slice(0, 1).toUpperCase()}</div>
-        <div>
-          <strong>{selected.customerName}</strong>
-          <div class="contact-line">{selected.customerEmail}</div>
-          <div class="contact-line">{selected.customerPhone}</div>
-        </div>
-        <div class="dates">
-          <span>Creada {formatDate(selected.createdAt)}</span>
-          <span>Act. {formatDate(selected.updatedAt)}</span>
-        </div>
+      <div class="search-row">
+        <input type="search" placeholder="Buscar código, cliente, servicio…" bind:value={search} />
       </div>
 
-      <div class="info-grid">
-        <div class="info-card">
-          <h3>Servicio</h3>
-          <p>{selected.serviceCategory}</p>
-        </div>
-        <div class="info-card accent">
-          <h3>Visita preferida</h3>
-          <p>{selected.preferredDate}</p>
-          <small>{selected.preferredTimeSlot}</small>
-        </div>
-        <div class="info-card wide">
-          <h3>Dirección</h3>
-          <p>{selected.address || '—'}</p>
-        </div>
-        <div class="info-card wide">
-          <h3>Notas</h3>
-          <p class="notes">{selected.notes || 'Sin notas'}</p>
-        </div>
+      <div class="chips" role="tablist">
+        <button type="button" class="chip" class:active={filter === 'all'} onclick={() => (filter = 'all')}>
+          Todas <span>{items.length}</span>
+        </button>
+        {#each STATUSES as s}
+          <button type="button" class="chip" class:active={filter === s} onclick={() => (filter = s)}>
+            {statusLabel[s]} <span>{counts[s] ?? 0}</span>
+          </button>
+        {/each}
       </div>
 
-      <div class="status-steps">
-        <h3>Flujo de estado</h3>
-        <div class="steps">
-          {#each STATUSES as s}
+      {#if error}
+        <div class="banner-error" role="alert">{error}</div>
+      {/if}
+
+      <div class="item-list">
+        {#if loading && items.length === 0}
+          <div class="skeleton-stack">
+            {#each [1, 2, 3, 4] as _}<div class="skeleton-card"></div>{/each}
+          </div>
+        {:else if filtered.length === 0}
+          <div class="empty-state">
+            <div class="empty-icon">◈</div>
+            <p>No hay reservas aquí</p>
+            <small>Cambia el filtro o inserta una de prueba en Supabase</small>
+          </div>
+        {:else}
+          {#each filtered as r (r.id)}
             <button
               type="button"
-              class="step"
-              class:current={selected.status === s}
-              class:done={STATUSES.indexOf(selected.status) > STATUSES.indexOf(s) &&
-                selected.status !== 'cancelled' &&
-                s !== 'cancelled'}
-              class:cancelled={s === 'cancelled' && selected.status === 'cancelled'}
-              disabled={updatingId === selected.id}
-              onclick={() => changeStatus(selected!, s)}
+              class="item-card"
+              class:selected={selected?.id === r.id}
+              onclick={() => openReservation(r)}
             >
-              <span class="dot"></span>
-              {statusLabel[s]}
+              <div class="item-top">
+                <code>{r.trackingCode}</code>
+                <span class="time">{relativeHint(r.createdAt)}</span>
+              </div>
+              <strong class="subject">{r.customerName}</strong>
+              <div class="item-meta">
+                <span class="who">{r.serviceCategory}</span>
+                <span class="badge status" data-status={r.status}>{statusLabel[r.status]}</span>
+              </div>
+              <div class="item-sub">{r.preferredDate} · {r.preferredTimeSlot}</div>
             </button>
           {/each}
-        </div>
+        {/if}
       </div>
-    {/if}
-  </section>
-</div>
+    </section>
+  {/snippet}
+
+  {#snippet right()}
+    <section class="detail-pane" class:empty={!selected}>
+      {#if !selected}
+        <div class="empty-detail">
+          <div class="empty-icon big">📅</div>
+          <h2>Selecciona una reserva</h2>
+          <p>Revisa los datos del cliente y actualiza el estado de la visita.</p>
+        </div>
+      {:else}
+        <header class="detail-header">
+          <div class="detail-title">
+            <div class="code-row">
+              <code>{selected.trackingCode}</code>
+              <span class="badge status" data-status={selected.status}>{statusLabel[selected.status]}</span>
+            </div>
+            <h2>{selected.customerName}</h2>
+          </div>
+          <div class="status-control">
+            <label for="res-status">Estado</label>
+            <select
+              id="res-status"
+              value={selected.status}
+              disabled={updatingId === selected.id}
+              onchange={(e) =>
+                changeStatus(
+                  selected!,
+                  (e.currentTarget as HTMLSelectElement).value as ReservationStatus
+                )}
+            >
+              {#each STATUSES as s}
+                <option value={s}>{statusLabel[s]}</option>
+              {/each}
+            </select>
+          </div>
+        </header>
+
+        <div class="customer-card">
+          <div class="avatar">{selected.customerName.slice(0, 1).toUpperCase()}</div>
+          <div>
+            <strong>{selected.customerName}</strong>
+            <div class="contact-line">{selected.customerEmail}</div>
+            <div class="contact-line">{selected.customerPhone}</div>
+          </div>
+          <div class="dates">
+            <span>Creada {formatDate(selected.createdAt)}</span>
+            <span>Act. {formatDate(selected.updatedAt)}</span>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-card">
+            <h3>Servicio</h3>
+            <p>{selected.serviceCategory}</p>
+          </div>
+          <div class="info-card accent">
+            <h3>Visita preferida</h3>
+            <p>{selected.preferredDate}</p>
+            <small>{selected.preferredTimeSlot}</small>
+          </div>
+          <div class="info-card wide">
+            <h3>Dirección</h3>
+            <p>{selected.address || '—'}</p>
+          </div>
+          <div class="info-card wide">
+            <h3>Notas</h3>
+            <p class="notes">{selected.notes || 'Sin notas'}</p>
+          </div>
+        </div>
+
+        <div class="status-steps">
+          <h3>Flujo de estado</h3>
+          <div class="steps">
+            {#each STATUSES as s}
+              <button
+                type="button"
+                class="step"
+                class:current={selected.status === s}
+                class:done={STATUSES.indexOf(selected.status) > STATUSES.indexOf(s) &&
+                  selected.status !== 'cancelled' &&
+                  s !== 'cancelled'}
+                class:cancelled={s === 'cancelled' && selected.status === 'cancelled'}
+                disabled={updatingId === selected.id}
+                onclick={() => changeStatus(selected!, s)}
+              >
+                <span class="dot"></span>
+                {statusLabel[s]}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    </section>
+  {/snippet}
+</ResizableSplit>
 
 <style>
-  .res-shell {
-    display: grid;
-    grid-template-columns: minmax(300px, 380px) 1fr;
-    min-height: 100vh;
-    background: var(--color-bg);
-  }
-
   .list-pane {
-    border-right: 1px solid var(--color-border);
-    background: var(--color-surface);
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    max-height: 100vh;
+    height: 100%;
+    min-height: 0;
   }
   .pane-header {
     display: flex;
@@ -343,10 +317,6 @@
     color: var(--color-text);
     font-size: 16px;
   }
-  .icon-btn:disabled {
-    opacity: 0.5;
-  }
-
   .search-row {
     padding: 0 16px 12px;
   }
@@ -364,7 +334,6 @@
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
   }
-
   .chips {
     display: flex;
     gap: 6px;
@@ -387,7 +356,6 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: 0.15s;
   }
   .chip span {
     background: var(--color-surface-2);
@@ -404,7 +372,6 @@
     background: rgba(255, 255, 255, 0.2);
     color: white;
   }
-
   .banner-error {
     margin: 0 16px 10px;
     background: color-mix(in srgb, #c0392b 12%, var(--color-surface));
@@ -414,7 +381,6 @@
     border-radius: 10px;
     font-size: 12px;
   }
-
   .item-list {
     flex: 1;
     overflow-y: auto;
@@ -430,7 +396,6 @@
     border-radius: 14px;
     padding: 12px 14px;
     color: var(--color-text);
-    transition: 0.15s;
     cursor: pointer;
   }
   .item-card:hover {
@@ -443,7 +408,6 @@
   .item-top {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     margin-bottom: 4px;
   }
   .item-top code {
@@ -458,9 +422,7 @@
   .subject {
     display: block;
     font-size: 13.5px;
-    letter-spacing: -0.02em;
     margin-bottom: 6px;
-    line-height: 1.3;
   }
   .item-meta {
     display: flex;
@@ -471,14 +433,12 @@
   .who {
     font-size: 11px;
     color: var(--color-muted);
-    margin-right: 4px;
   }
   .item-sub {
     margin-top: 6px;
     font-size: 11px;
     color: var(--color-muted);
   }
-
   .badge {
     font-size: 10px;
     font-weight: 800;
@@ -507,7 +467,6 @@
     background: var(--color-surface-2);
     color: var(--color-muted);
   }
-
   .empty-state,
   .empty-detail {
     text-align: center;
@@ -531,16 +490,14 @@
     font-size: 28px;
     border-radius: 18px;
   }
+  .empty-detail {
+    margin: auto;
+  }
   .empty-detail h2 {
     margin: 12px 0 8px;
     color: var(--color-text);
     font-size: 20px;
   }
-  .empty-detail p {
-    margin: 0;
-    max-width: 280px;
-  }
-
   .skeleton-stack {
     display: grid;
     gap: 8px;
@@ -566,12 +523,11 @@
       background-position: -200% 0;
     }
   }
-
   .detail-pane {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    max-height: 100vh;
+    height: 100%;
+    min-height: 0;
     overflow-y: auto;
   }
   .detail-pane.empty {
@@ -582,7 +538,6 @@
     display: flex;
     justify-content: space-between;
     gap: 20px;
-    align-items: flex-start;
     padding: 22px 28px 16px;
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface);
@@ -591,7 +546,6 @@
     margin: 8px 0 0;
     font-size: 22px;
     letter-spacing: -0.03em;
-    line-height: 1.2;
   }
   .code-row {
     display: flex;
@@ -615,7 +569,6 @@
     font-weight: 700;
     color: var(--color-muted);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
   }
   .status-control select {
     border: 1px solid var(--color-border);
@@ -626,7 +579,6 @@
     font-size: 13px;
     font-weight: 600;
   }
-
   .customer-card {
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -647,7 +599,6 @@
     display: grid;
     place-items: center;
     font-weight: 800;
-    font-size: 16px;
   }
   .contact-line {
     font-size: 12px;
@@ -661,7 +612,6 @@
     color: var(--color-muted);
     text-align: right;
   }
-
   .info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -698,15 +648,12 @@
     margin-top: 4px;
     font-size: 12px;
     color: var(--color-muted);
-    font-weight: 500;
   }
   .notes {
     font-weight: 500 !important;
     font-size: 14px !important;
     white-space: pre-wrap;
-    line-height: 1.5;
   }
-
   .status-steps {
     margin: 0 28px 28px;
     padding: 18px 16px;
@@ -737,7 +684,6 @@
     padding: 8px 14px;
     font-size: 12px;
     font-weight: 700;
-    transition: 0.15s;
   }
   .step .dot {
     width: 8px;
@@ -768,24 +714,7 @@
   .step.cancelled .dot {
     background: white;
   }
-  .step:disabled {
-    opacity: 0.6;
-  }
-
   @media (max-width: 900px) {
-    .res-shell {
-      grid-template-columns: 1fr;
-    }
-    .list-pane {
-      max-height: none;
-      min-height: auto;
-      border-right: 0;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .detail-pane {
-      min-height: 70vh;
-      max-height: none;
-    }
     .customer-card {
       grid-template-columns: auto 1fr;
     }

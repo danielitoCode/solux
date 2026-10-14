@@ -9,6 +9,7 @@
   } from '$features/support/domain/entities';
   import { getAuthUser } from '$features/auth/ui/stores/auth.store.svelte';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
+  import ResizableSplit from '$infrastructure/ui/ResizableSplit.svelte';
 
   const STATUSES: TicketStatus[] = [
     'open',
@@ -169,228 +170,192 @@
   onMount(load);
 </script>
 
-<div class="support-shell">
-  <!-- LISTA -->
-  <section class="list-pane">
-    <header class="pane-header">
-      <div>
-        <p class="eyebrow">Backoffice</p>
-        <h1>Soporte</h1>
-      </div>
-      <button type="button" class="icon-btn" onclick={load} disabled={loading} title="Actualizar">
-        {loading ? '…' : '↻'}
-      </button>
-    </header>
-
-    <div class="search-row">
-      <input
-        type="search"
-        placeholder="Buscar código, cliente, asunto…"
-        bind:value={search}
-      />
-    </div>
-
-    <div class="chips" role="tablist">
-      <button
-        type="button"
-        class="chip"
-        class:active={filter === 'all'}
-        onclick={() => (filter = 'all')}
-      >
-        Todos <span>{items.length}</span>
-      </button>
-      {#each STATUSES as s}
-        <button
-          type="button"
-          class="chip"
-          class:active={filter === s}
-          data-status={s}
-          onclick={() => (filter = s)}
-        >
-          {statusLabel[s]} <span>{counts[s] ?? 0}</span>
+<ResizableSplit storageKey="solux-bo-support-split" initialLeft={360} minLeft={280} maxLeft={560}>
+  {#snippet left()}
+    <section class="list-pane">
+      <header class="pane-header">
+        <div>
+          <p class="eyebrow">Backoffice</p>
+          <h1>Soporte</h1>
+        </div>
+        <button type="button" class="icon-btn" onclick={load} disabled={loading} title="Actualizar">
+          {loading ? '…' : '↻'}
         </button>
-      {/each}
-    </div>
-
-    {#if error}
-      <div class="banner-error" role="alert">{error}</div>
-    {/if}
-
-    <div class="ticket-list">
-      {#if loading && items.length === 0}
-        <div class="skeleton-stack">
-          {#each [1, 2, 3, 4] as _}
-            <div class="skeleton-card"></div>
-          {/each}
-        </div>
-      {:else if filtered.length === 0}
-        <div class="empty-state">
-          <div class="empty-icon">◈</div>
-          <p>No hay tickets aquí</p>
-          <small>Cambia el filtro o crea uno de prueba en Supabase</small>
-        </div>
-      {:else}
-        {#each filtered as t (t.id)}
-          <button
-            type="button"
-            class="ticket-card"
-            class:selected={selected?.id === t.id}
-            onclick={() => openTicket(t)}
-          >
-            <div class="ticket-top">
-              <code>{t.trackingCode}</code>
-              <span class="time">{relativeHint(t.createdAt)}</span>
-            </div>
-            <strong class="subject">{t.subject}</strong>
-            <div class="ticket-meta">
-              <span class="who">{t.customerName}</span>
-              <span class="badge status" data-status={t.status}>{statusLabel[t.status]}</span>
-              <span class="badge prio" data-prio={t.priority}>{priorityLabel[t.priority]}</span>
-            </div>
-          </button>
-        {/each}
-      {/if}
-    </div>
-  </section>
-
-  <!-- DETALLE -->
-  <section class="detail-pane" class:empty={!selected}>
-    {#if !selected}
-      <div class="empty-detail">
-        <div class="empty-icon big">✉</div>
-        <h2>Selecciona un ticket</h2>
-        <p>Revisa el hilo, cambia el estado y responde al cliente.</p>
-      </div>
-    {:else}
-      <header class="detail-header">
-        <div class="detail-title">
-          <div class="code-row">
-            <code>{selected.trackingCode}</code>
-            <span class="badge status" data-status={selected.status}
-              >{statusLabel[selected.status]}</span
-            >
-            <span class="badge prio" data-prio={selected.priority}
-              >{priorityLabel[selected.priority]}</span
-            >
-          </div>
-          <h2>{selected.subject}</h2>
-        </div>
-        <div class="status-control">
-          <label for="status-select">Estado</label>
-          <select
-            id="status-select"
-            value={selected.status}
-            disabled={updatingId === selected.id}
-            onchange={(e) =>
-              changeStatus(
-                selected!,
-                (e.currentTarget as HTMLSelectElement).value as TicketStatus
-              )}
-          >
-            {#each STATUSES as s}
-              <option value={s}>{statusLabel[s]}</option>
-            {/each}
-          </select>
-        </div>
       </header>
 
-      <div class="customer-card">
-        <div class="avatar">{selected.customerName.slice(0, 1).toUpperCase()}</div>
-        <div>
-          <strong>{selected.customerName}</strong>
-          <div class="contact-line">{selected.customerEmail}</div>
-          {#if selected.customerPhone}
-            <div class="contact-line">{selected.customerPhone}</div>
-          {/if}
-        </div>
-        <div class="dates">
-          <span>Creado {formatDate(selected.createdAt)}</span>
-          <span>Act. {formatDate(selected.updatedAt)}</span>
-        </div>
+      <div class="search-row">
+        <input type="search" placeholder="Buscar código, cliente, asunto…" bind:value={search} />
       </div>
 
-      <div class="report-box">
-        <h3>Reporte inicial</h3>
-        <p>{selected.description}</p>
+      <div class="chips" role="tablist">
+        <button type="button" class="chip" class:active={filter === 'all'} onclick={() => (filter = 'all')}>
+          Todos <span>{items.length}</span>
+        </button>
+        {#each STATUSES as s}
+          <button type="button" class="chip" class:active={filter === s} onclick={() => (filter = s)}>
+            {statusLabel[s]} <span>{counts[s] ?? 0}</span>
+          </button>
+        {/each}
       </div>
 
-      <div class="thread-wrap">
-        <h3>Conversación</h3>
-        {#if loadingThread}
-          <div class="skeleton-stack compact">
-            <div class="skeleton-card"></div>
-            <div class="skeleton-card"></div>
+      {#if error}
+        <div class="banner-error" role="alert">{error}</div>
+      {/if}
+
+      <div class="ticket-list">
+        {#if loading && items.length === 0}
+          <div class="skeleton-stack">
+            {#each [1, 2, 3, 4] as _}<div class="skeleton-card"></div>{/each}
           </div>
-        {:else if messages.length === 0}
-          <p class="muted-hint">Aún no hay mensajes. Escribe la primera respuesta abajo.</p>
+        {:else if filtered.length === 0}
+          <div class="empty-state">
+            <div class="empty-icon">◈</div>
+            <p>No hay tickets aquí</p>
+            <small>Cambia el filtro o crea uno de prueba en Supabase</small>
+          </div>
         {:else}
-          <ul class="thread">
-            {#each messages as m (m.id)}
-              <li
-                class:from-agent={m.author === 'agent'}
-                class:from-customer={m.author === 'customer'}
-                class:internal={m.isInternal}
-              >
-                <div class="bubble">
-                  <div class="bubble-head">
-                    <strong>{m.authorName}</strong>
-                    {#if m.isInternal}<em>interno</em>{/if}
-                    <time>{formatDate(m.createdAt)}</time>
-                  </div>
-                  <p>{m.body}</p>
-                </div>
-              </li>
-            {/each}
-          </ul>
+          {#each filtered as t (t.id)}
+            <button
+              type="button"
+              class="ticket-card"
+              class:selected={selected?.id === t.id}
+              onclick={() => openTicket(t)}
+            >
+              <div class="ticket-top">
+                <code>{t.trackingCode}</code>
+                <span class="time">{relativeHint(t.createdAt)}</span>
+              </div>
+              <strong class="subject">{t.subject}</strong>
+              <div class="ticket-meta">
+                <span class="who">{t.customerName}</span>
+                <span class="badge status" data-status={t.status}>{statusLabel[t.status]}</span>
+                <span class="badge prio" data-prio={t.priority}>{priorityLabel[t.priority]}</span>
+              </div>
+            </button>
+          {/each}
         {/if}
       </div>
+    </section>
+  {/snippet}
 
-      <footer class="composer">
-        <textarea
-          rows="3"
-          placeholder={replyInternal
-            ? 'Nota interna (solo staff)…'
-            : 'Escribe una respuesta al cliente…'}
-          bind:value={reply}
-          onkeydown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendReply();
-          }}
-        ></textarea>
-        <div class="composer-bar">
-          <label class="toggle">
-            <input type="checkbox" bind:checked={replyInternal} />
-            <span>Nota interna</span>
-          </label>
-          <button
-            type="button"
-            class="btn btn-primary"
-            disabled={sending || !reply.trim()}
-            onclick={sendReply}
-          >
-            {sending ? 'Enviando…' : replyInternal ? 'Guardar nota' : 'Enviar respuesta'}
-          </button>
+  {#snippet right()}
+    <section class="detail-pane" class:empty={!selected}>
+      {#if !selected}
+        <div class="empty-detail">
+          <div class="empty-icon big">✉</div>
+          <h2>Selecciona un ticket</h2>
+          <p>Revisa el hilo, cambia el estado y responde al cliente.</p>
         </div>
-      </footer>
-    {/if}
-  </section>
-</div>
+      {:else}
+        <header class="detail-header">
+          <div class="detail-title">
+            <div class="code-row">
+              <code>{selected.trackingCode}</code>
+              <span class="badge status" data-status={selected.status}>{statusLabel[selected.status]}</span>
+              <span class="badge prio" data-prio={selected.priority}>{priorityLabel[selected.priority]}</span>
+            </div>
+            <h2>{selected.subject}</h2>
+          </div>
+          <div class="status-control">
+            <label for="status-select">Estado</label>
+            <select
+              id="status-select"
+              value={selected.status}
+              disabled={updatingId === selected.id}
+              onchange={(e) =>
+                changeStatus(selected!, (e.currentTarget as HTMLSelectElement).value as TicketStatus)}
+            >
+              {#each STATUSES as s}
+                <option value={s}>{statusLabel[s]}</option>
+              {/each}
+            </select>
+          </div>
+        </header>
+
+        <div class="customer-card">
+          <div class="avatar">{selected.customerName.slice(0, 1).toUpperCase()}</div>
+          <div>
+            <strong>{selected.customerName}</strong>
+            <div class="contact-line">{selected.customerEmail}</div>
+            {#if selected.customerPhone}<div class="contact-line">{selected.customerPhone}</div>{/if}
+          </div>
+          <div class="dates">
+            <span>Creado {formatDate(selected.createdAt)}</span>
+            <span>Act. {formatDate(selected.updatedAt)}</span>
+          </div>
+        </div>
+
+        <div class="report-box">
+          <h3>Reporte inicial</h3>
+          <p>{selected.description}</p>
+        </div>
+
+        <div class="thread-wrap">
+          <h3>Conversación</h3>
+          {#if loadingThread}
+            <div class="skeleton-stack compact">
+              <div class="skeleton-card"></div>
+              <div class="skeleton-card"></div>
+            </div>
+          {:else if messages.length === 0}
+            <p class="muted-hint">Aún no hay mensajes. Escribe la primera respuesta abajo.</p>
+          {:else}
+            <ul class="thread">
+              {#each messages as m (m.id)}
+                <li
+                  class:from-agent={m.author === 'agent'}
+                  class:from-customer={m.author === 'customer'}
+                  class:internal={m.isInternal}
+                >
+                  <div class="bubble">
+                    <div class="bubble-head">
+                      <strong>{m.authorName}</strong>
+                      {#if m.isInternal}<em>interno</em>{/if}
+                      <time>{formatDate(m.createdAt)}</time>
+                    </div>
+                    <p>{m.body}</p>
+                  </div>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+
+        <footer class="composer">
+          <textarea
+            rows="3"
+            placeholder={replyInternal ? 'Nota interna (solo staff)…' : 'Escribe una respuesta al cliente…'}
+            bind:value={reply}
+            onkeydown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendReply();
+            }}
+          ></textarea>
+          <div class="composer-bar">
+            <label class="toggle">
+              <input type="checkbox" bind:checked={replyInternal} />
+              <span>Nota interna</span>
+            </label>
+            <button
+              type="button"
+              class="btn btn-primary"
+              disabled={sending || !reply.trim()}
+              onclick={sendReply}
+            >
+              {sending ? 'Enviando…' : replyInternal ? 'Guardar nota' : 'Enviar respuesta'}
+            </button>
+          </div>
+        </footer>
+      {/if}
+    </section>
+  {/snippet}
+</ResizableSplit>
 
 <style>
-  .support-shell {
-    display: grid;
-    grid-template-columns: minmax(300px, 380px) 1fr;
-    min-height: 100vh;
-    background: var(--color-bg);
-  }
-
-  /* —— Lista —— */
   .list-pane {
-    border-right: 1px solid var(--color-border);
-    background: var(--color-surface);
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    max-height: 100vh;
+    height: 100%;
+    min-height: 0;
   }
   .pane-header {
     display: flex;
@@ -423,7 +388,6 @@
   .icon-btn:disabled {
     opacity: 0.5;
   }
-
   .search-row {
     padding: 0 16px 12px;
   }
@@ -441,7 +405,6 @@
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
   }
-
   .chips {
     display: flex;
     gap: 6px;
@@ -464,7 +427,6 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: 0.15s;
   }
   .chip span {
     background: var(--color-surface-2);
@@ -481,7 +443,6 @@
     background: rgba(255, 255, 255, 0.2);
     color: white;
   }
-
   .banner-error {
     margin: 0 16px 10px;
     background: color-mix(in srgb, #c0392b 12%, var(--color-surface));
@@ -491,7 +452,6 @@
     border-radius: 10px;
     font-size: 12px;
   }
-
   .ticket-list {
     flex: 1;
     overflow-y: auto;
@@ -507,7 +467,6 @@
     border-radius: 14px;
     padding: 12px 14px;
     color: var(--color-text);
-    transition: 0.15s;
     cursor: pointer;
   }
   .ticket-card:hover {
@@ -520,7 +479,6 @@
   .ticket-top {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     margin-bottom: 4px;
   }
   .ticket-top code {
@@ -535,9 +493,7 @@
   .subject {
     display: block;
     font-size: 13.5px;
-    letter-spacing: -0.02em;
     margin-bottom: 8px;
-    line-height: 1.3;
   }
   .ticket-meta {
     display: flex;
@@ -548,9 +504,7 @@
   .who {
     font-size: 11px;
     color: var(--color-muted);
-    margin-right: 4px;
   }
-
   .badge {
     font-size: 10px;
     font-weight: 800;
@@ -595,7 +549,6 @@
     background: color-mix(in srgb, #e74c3c 18%, transparent);
     color: #c0392b;
   }
-
   .empty-state,
   .empty-detail {
     text-align: center;
@@ -619,23 +572,18 @@
     font-size: 28px;
     border-radius: 18px;
   }
+  .empty-detail {
+    margin: auto;
+  }
   .empty-detail h2 {
     margin: 12px 0 8px;
     color: var(--color-text);
     font-size: 20px;
   }
-  .empty-detail p {
-    margin: 0;
-    max-width: 280px;
-  }
-
   .skeleton-stack {
     display: grid;
     gap: 8px;
     padding: 4px;
-  }
-  .skeleton-stack.compact {
-    padding: 0;
   }
   .skeleton-card {
     height: 72px;
@@ -657,13 +605,11 @@
       background-position: -200% 0;
     }
   }
-
-  /* —— Detalle —— */
   .detail-pane {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    max-height: 100vh;
+    height: 100%;
+    min-height: 0;
     overflow: hidden;
   }
   .detail-pane.empty {
@@ -674,7 +620,6 @@
     display: flex;
     justify-content: space-between;
     gap: 20px;
-    align-items: flex-start;
     padding: 22px 28px 16px;
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface);
@@ -683,7 +628,6 @@
     margin: 8px 0 0;
     font-size: 22px;
     letter-spacing: -0.03em;
-    line-height: 1.2;
   }
   .code-row {
     display: flex;
@@ -707,7 +651,6 @@
     font-weight: 700;
     color: var(--color-muted);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
   }
   .status-control select {
     border: 1px solid var(--color-border);
@@ -718,7 +661,6 @@
     font-size: 13px;
     font-weight: 600;
   }
-
   .customer-card {
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -739,7 +681,6 @@
     display: grid;
     place-items: center;
     font-weight: 800;
-    font-size: 16px;
   }
   .contact-line {
     font-size: 12px;
@@ -753,7 +694,6 @@
     color: var(--color-muted);
     text-align: right;
   }
-
   .report-box {
     margin: 14px 28px 0;
     padding: 14px 16px;
@@ -774,7 +714,6 @@
     line-height: 1.55;
     white-space: pre-wrap;
   }
-
   .thread-wrap {
     flex: 1;
     overflow-y: auto;
@@ -805,9 +744,6 @@
   .thread li.from-agent {
     justify-content: flex-end;
   }
-  .thread li.from-customer {
-    justify-content: flex-start;
-  }
   .bubble {
     max-width: min(420px, 92%);
     padding: 12px 14px;
@@ -826,20 +762,17 @@
   .thread li.internal .bubble {
     border-style: dashed;
     background: var(--color-surface-2);
-    opacity: 0.95;
   }
   .bubble-head {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    align-items: baseline;
     margin-bottom: 6px;
     font-size: 11px;
     color: var(--color-muted);
   }
   .bubble-head strong {
     color: var(--color-text);
-    font-size: 12px;
   }
   .bubble-head em {
     font-style: normal;
@@ -854,7 +787,6 @@
     line-height: 1.5;
     white-space: pre-wrap;
   }
-
   .composer {
     border-top: 1px solid var(--color-border);
     background: var(--color-surface);
@@ -890,27 +822,11 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--color-muted);
-    cursor: pointer;
   }
   .composer .btn:disabled {
     opacity: 0.55;
-    transform: none;
   }
-
   @media (max-width: 900px) {
-    .support-shell {
-      grid-template-columns: 1fr;
-    }
-    .list-pane {
-      max-height: none;
-      min-height: auto;
-      border-right: 0;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .detail-pane {
-      min-height: 70vh;
-      max-height: none;
-    }
     .customer-card {
       grid-template-columns: auto 1fr;
     }
