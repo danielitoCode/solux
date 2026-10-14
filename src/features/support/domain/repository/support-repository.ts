@@ -1,5 +1,4 @@
-import type { SupportTicket } from '../entities';
-import type { TicketMessage } from '../entities/ticket-message';
+import type { SupportTicket, TicketMessage } from '../entities';
 
 export interface CreateTicketInput {
   customerName: string;
@@ -15,5 +14,12 @@ export interface SupportRepository {
   getByTrackingCode(code: string): Promise<SupportTicket | null>;
   getMessagesByTrackingCode(code: string): Promise<TicketMessage[]>;
   listAll(): Promise<SupportTicket[]>;
+  listMessages(ticketId: string): Promise<TicketMessage[]>;
+  addAgentMessage(
+    ticketId: string,
+    authorName: string,
+    body: string,
+    isInternal?: boolean
+  ): Promise<TicketMessage>;
   updateStatus(id: string, status: SupportTicket['status']): Promise<SupportTicket>;
 }
