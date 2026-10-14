@@ -2,9 +2,12 @@
   import '../app.css';
   import Header from '$features/presentation/ui/components/Header.svelte';
   import Footer from '$features/presentation/ui/components/Footer.svelte';
+  import { page } from '$app/stores';
   import { onMount } from 'svelte';
 
   let { children } = $props();
+
+  const isBackoffice = $derived($page.url.pathname.startsWith('/backoffice'));
 
   onMount(() => {
     const saved = localStorage.getItem('solux-theme') || 'light';
@@ -12,13 +15,22 @@
   });
 </script>
 
-<div class="ambient ambient-a"></div>
-<div class="ambient ambient-b"></div>
+{#if !isBackoffice}
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <Header />
+{/if}
 
-<Header />
-
-<main>
+<main class:bo-full={isBackoffice}>
   {@render children()}
 </main>
 
-<Footer />
+{#if !isBackoffice}
+  <Footer />
+{/if}
+
+<style>
+  .bo-full {
+    min-height: 100vh;
+  }
+</style>
