@@ -1,0 +1,54 @@
+/* SOLUX Design Tokens — extracted from prototype */
+:root {
+  /* Color */
+  --color-bg: #f5f8f4;
+  --color-surface: #ffffff;
+  --color-surface-2: #edf4ee;
+  --color-text: #173d29;
+  --color-muted: #526257;
+  --color-primary: #08783e;
+  --color-primary-2: #35b85a;
+  --color-primary-hover: #066331;
+  --color-accent: #ffbf19;
+  --color-border: #dce6dc;
+  --color-shadow: 0 18px 60px rgba(8, 67, 36, 0.1);
+
+  /* Radius */
+  --radius-sm: 12px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-2xl: 32px;
+
+  /* Layout */
+  --max-width: 1180px;
+  --header-height: 74px;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 0.2s;
+  --duration-base: 0.3s;
+  --duration-slow: 0.55s;
+}
+
+[data-theme='dark'] {
+  --color-bg: #101713;
+  --color-surface: #18231c;
+  --color-surface-2: #223128;
+  --color-text: #f1f7f1;
+  --color-muted: #b6c6b9;
+  --color-primary: #35b85a;
+  --color-primary-2: #53cc73;
+  --color-primary-hover: #64d584;
+  --color-accent: #ffcb45;
+  --color-border: #304136;
+  --color-shadow: 0 20px 70px rgba(0, 0, 0, 0.28);
+}
