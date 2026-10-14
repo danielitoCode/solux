@@ -1,104 +1,13 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { getCatalogRepository } from '$features/catalog/di';
   import type { CatalogItem } from '$features/catalog/domain/entities';
+  import { devError } from '$infrastructure/ui/dev-logger';
 
-  /** Mock data — will come from Supabase via repository */
-  const items: CatalogItem[] = [
-    {
-      id: '1',
-      type: 'product',
-      category: 'solar_panels',
-      name: 'Panel Monocristalino 550W',
-      shortDescription: 'Alta eficiencia para residencial y comercial.',
-      description: 'Módulo fotovoltaico monocristalino de 550W con garantía de rendimiento.',
-      price: 180,
-      currency: 'USD',
-      features: ['Eficiencia >21%', 'Garantía 25 años', 'Resistente a salinidad'],
-      isActive: true,
-      isFeatured: true,
-      sortOrder: 1,
-      createdAt: '',
-      updatedAt: ''
-    },
-    {
-      id: '2',
-      type: 'product',
-      category: 'inverters',
-      name: 'Inversor Híbrido 5kW',
-      shortDescription: 'Gestión inteligente de red + batería.',
-      description: 'Inversor híbrido con monitoreo remoto y priorización de cargas.',
-      price: 890,
-      currency: 'USD',
-      features: ['MPPT dual', 'App de monitoreo', 'Respaldo automático'],
-      isActive: true,
-      isFeatured: true,
-      sortOrder: 2,
-      createdAt: '',
-      updatedAt: ''
-    },
-    {
-      id: '3',
-      type: 'product',
-      category: 'batteries',
-      name: 'Batería LiFePO4 5kWh',
-      shortDescription: 'Almacenamiento seguro y de larga vida.',
-      description: 'Batería de litio hierro fosfato para uso diario y respaldo.',
-      price: 1200,
-      currency: 'USD',
-      features: ['6000+ ciclos', 'BMS integrado', 'Expandible'],
-      isActive: true,
-      isFeatured: false,
-      sortOrder: 3,
-      createdAt: '',
-      updatedAt: ''
-    },
-    {
-      id: '4',
-      type: 'service',
-      category: 'solar_kits',
-      name: 'Kit solar residencial 3kW',
-      shortDescription: 'Paquete completo listo para instalar.',
-      description: 'Incluye paneles, inversor, estructura y cableado dimensionado.',
-      price: 2800,
-      currency: 'USD',
-      features: ['Instalación incluida', 'Visita técnica', 'Garantía de obra'],
-      isActive: true,
-      isFeatured: true,
-      sortOrder: 4,
-      createdAt: '',
-      updatedAt: ''
-    },
-    {
-      id: '5',
-      type: 'service',
-      category: 'electrical_installation',
-      name: 'Instalación eléctrica completa',
-      shortDescription: 'Residencial, comercial e industrial.',
-      description: 'Diseño, materiales e instalación según normas vigentes.',
-      features: ['Diseño certificado', 'Materiales de calidad', 'Pruebas finales'],
-      currency: 'USD',
-      isActive: true,
-      isFeatured: false,
-      sortOrder: 5,
-      createdAt: '',
-      updatedAt: ''
-    },
-    {
-      id: '6',
-      type: 'service',
-      category: 'maintenance',
-      name: 'Mantenimiento preventivo',
-      shortDescription: 'Revisión y limpieza de sistemas solares.',
-      description: 'Diagnóstico, limpieza de paneles y reporte de estado.',
-      price: 80,
-      currency: 'USD',
-      features: ['Inspección térmica', 'Limpieza', 'Informe'],
-      isActive: true,
-      isFeatured: false,
-      sortOrder: 6,
-      createdAt: '',
-      updatedAt: ''
-    }
-  ];
+  let items = $state<CatalogItem[]>([]);
+  let loading = $state(true);
+  let error = $state('');
+  let activeImage = $state<Record<string, number>>({});
 
   const categoryLabel: Record<string, string> = {
     solar_panels: 'Paneles',
@@ -112,6 +21,25 @@
     maintenance: 'Mantenimiento',
     advisory: 'Asesoría'
   };
+
+  async function load() {
+    loading = true;
+    error = '';
+    try {
+      items = await getCatalogRepository().listActive();
+    } catch (e) {
+      devError('catalog-page', 'listActive failed', e);
+      error = e instanceof Error ? e.message : 'No se pudo cargar el catálogo';
+    } finally {
+      loading = false;
+    }
+  }
+
+  function setImage(itemId: string, index: number) {
+    activeImage = { ...activeImage, [itemId]: index };
+  }
+
+  onMount(load);
 </script>
 
 <section class="page">
@@ -123,40 +51,76 @@
     <p>Carta de equipos y servicios que instalamos y mantenemos. Precios orientativos; cada proyecto se dimensiona a medida.</p>
   </div>
 
-  <div class="grid grid-3">
-    {#each items as item}
-      <article class="card catalog-card">
-        <div class="catalog-badge">{item.type === 'product' ? 'Producto' : 'Servicio'}</div>
-        <div class="icon">
-          {#if item.category === 'solar_panels'}☀
-          {:else if item.category === 'inverters'}◈
-          {:else if item.category === 'batteries'}▣
-          {:else if item.category === 'solar_kits'}✦
-          {:else if item.category === 'maintenance'}✓
-          {:else}⌁
-          {/if}
-        </div>
-        <p class="cat-label">{categoryLabel[item.category] ?? item.category}</p>
-        <h3>{item.name}</h3>
-        <p>{item.shortDescription}</p>
-        {#if item.features?.length}
-          <ul class="feat-list">
-            {#each item.features.slice(0, 3) as f}
-              <li>{f}</li>
-            {/each}
-          </ul>
-        {/if}
-        <div class="catalog-footer">
-          {#if item.price}
-            <strong class="price">desde {item.price} {item.currency}</strong>
+  {#if loading}
+    <div class="grid grid-3">
+      {#each [1, 2, 3] as _}<article class="card catalog-card skeleton"></article>{/each}
+    </div>
+  {:else if error}
+    <div class="banner-error" role="alert">{error}</div>
+  {:else}
+    <div class="grid grid-3">
+      {#each items as item (item.id)}
+        {@const images = item.imageUrls ?? []}
+        {@const imageIndex = activeImage[item.id] ?? 0}
+        <article class="card catalog-card">
+          <div class="catalog-badge">{item.type === 'product' ? 'Producto' : 'Servicio'}</div>
+
+          {#if images.length}
+            <div class="catalog-media">
+              <a href={images[imageIndex]} target="_blank" rel="noopener noreferrer">
+                <img src={images[imageIndex]} alt={item.name} loading="lazy" />
+              </a>
+              {#if images.length > 1}
+                <div class="image-strip" aria-label="Fotos de {item.name}">
+                  {#each images as image, index}
+                    <button
+                      type="button"
+                      class:active={index === imageIndex}
+                      aria-label={`Ver foto ${index + 1}`}
+                      onclick={() => setImage(item.id, index)}
+                    >
+                      <img src={image} alt="" loading="lazy" />
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
           {:else}
-            <strong class="price">A consultar</strong>
+            <div class="icon">
+              {#if item.category === 'solar_panels'}☀
+              {:else if item.category === 'inverters'}◈
+              {:else if item.category === 'batteries'}▣
+              {:else if item.category === 'solar_kits'}✦
+              {:else if item.category === 'maintenance'}✓
+              {:else}⌁
+              {/if}
+            </div>
           {/if}
-          <a class="btn btn-small btn-primary" href="/reservas">Solicitar</a>
-        </div>
-      </article>
-    {/each}
-  </div>
+
+          <p class="cat-label">{categoryLabel[item.category] ?? item.category}</p>
+          <h3>{item.name}</h3>
+          <p>{item.shortDescription}</p>
+          {#if item.features?.length}
+            <ul class="feat-list">
+              {#each item.features.slice(0, 3) as feature}
+                <li>{feature}</li>
+              {/each}
+            </ul>
+          {/if}
+          <div class="catalog-footer">
+            {#if item.price != null}
+              <strong class="price">desde {item.price} {item.currency}</strong>
+            {:else}
+              <strong class="price">A consultar</strong>
+            {/if}
+            <a class="btn btn-small btn-primary" href="/reservas">Solicitar</a>
+          </div>
+        </article>
+      {:else}
+        <div class="empty-state">Catálogo sin productos publicados.</div>
+      {/each}
+    </div>
+  {/if}
 
   <div class="banner" style="margin-top: 45px">
     <div>
@@ -177,6 +141,7 @@
     position: absolute;
     top: 16px;
     right: 16px;
+    z-index: 2;
     font-size: 10px;
     font-weight: 800;
     text-transform: uppercase;
@@ -186,6 +151,43 @@
     background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     color: var(--color-primary);
   }
+  .catalog-media {
+    margin: -6px -6px 18px;
+  }
+  .catalog-media > a {
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: 18px;
+    background: var(--color-surface-2, #f3f5f4);
+  }
+  .catalog-media > a img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .image-strip {
+    display: flex;
+    gap: 6px;
+    margin-top: 7px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .image-strip button {
+    flex: 0 0 48px;
+    width: 48px;
+    height: 38px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    overflow: hidden;
+    background: transparent;
+    cursor: pointer;
+  }
+  .image-strip button.active { border-color: var(--color-primary); }
+  .image-strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .catalog-card > .icon { margin-top: 6px; }
   .cat-label {
     font-size: 11px;
     font-weight: 700;
@@ -194,23 +196,9 @@
     letter-spacing: 0.06em;
     margin-bottom: 6px !important;
   }
-  .feat-list {
-    list-style: none;
-    padding: 0;
-    margin: 14px 0 0;
-    flex: 1;
-  }
-  .feat-list li {
-    font-size: 12px;
-    color: var(--color-muted);
-    margin: 6px 0;
-  }
-  .feat-list li::before {
-    content: '·';
-    color: var(--color-primary-2);
-    font-weight: 800;
-    margin-right: 6px;
-  }
+  .feat-list { list-style: none; padding: 0; margin: 14px 0 0; flex: 1; }
+  .feat-list li { font-size: 12px; color: var(--color-muted); margin: 6px 0; }
+  .feat-list li::before { content: '·'; color: var(--color-primary-2); font-weight: 800; margin-right: 6px; }
   .catalog-footer {
     display: flex;
     align-items: center;
@@ -219,10 +207,8 @@
     padding-top: 16px;
     border-top: 1px solid var(--color-border);
   }
-  .price {
-    font-size: 15px;
-    color: var(--color-text);
-  }
+  .price { font-size: 15px; color: var(--color-text); }
+  .skeleton { min-height: 360px; }
   .banner {
     border-radius: 26px;
     padding: 30px;
@@ -233,16 +219,9 @@
     align-items: center;
     gap: 20px;
   }
-  .banner p {
-    margin: 6px 0 0;
-    opacity: 0.8;
-  }
+  .banner p { margin: 6px 0 0; opacity: 0.8; }
   @media (max-width: 600px) {
-    .banner {
-      display: block;
-    }
-    .banner .btn {
-      margin-top: 18px;
-    }
+    .banner { display: block; }
+    .banner .btn { margin-top: 18px; }
   }
 </style>
