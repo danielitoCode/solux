@@ -63,6 +63,7 @@ export interface Database {
           vision: string;
           years_of_experience: number;
           completed_projects: number;
+          logo_url: string | null;
           updated_at: string;
         };
         Insert: {
@@ -74,6 +75,7 @@ export interface Database {
           vision?: string;
           years_of_experience?: number;
           completed_projects?: number;
+          logo_url?: string | null;
         };
         Update: Partial<Database['public']['Tables']['company_profile']['Insert']>;
       };
