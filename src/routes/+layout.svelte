@@ -2,8 +2,10 @@
   import '../app.css';
   import Header from '$features/presentation/ui/components/Header.svelte';
   import Footer from '$features/presentation/ui/components/Footer.svelte';
+  import DevDebugPanel from '$infrastructure/ui/DevDebugPanel.svelte';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
+  import { devLog } from '$infrastructure/ui/dev-logger';
 
   let { children } = $props();
 
@@ -12,6 +14,7 @@
   onMount(() => {
     const saved = localStorage.getItem('solux-theme') || 'light';
     document.documentElement.dataset.theme = saved;
+    devLog('app', 'mount', { path: location.pathname });
   });
 </script>
 
@@ -28,6 +31,8 @@
 {#if !isBackoffice}
   <Footer />
 {/if}
+
+<DevDebugPanel />
 
 <style>
   .bo-full {

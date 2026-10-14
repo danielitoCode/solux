@@ -1,7 +1,8 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { login, getAuthUser, initAuth, isAuthLoading } from '../stores/auth.store';
+  import { login, getAuthUser, initAuth, isAuthLoading } from '../stores/auth.store.svelte';
   import { onMount } from 'svelte';
+  import { devLog } from '$infrastructure/ui/dev-logger';
 
   let email = $state('');
   let password = $state('');
@@ -9,6 +10,7 @@
   let submitting = $state(false);
 
   onMount(async () => {
+    devLog('login-page', 'mount');
     await initAuth();
     if (getAuthUser()) {
       goto('/backoffice');
@@ -25,6 +27,7 @@
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesión';
       error = msg.includes('Invalid') ? 'Email o contraseña incorrectos' : msg;
+      devLog('login-page', 'submit failed', msg);
     } finally {
       submitting = false;
     }
@@ -82,10 +85,11 @@
 
 <style>
   .login-page {
-    min-height: calc(100vh - var(--header-height) - 120px);
+    min-height: 100vh;
     display: grid;
     place-items: center;
     padding: 40px 20px;
+    background: var(--color-bg);
   }
   .login-card {
     width: 100%;

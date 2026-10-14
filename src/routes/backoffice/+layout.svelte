@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { logout, initAuth, getAuthUser } from '$features/auth/ui/stores/auth.store';
+  import { logout, initAuth, getAuthUser } from '$features/auth/ui/stores/auth.store.svelte';
   import type { User, UserRole } from '$features/auth/domain/entities';
   import { onMount } from 'svelte';
 
