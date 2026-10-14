@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
 
-  type Profile = { id?: string; name: string; tagline: string; about: string; mission: string; vision: string; years_of_experience: number; completed_projects: number };
+  type Profile = { id?: string; name: string; tagline: string; about: string; mission: string; vision: string; years_of_experience: number; completed_projects: number; logo_url?: string | null };
   type Contact = { id?: string; email: string; phone: string; whatsapp: string | null; address: string; city: string; country: string; map_url: string | null };
   type Hours = { id?: string; day: string; open_time: string | null; close_time: string | null; is_closed: boolean };
 
@@ -15,6 +15,7 @@
   let hours = $state<Hours[]>(days.map(([day]) => ({ day, open_time: '08:00', close_time: '17:00', is_closed: false })));
   let loading = $state(true);
   let saving = $state(false);
+  let uploadingLogo = $state(false);
   let error = $state('');
   let success = $state('');
 
@@ -64,6 +65,41 @@
     } finally { saving = false; }
   }
 
+  async function uploadLogo(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    error = ''; success = '';
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      error = 'Formato no válido. Usa PNG, JPG o WebP.'; input.value = ''; return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      error = 'El logo supera 2 MB.'; input.value = ''; return;
+    }
+    uploadingLogo = true;
+    try {
+      if (!profile.id) {
+        const { data, error: insertError } = await supabase.from('company_profile').insert({
+          name: profile.name || 'SOLUX', tagline: profile.tagline, about: profile.about,
+          mission: profile.mission, vision: profile.vision,
+          years_of_experience: profile.years_of_experience, completed_projects: profile.completed_projects
+        }).select('id').single();
+        if (insertError) throw insertError;
+        profile.id = data.id;
+      }
+      const path = `company-logo/${profile.id}/logo-${Date.now()}.${file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/webp' ? 'webp' : 'png'}`;
+      const { error: uploadError } = await supabase.storage.from('company-assets').upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data: publicData } = supabase.storage.from('company-assets').getPublicUrl(path);
+      const { error: updateError } = await supabase.from('company_profile').update({ logo_url: publicData.publicUrl }).eq('id', profile.id);
+      if (updateError) throw updateError;
+      profile.logo_url = publicData.publicUrl;
+      success = 'Logo actualizado.';
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudo subir el logo.';
+    } finally { uploadingLogo = false; input.value = ''; }
+  }
+
   onMount(load);
 </script>
 
@@ -80,6 +116,13 @@
     <form onsubmit={(event) => { event.preventDefault(); save(); }}>
       <section class="panel">
         <h2>Identidad y portada</h2>
+        <div class="logo-upload">
+          {#if profile.logo_url}<img src={profile.logo_url} alt="Logo actual de la empresa" />{/if}
+          <label>Logo de la empresa (PNG, JPG o WebP; máximo 2 MB)
+            <input type="file" accept="image/png,image/jpeg,image/webp" onchange={uploadLogo} disabled={uploadingLogo} />
+          </label>
+          {#if uploadingLogo}<small>Subiendo logo…</small>{/if}
+        </div>
         <div class="fields">
           <label>Nombre de empresa<input bind:value={profile.name} required /></label>
           <label>Eslogan<input bind:value={profile.tagline} /></label>
@@ -127,6 +170,7 @@
   .eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--color-primary)}
   .panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:18px;padding:22px;margin:18px 0}
   h2{font-size:17px;margin:0 0 18px}
+  .logo-upload{display:flex;align-items:center;gap:18px;margin-bottom:20px;flex-wrap:wrap}.logo-upload img{width:88px;height:88px;object-fit:contain;border:1px solid var(--color-border);border-radius:12px;padding:8px;background:white}.logo-upload label{min-width:240px}.logo-upload input{margin-top:4px}
   .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
   label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:var(--color-muted)}
   input,textarea{width:100%;box-sizing:border-box;border:1px solid var(--color-border);border-radius:9px;padding:10px 11px;background:var(--color-background);color:var(--color-text);font:inherit;font-size:14px}
