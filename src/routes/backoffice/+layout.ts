@@ -22,6 +22,11 @@ export const load: LayoutLoad = async ({ url }) => {
       throw redirect(303, `/backoffice/login?redirect=${encodeURIComponent(url.pathname)}`);
     }
 
+    if (url.pathname.startsWith('/backoffice/usuarios') && user.role !== 'admin') {
+      devLog('guard', 'users management requires admin', { role: user.role });
+      throw redirect(303, '/backoffice');
+    }
+
     devLog('guard', 'ok', { email: user.email, role: user.role });
     return { user };
   } catch (e) {
