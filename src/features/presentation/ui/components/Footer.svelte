@@ -1,8 +1,19 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { supabase } from '$infrastructure/data/supabase-client';
+  let companyName = $state('SOLUX');
+  let logoUrl = $state('');
+  onMount(async () => {
+    const { data } = await supabase.from('company_profile').select('name, logo_url').limit(1).maybeSingle();
+    if (data) { companyName = data.name || 'SOLUX'; logoUrl = data.logo_url || ''; }
+  });
+</script>
+
 <footer class="footer">
   <div>
     <div class="brand footer-brand">
-      <span class="brand-mark"><span></span></span>
-      <span>SOLUX</span>
+      {#if logoUrl}<img class="company-logo" src={logoUrl} alt={`Logo de ${companyName}`} />{:else}<span class="brand-mark"><span></span></span>{/if}
+      <span>{companyName}</span>
     </div>
     <p>Energía solar · Ingeniería eléctrica</p>
   </div>
@@ -36,6 +47,7 @@
     gap: 10px;
     font-weight: 800;
   }
+  .company-logo { width: 30px; height: 30px; object-fit: contain; border-radius: 7px; }
   .brand-mark {
     width: 28px;
     height: 28px;
