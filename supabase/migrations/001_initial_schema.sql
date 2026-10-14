@@ -1,32 +1,50 @@
--- SOLUX — schema inicial
+-- SOLUX — schema inicial (idempotent enums)
 -- Clientes NO se autentican. Staff: admin | support | sales
 -- Seguimiento cliente: tracking_code en reservations y support_tickets
 
--- Extensions
 create extension if not exists "pgcrypto";
 
--- Enums
-create type user_role as enum ('admin', 'support', 'sales');
-create type catalog_item_type as enum ('product', 'service');
-create type catalog_category as enum (
+-- Enums (safe si ya existen)
+do $$ begin create type user_role as enum ('admin', 'support', 'sales');
+exception when duplicate_object then null; end $$;
+
+do $$ begin create type catalog_item_type as enum ('product', 'service');
+exception when duplicate_object then null; end $$;
+
+do $$ begin create type catalog_category as enum (
   'solar_panels', 'inverters', 'batteries', 'solar_kits', 'power_stations',
   'grounding', 'electrical_installation', 'electrical_repair', 'maintenance', 'advisory'
 );
-create type reservation_status as enum ('pending', 'confirmed', 'in_progress', 'completed', 'cancelled');
-create type ticket_status as enum ('open', 'in_progress', 'waiting_customer', 'resolved', 'closed');
-create type ticket_priority as enum ('low', 'medium', 'high', 'urgent');
-create type message_author as enum ('customer', 'agent', 'system');
-create type contact_subject as enum ('quote', 'general', 'partnership', 'other');
-create type day_of_week as enum ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
-create type service_category as enum (
+exception when duplicate_object then null; end $$;
+
+do $$ begin create type reservation_status as enum ('pending', 'confirmed', 'in_progress', 'completed', 'cancelled');
+exception when duplicate_object then null; end $$;
+
+do $$ begin create type ticket_status as enum ('open', 'in_progress', 'waiting_customer', 'resolved', 'closed');
+exception when duplicate_object then null; end $$;
+
+do $$ begin create type ticket_priority as enum ('low', 'medium', 'high', 'urgent');
+exception when duplicate_object then null; end $$;
+
+do $$ begin create type message_author as enum ('customer', 'agent', 'system');
+exception when duplicate_object then null; end $$;
+
+do $$ begin create type contact_subject as enum ('quote', 'general', 'partnership', 'other');
+exception when duplicate_object then null; end $$;
+
+do $$ begin create type day_of_week as enum ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
+exception when duplicate_object then null; end $$;
+
+do $$ begin create type service_category as enum (
   'solar_panels', 'solar_kits', 'power_stations', 'grounding',
   'electrical_repair', 'electrical_installation'
 );
+exception when duplicate_object then null; end $$;
 
 -- ============================================================
--- STAFF PROFILES (solo usuarios internos, vinculados a auth.users)
+-- STAFF PROFILES
 -- ============================================================
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   email text not null unique,
   full_name text not null,
@@ -40,7 +58,7 @@ create table public.profiles (
 -- ============================================================
 -- PRESENTATION
 -- ============================================================
-create table public.company_profile (
+create table if not exists public.company_profile (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   tagline text not null default '',
@@ -52,7 +70,7 @@ create table public.company_profile (
   updated_at timestamptz not null default now()
 );
 
-create table public.services (
+create table if not exists public.services (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   description text not null default '',
@@ -63,7 +81,7 @@ create table public.services (
   updated_at timestamptz not null default now()
 );
 
-create table public.projects (
+create table if not exists public.projects (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   description text not null default '',
@@ -80,7 +98,7 @@ create table public.projects (
 -- ============================================================
 -- CONTACT
 -- ============================================================
-create table public.contact_info (
+create table if not exists public.contact_info (
   id uuid primary key default gen_random_uuid(),
   email text not null,
   phone text not null,
@@ -92,7 +110,7 @@ create table public.contact_info (
   updated_at timestamptz not null default now()
 );
 
-create table public.business_hours (
+create table if not exists public.business_hours (
   id uuid primary key default gen_random_uuid(),
   day day_of_week not null unique,
   open_time time,
@@ -100,7 +118,7 @@ create table public.business_hours (
   is_closed boolean not null default false
 );
 
-create table public.contact_messages (
+create table if not exists public.contact_messages (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   email text not null,
@@ -113,9 +131,9 @@ create table public.contact_messages (
 );
 
 -- ============================================================
--- CATALOG (productos y servicios — carta)
+-- CATALOG
 -- ============================================================
-create table public.catalog_items (
+create table if not exists public.catalog_items (
   id uuid primary key default gen_random_uuid(),
   type catalog_item_type not null,
   category catalog_category not null,
@@ -134,9 +152,9 @@ create table public.catalog_items (
 );
 
 -- ============================================================
--- RESERVATIONS (cliente sin cuenta; tracking_code público)
+-- RESERVATIONS
 -- ============================================================
-create table public.reservations (
+create table if not exists public.reservations (
   id uuid primary key default gen_random_uuid(),
   tracking_code text not null unique,
   customer_name text not null,
@@ -153,13 +171,13 @@ create table public.reservations (
   updated_at timestamptz not null default now()
 );
 
-create index reservations_tracking_code_idx on public.reservations (tracking_code);
-create index reservations_status_idx on public.reservations (status);
+create index if not exists reservations_tracking_code_idx on public.reservations (tracking_code);
+create index if not exists reservations_status_idx on public.reservations (status);
 
 -- ============================================================
--- SUPPORT TICKETS (seguimiento por tracking_code)
+-- SUPPORT
 -- ============================================================
-create table public.support_tickets (
+create table if not exists public.support_tickets (
   id uuid primary key default gen_random_uuid(),
   tracking_code text not null unique,
   customer_name text not null,
@@ -176,10 +194,10 @@ create table public.support_tickets (
   resolved_at timestamptz
 );
 
-create index support_tickets_tracking_code_idx on public.support_tickets (tracking_code);
-create index support_tickets_status_idx on public.support_tickets (status);
+create index if not exists support_tickets_tracking_code_idx on public.support_tickets (tracking_code);
+create index if not exists support_tickets_status_idx on public.support_tickets (status);
 
-create table public.ticket_messages (
+create table if not exists public.ticket_messages (
   id uuid primary key default gen_random_uuid(),
   ticket_id uuid not null references public.support_tickets (id) on delete cascade,
   author message_author not null,
@@ -189,7 +207,7 @@ create table public.ticket_messages (
   created_at timestamptz not null default now()
 );
 
-create index ticket_messages_ticket_id_idx on public.ticket_messages (ticket_id);
+create index if not exists ticket_messages_ticket_id_idx on public.ticket_messages (ticket_id);
 
 -- ============================================================
 -- HELPERS
@@ -204,24 +222,38 @@ begin
 end;
 $$;
 
+drop trigger if exists profiles_updated_at on public.profiles;
 create trigger profiles_updated_at before update on public.profiles
   for each row execute function public.set_updated_at();
+
+drop trigger if exists company_profile_updated_at on public.company_profile;
 create trigger company_profile_updated_at before update on public.company_profile
   for each row execute function public.set_updated_at();
+
+drop trigger if exists services_updated_at on public.services;
 create trigger services_updated_at before update on public.services
   for each row execute function public.set_updated_at();
+
+drop trigger if exists projects_updated_at on public.projects;
 create trigger projects_updated_at before update on public.projects
   for each row execute function public.set_updated_at();
+
+drop trigger if exists contact_info_updated_at on public.contact_info;
 create trigger contact_info_updated_at before update on public.contact_info
   for each row execute function public.set_updated_at();
+
+drop trigger if exists catalog_items_updated_at on public.catalog_items;
 create trigger catalog_items_updated_at before update on public.catalog_items
   for each row execute function public.set_updated_at();
+
+drop trigger if exists reservations_updated_at on public.reservations;
 create trigger reservations_updated_at before update on public.reservations
   for each row execute function public.set_updated_at();
+
+drop trigger if exists support_tickets_updated_at on public.support_tickets;
 create trigger support_tickets_updated_at before update on public.support_tickets
   for each row execute function public.set_updated_at();
 
--- Genera tracking code legible: SLX-XXXXXXXX
 create or replace function public.generate_tracking_code()
 returns text
 language plpgsql
@@ -258,15 +290,16 @@ begin
 end;
 $$;
 
+drop trigger if exists reservations_tracking_code on public.reservations;
 create trigger reservations_tracking_code
   before insert on public.reservations
   for each row execute function public.set_reservation_tracking_code();
 
+drop trigger if exists support_tickets_tracking_code on public.support_tickets;
 create trigger support_tickets_tracking_code
   before insert on public.support_tickets
   for each row execute function public.set_ticket_tracking_code();
 
--- Auto-crear profile al registrar usuario en Auth (solo staff)
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -280,16 +313,17 @@ begin
     new.email,
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     coalesce((new.raw_user_meta_data->>'role')::user_role, 'support')
-  );
+  )
+  on conflict (id) do nothing;
   return new;
 end;
 $$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Helper: rol del usuario autenticado
 create or replace function public.current_user_role()
 returns user_role
 language sql
