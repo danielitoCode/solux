@@ -1,44 +1,67 @@
-import { supabase } from '$infrastructure/di/supabase';
+import { assertSupabaseConfigured, supabase } from '$infrastructure/data/supabase-client';
+import { devLog, devError } from '$infrastructure/ui/dev-logger';
+import type { CatalogItemDto } from '../../dto/catalog-item.dto';
 
 export class CatalogRemoteDataSource {
-  async listActive() {
+  async listActive(): Promise<CatalogItemDto[]> {
+    assertSupabaseConfigured();
     const { data, error } = await supabase
       .from('catalog_items')
       .select('*')
       .eq('is_active', true)
       .order('sort_order');
-    if (error) throw error;
-    return data ?? [];
+    if (error) {
+      devError('catalog-remote', 'listActive failed', error);
+      throw error;
+    }
+    return (data ?? []) as CatalogItemDto[];
   }
 
-  async listAll() {
+  async listAll(): Promise<CatalogItemDto[]> {
+    assertSupabaseConfigured();
+    devLog('catalog-remote', 'listAll');
     const { data, error } = await supabase
       .from('catalog_items')
       .select('*')
       .order('sort_order');
-    if (error) throw error;
-    return data ?? [];
+    if (error) {
+      devError('catalog-remote', 'listAll failed', error);
+      throw error;
+    }
+    return (data ?? []) as CatalogItemDto[];
   }
 
-  async insert(row: Record<string, unknown>) {
+  async insert(row: Record<string, unknown>): Promise<CatalogItemDto> {
+    assertSupabaseConfigured();
     const { data, error } = await supabase.from('catalog_items').insert(row).select().single();
-    if (error) throw error;
-    return data;
+    if (error) {
+      devError('catalog-remote', 'insert failed', error);
+      throw error;
+    }
+    return data as CatalogItemDto;
   }
 
-  async update(id: string, row: Record<string, unknown>) {
+  async update(id: string, row: Record<string, unknown>): Promise<CatalogItemDto> {
+    assertSupabaseConfigured();
     const { data, error } = await supabase
       .from('catalog_items')
       .update(row)
       .eq('id', id)
       .select()
       .single();
-    if (error) throw error;
-    return data;
+    if (error) {
+      devError('catalog-remote', 'update failed', error);
+      throw error;
+    }
+    return data as CatalogItemDto;
   }
 
-  async remove(id: string) {
+  async remove(id: string): Promise<void> {
+    assertSupabaseConfigured();
     const { error } = await supabase.from('catalog_items').delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      devError('catalog-remote', 'remove failed', error);
+      throw error;
+    }
   }
 }

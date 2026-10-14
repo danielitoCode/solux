@@ -24,7 +24,10 @@ export interface CatalogItem {
   description: string;
   price?: number;
   currency: string;
+  /** @deprecated prefer imageUrls */
   imageUrl?: string;
+  /** URLs Cloudinary (múltiples fotos) */
+  imageUrls: string[];
   features: string[];
   isActive: boolean;
   isFeatured: boolean;
