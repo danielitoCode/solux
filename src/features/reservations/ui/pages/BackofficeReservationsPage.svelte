@@ -288,12 +288,15 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    min-width: 0;
+    overflow: hidden;
   }
   .pane-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     padding: 22px 20px 12px;
+    flex-shrink: 0;
   }
   .pane-header h1 {
     margin: 4px 0 0;
@@ -316,12 +319,16 @@
     background: var(--color-bg);
     color: var(--color-text);
     font-size: 16px;
+    flex-shrink: 0;
   }
   .search-row {
     padding: 0 16px 12px;
+    flex-shrink: 0;
+    min-width: 0;
   }
   .search-row input {
     width: 100%;
+    box-sizing: border-box;
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     color: var(--color-text);
@@ -334,18 +341,21 @@
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
   }
+
+  /* Chips: se reorganizan al mover el split */
   .chips {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
     padding: 0 16px 14px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .chips::-webkit-scrollbar {
-    display: none;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    flex-shrink: 0;
   }
   .chip {
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    max-width: 100%;
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     color: var(--color-muted);
@@ -356,6 +366,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
   }
   .chip span {
     background: var(--color-surface-2);
@@ -372,6 +383,7 @@
     background: rgba(255, 255, 255, 0.2);
     color: white;
   }
+
   .banner-error {
     margin: 0 16px 10px;
     background: color-mix(in srgb, #c0392b 12%, var(--color-surface));
@@ -380,14 +392,17 @@
     padding: 10px 12px;
     border-radius: 10px;
     font-size: 12px;
+    flex-shrink: 0;
   }
   .item-list {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0 10px 16px;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    min-width: 0;
   }
   .item-card {
     text-align: left;
@@ -397,6 +412,7 @@
     padding: 12px 14px;
     color: var(--color-text);
     cursor: pointer;
+    min-width: 0;
   }
   .item-card:hover {
     background: var(--color-surface-2);
@@ -408,21 +424,28 @@
   .item-top {
     display: flex;
     justify-content: space-between;
+    gap: 8px;
     margin-bottom: 4px;
+    min-width: 0;
   }
   .item-top code {
     font-size: 11px;
     font-weight: 800;
     color: var(--color-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .time {
     font-size: 10px;
     color: var(--color-muted);
+    flex-shrink: 0;
   }
   .subject {
     display: block;
     font-size: 13.5px;
     margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .item-meta {
     display: flex;
