@@ -38,22 +38,20 @@
     const query = [contact.address, contact.city, contact.country].filter(Boolean).join(', ');
     const rawUrl = contact.map_url?.trim();
     if (rawUrl) {
+      // Google Maps short links cannot be resolved reliably in the browser due to redirects/CORS.
+      // Use the official embed URL supplied for this exact company location.
+      if (rawUrl.includes('maps.app.goo.gl/ssEEXshVQw95LymN6')) {
+        return 'https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d936.4971499876735!2d-75.21309445975318!3d20.134523205264504!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ses-419!2sus!4v1792010812592!5m2!1ses-419!2sus';
+      }
       try {
         const url = new URL(rawUrl);
         const host = url.hostname.toLowerCase();
-        if (host.includes('google.') || host === 'maps.app.goo.gl') {
-          // Conservar URL de incrustación generada por Google Maps: incluye pin y zoom exactos.
+        if (host.includes('google.')) {
           if (url.pathname.includes('/maps/embed')) return url.href;
-
-          const dataCoords = url.href.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
-          const viewCoords = url.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-          const queryCoords = url.searchParams.get('q')?.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-          const coords = dataCoords || queryCoords || viewCoords;
-          if (coords) {
-            const [, lat, lng] = coords;
-            return `https://www.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
-          }
-
+          const coords = url.href.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/)
+            || url.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/)
+            || url.searchParams.get('q')?.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+          if (coords) return `https://www.google.com/maps?q=${coords[1]},${coords[2]}&z=17&output=embed`;
           const place = url.pathname.match(/\/maps\/place\/([^/]+)/)?.[1];
           const target = url.searchParams.get('q') || url.searchParams.get('query') || (place ? decodeURIComponent(place.replace(/\+/g, ' ')) : '') || query;
           if (target) return `https://www.google.com/maps?q=${encodeURIComponent(target)}&output=embed`;
