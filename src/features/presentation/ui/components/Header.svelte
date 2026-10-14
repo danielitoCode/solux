@@ -1,5 +1,15 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { page } from '$app/stores';
+  import { supabase } from '$infrastructure/data/supabase-client';
+
+  let companyName = $state('SOLUX');
+  let logoUrl = $state('');
+
+  onMount(async () => {
+    const { data } = await supabase.from('company_profile').select('name, logo_url').limit(1).maybeSingle();
+    if (data) { companyName = data.name || 'SOLUX'; logoUrl = data.logo_url || ''; }
+  });
 
   const links = [
     { href: '/', label: 'Inicio', route: '/' },
@@ -26,8 +36,8 @@
 
 <header class="site-header">
   <a class="brand" href="/" aria-label="SOLUX inicio">
-    <span class="brand-mark"><span></span></span>
-    <span>SOLUX</span>
+    {#if logoUrl}<img class="company-logo" src={logoUrl} alt={`Logo de ${companyName}`} />{:else}<span class="brand-mark"><span></span></span>{/if}
+    <span>{companyName}</span>
   </a>
 
   <nav class="desktop-nav" class:open={menuOpen} aria-label="Navegación principal">
@@ -69,6 +79,7 @@
     font-weight: 800;
     letter-spacing: -0.04em;
   }
+  .company-logo { width: 38px; height: 38px; object-fit: contain; border-radius: 8px; }
   .brand-mark {
     width: 32px;
     height: 32px;
