@@ -1,12 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
+  import { loadSiteContent, type SitePageContent } from '$infrastructure/data/site-content';
 
   let company = $state({ name: 'SOLUX', tagline: 'Energía limpia para un mejor mañana.', about: 'Diseñamos e instalamos soluciones solares y eléctricas para hogares, negocios e industrias. Ingeniería cercana, tecnología y resultados medibles.', years_of_experience: 5, completed_projects: 120 });
 
+  let pageContent = $state<SitePageContent>({});
   onMount(async () => {
-    const { data } = await supabase.from('company_profile').select('name,tagline,about,years_of_experience,completed_projects').limit(1).maybeSingle();
+    const [{ data }, savedContent] = await Promise.all([
+      supabase.from('company_profile').select('name,tagline,about,years_of_experience,completed_projects').limit(1).maybeSingle(),
+      loadSiteContent('inicio', { eyebrow: 'Lo que hacemos', title: company.tagline, description: company.about, secondary_title: 'Más que energía, construimos confianza.', secondary_description: 'Cuéntanos qué necesitas y diseñamos el siguiente paso.', image_1: 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=1100&q=85' })
+    ]);
     if (data) company = { ...company, ...data };
+    pageContent = savedContent;
   });
 
   const services = [
@@ -31,10 +37,9 @@
   <div class="hero">
     <div>
       <div class="eyebrow">{company.name} · Guantánamo, Cuba</div>
-      <h1>{company.tagline}</h1>
+      <h1>{pageContent.title || company.tagline}</h1>
       <p class="lead">
-        Diseñamos e instalamos soluciones solares y eléctricas para hogares, negocios e industrias.
-        Ingeniería cercana, tecnología y resultados medibles.
+        {pageContent.description || company.about}
       </p>
       <div class="hero-actions">
         <a class="btn btn-accent" href="/reservas">Solicitar una instalación →</a>
@@ -46,7 +51,7 @@
         <div class="stat"><strong>24/7</strong><span>energía pensada para ti</span></div>
       </div>
     </div>
-    <div class="hero-visual">
+    <div class="hero-visual" style={`background: linear-gradient(145deg, rgba(0, 30, 15, 0.25), rgba(0, 0, 0, 0.55)), url("${pageContent.image_1}") center / cover;`}>
       <div class="sun"></div>
       <div class="hero-badge">
         <strong>Tu independencia energética</strong><br />
@@ -76,8 +81,8 @@
 
   <div class="banner reveal">
     <div>
-      <strong>Más que energía, construimos confianza.</strong>
-      <p>Cuéntanos qué necesitas y diseñamos el siguiente paso.</p>
+      <strong>{pageContent.secondary_title || 'Más que energía, construimos confianza.'}</strong>
+      <p>{pageContent.secondary_description || 'Cuéntanos qué necesitas y diseñamos el siguiente paso.'}</p>
     </div>
     <a class="btn btn-accent" href="/reservas">Reservar visita técnica</a>
   </div>
