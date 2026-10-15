@@ -55,11 +55,11 @@ begin
     raise exception 'invalid_job_closeout_parameters';
   end if;
 
-  select id into v_existing from public.job_closeouts where reservation_id = p_reservation_id;
-  if v_existing is not null then return v_existing; end if;
-
   select * into v_reservation from public.reservations where id = p_reservation_id for update;
   if not found then raise exception 'reservation_not_found'; end if;
+
+  select id into v_existing from public.job_closeouts where reservation_id = p_reservation_id;
+  if v_existing is not null then return v_existing; end if;
   if v_reservation.status <> 'in_progress' then raise exception 'reservation_must_be_in_progress'; end if;
 
   select
