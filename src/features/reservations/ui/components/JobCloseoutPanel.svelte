@@ -112,7 +112,7 @@
         {#if Number(closeout.other_charge) > 0}<tr><td colspan="3">Cargos adicionales{#if closeout.notes}<small>{closeout.notes}</small>{/if}</td><td>{money(Number(closeout.other_charge))}</td></tr>{/if}
       </tbody></table>
       <div class="invoice-total"><span>TOTAL FACTURADO</span><strong>{money(Number(closeout.total_charge))}</strong></div>
-      <div class="invoice-footer"><p>Estado de pago: <strong>Pendiente de conciliación</strong></p><p>Esta factura acredita el cargo registrado, no el pago. Los pagos se registran en Finanzas.</p></div>
+      <div class="invoice-footer"><p>Estado de pago: <strong>Consultar Finanzas</strong></p><p>Esta factura acredita el cargo registrado, no el pago. Los pagos se registran en Finanzas.</p></div>
     </div>
   {:else if status === 'in_progress'}
     <p class="muted">Cierre atómico: registra cargo pendiente, guarda costos y cambia reserva a Completada. El margen es estimado y no descuenta gastos generales.</p>
