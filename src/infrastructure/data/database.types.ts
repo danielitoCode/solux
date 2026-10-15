@@ -247,6 +247,16 @@ export interface Database {
         };
         Update: Partial<Database['public']['Tables']['contact_info']['Insert']>;
       };
+      consumable_products: {
+        Row: { id: string; name: string; sku: string | null; category: string; unit: string; description: string; default_cost: number; default_markup_percent: number; is_active: boolean; created_at: string; updated_at: string };
+        Insert: { id?: string; name: string; sku?: string | null; category?: string; unit?: string; description?: string; default_cost?: number; default_markup_percent?: number; is_active?: boolean };
+        Update: Partial<Database['public']['Tables']['consumable_products']['Insert']>;
+      };
+      reservation_materials: {
+        Row: { id: string; reservation_id: string; product_id: string | null; product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: 'markup' | 'discount' | 'none'; adjustment_percent: number; notes: string; created_at: string; updated_at: string };
+        Insert: { id?: string; reservation_id: string; product_id?: string | null; product_name: string; unit?: string; quantity?: number; unit_cost?: number; adjustment_type?: 'markup' | 'discount' | 'none'; adjustment_percent?: number; notes?: string };
+        Update: Partial<Database['public']['Tables']['reservation_materials']['Insert']>;
+      };
       site_projects: {
         Row: { id: string; title: string; slug: string; location: string; category: string; system_name: string; capacity_kw: number | null; inverter: string; panels: string; battery: string; description: string; specifications: { label: string; value: string }[]; gallery: string[]; layout: 'hero-left' | 'editorial' | 'gallery-grid' | 'technical-report'; is_published: boolean; sort_order: number; created_at: string; updated_at: string };
         Insert: { id?: string; title: string; slug: string; location?: string; category?: string; system_name?: string; capacity_kw?: number | null; inverter?: string; panels?: string; battery?: string; description?: string; specifications?: { label: string; value: string }[]; gallery?: string[]; layout?: 'hero-left' | 'editorial' | 'gallery-grid' | 'technical-report'; is_published?: boolean; sort_order?: number; created_at?: string; updated_at?: string };
@@ -271,6 +281,11 @@ export interface Database {
       };
     };
     Functions: {
+      get_reservation_materials_by_tracking: {
+        Args: { p_code: string };
+        Returns: { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: string; adjustment_percent: number; line_total: number; notes: string; created_at: string }[];
+      };
+      get_reservation_materials_total_by_tracking: { Args: { p_code: string }; Returns: number };
       get_reservation_by_tracking: {
         Args: { p_code: string };
         Returns: Database['public']['Tables']['reservations']['Row'][];
