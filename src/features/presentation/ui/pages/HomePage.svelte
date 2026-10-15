@@ -36,7 +36,7 @@
 <section class="page">
   <div class="hero">
     <div>
-      <div class="eyebrow">{company.name} · Guantánamo, Cuba</div>
+      <div class="eyebrow">{pageContent.eyebrow || company.name} · Guantánamo, Cuba</div>
       <h1>{pageContent.title || company.tagline}</h1>
       <p class="lead">
         {pageContent.description || company.about}
