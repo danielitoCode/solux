@@ -3,6 +3,10 @@
   import { login, getAuthUser, initAuth, isAuthLoading } from '../stores/auth.store.svelte';
   import { onMount } from 'svelte';
   import { devLog } from '$infrastructure/ui/dev-logger';
+  import { supabase } from '$infrastructure/data/supabase-client';
+
+  let companyName = $state('SOLUX');
+  let logoUrl = $state('');
 
   let email = $state('');
   let password = $state('');
@@ -11,6 +15,11 @@
 
   onMount(async () => {
     devLog('login-page', 'mount');
+    const { data } = await supabase.from('company_profile').select('name, logo_url').limit(1).maybeSingle();
+    if (data) {
+      companyName = data.name || 'SOLUX';
+      logoUrl = data.logo_url || '';
+    }
     await initAuth();
     if (getAuthUser()) {
       goto('/backoffice');
@@ -37,9 +46,9 @@
 <section class="login-page">
   <div class="login-card card">
     <div class="brand-row">
-      <span class="brand-mark"><span></span></span>
+      {#if logoUrl}<img class="company-logo" src={logoUrl} alt={`Logo de ${companyName}`} />{:else}<span class="brand-mark"><span></span></span>{/if}
       <div>
-        <div class="eyebrow">SOLUX Backoffice</div>
+        <div class="eyebrow">{companyName} Backoffice</div>
         <h1>Acceso staff</h1>
       </div>
     </div>
@@ -101,6 +110,13 @@
     align-items: center;
     gap: 14px;
     margin-bottom: 8px;
+  }
+  .company-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 10px;
+    flex-shrink: 0;
   }
   .brand-mark {
     width: 40px;
