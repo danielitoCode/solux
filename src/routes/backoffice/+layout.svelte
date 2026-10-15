@@ -19,6 +19,7 @@
     { href: '/backoffice/soporte', label: 'Soporte', roles: ['admin', 'support'] },
     { href: '/backoffice/mensajes', label: 'Mensajes', roles: ['admin', 'support', 'sales'] },
     { href: '/backoffice/catalogo', label: 'Catálogo', roles: ['admin', 'sales'] },
+    { href: '/backoffice/consumibles', label: 'Consumibles', roles: ['admin', 'sales'] },
     { href: '/backoffice/presentacion', label: 'Presentación', roles: ['admin'] },
     { href: '/backoffice/proyectos', label: 'Proyectos web', roles: ['admin'] },
     { href: '/backoffice/usuarios', label: 'Usuarios', roles: ['admin'] }
