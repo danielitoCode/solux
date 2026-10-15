@@ -5,9 +5,23 @@
   type Employee = { id: string; full_name: string; role_title: string; email: string | null; phone: string | null; is_active: boolean; notes: string };
   type Reservation = { id: string; tracking_code: string; customer_name: string; service_category: string; preferred_date: string; status: string };
   type Operation = { id: string; operation_type: string; amount: number; currency: string; occurred_at: string; category: string; description: string; status: string; employee_id: string | null; reservation_id: string | null };
+  type Charge = { id: string; amount: number; currency: string; occurred_at: string; description: string; reservation_id: string | null };
+  type Summary = { sales_gross: number; managed_sales_commission: number; customer_cash_in: number; customer_refunds: number; operating_expenses: number; inventory_purchases: number; labor_accrued: number; employee_cash_out: number; estimated_cash_flow: number; unpaid_customer_charges: number };
+
   let employees = $state<Employee[]>([]);
   let reservations = $state<Reservation[]>([]);
   let operations = $state<Operation[]>([]);
+  let charges = $state<Charge[]>([]);
+  let customerPayments = $state<{ related_operation_id: string | null; amount: number }[]>([]);
+  let selectedChargeId = $state('');
+  let customerPaymentAmount = $state('');
+  let customerPaymentDescription = $state('Cobro de cliente');
+  let customerPaymentReference = $state('');
+  let reportFrom = $state(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
+  let reportTo = $state(new Date().toISOString().slice(0, 10));
+  let summary = $state<Summary | null>(null);
+  let reportLoading = $state(false);
+
   let loading = $state(true);
   let saving = $state(false);
   let error = $state('');
@@ -35,18 +49,30 @@
   const accrued = $derived(operations.filter((o) => o.operation_type === 'labor_accrual').reduce((n,o) => n + Number(o.amount), 0));
   const expenses = $derived(operations.filter((o) => o.operation_type === 'operating_expense').reduce((n,o) => n + Number(o.amount), 0));
   const payments = $derived(operations.filter((o) => o.operation_type === 'employee_payment').reduce((n,o) => n + Number(o.amount), 0));
+  const openCharges = $derived(charges.map((charge) => {
+    const paid = customerPayments.filter((p) => p.related_operation_id === charge.id).reduce((sum, p) => sum + Number(p.amount), 0);
+    return { ...charge, paid, outstanding: Math.max(0, Number(charge.amount) - paid) };
+  }).filter((charge) => charge.outstanding > 0.009));
+  const selectedCharge = $derived(openCharges.find((charge) => charge.id === selectedChargeId) ?? null);
+
 
   async function load() {
     loading = true; error = '';
-    const [e,r,o] = await Promise.all([
+    const [e,r,o,c,p] = await Promise.all([
       supabase.from('employees').select('id,full_name,role_title,email,phone,is_active,notes').order('full_name'),
       supabase.from('reservations').select('id,tracking_code,customer_name,service_category,preferred_date,status').neq('status','cancelled').order('created_at',{ascending:false}).limit(200),
-      supabase.from('financial_operations').select('id,operation_type,amount,currency,occurred_at,category,description,status,employee_id,reservation_id').order('occurred_at',{ascending:false}).limit(100)
+      supabase.from('financial_operations').select('id,operation_type,amount,currency,occurred_at,category,description,status,employee_id,reservation_id').order('occurred_at',{ascending:false}).limit(100),
+      supabase.from('financial_operations').select('id,amount,currency,occurred_at,description,reservation_id').eq('operation_type','customer_charge').eq('status','posted').order('occurred_at',{ascending:false}).limit(500),
+      supabase.from('financial_operations').select('related_operation_id,amount').eq('operation_type','customer_payment').eq('status','posted').limit(1000)
     ]);
-    if (e.error || r.error || o.error) error = e.error?.message || r.error?.message || o.error?.message || 'Error de carga';
+    if (e.error || r.error || o.error || c.error || p.error) error = e.error?.message || r.error?.message || o.error?.message || c.error?.message || p.error?.message || 'Error de carga';
     employees = (e.data ?? []) as Employee[];
     reservations = (r.data ?? []) as Reservation[];
     operations = (o.data ?? []) as Operation[];
+    charges = (c.data ?? []) as Charge[];
+    customerPayments = (p.data ?? []) as { related_operation_id: string | null; amount: number }[];
+    if (!selectedChargeId || !charges.some((charge) => charge.id === selectedChargeId)) selectedChargeId = charges[0]?.id ?? '';
+    await loadSummary();
     if (!laborEmployee && employees.length) laborEmployee = employees.find(x => x.is_active)?.id ?? '';
     if (!paymentEmployee && employees.length) paymentEmployee = employees[0].id;
     if (!laborReservation && reservations.length) laborReservation = reservations[0].id;
@@ -91,6 +117,41 @@
   }
 
   async function savePayment() {
+  async function loadSummary() {
+    reportLoading = true;
+    try {
+      const from = new Date(`${reportFrom}T00:00:00`).toISOString();
+      const to = new Date(`${reportTo}T23:59:59.999`).toISOString();
+      const result = await supabase.rpc('get_financial_summary', { p_from: from, p_to: to });
+      if (result.error) throw new Error(result.error.message);
+      summary = (result.data?.[0] ?? null) as Summary | null;
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Error al cargar informe financiero';
+    } finally {
+      reportLoading = false;
+    }
+  }
+
+  async function saveCustomerPayment() {
+    if (!selectedCharge || Number(customerPaymentAmount) <= 0 || Number(customerPaymentAmount) > selectedCharge.outstanding + 0.001) {
+      error = 'Selecciona cargo e importe válido, sin superar saldo pendiente.';
+      return;
+    }
+    await runAction(async () => {
+      const result = await supabase.rpc('record_customer_payment', {
+        p_operation_key: crypto.randomUUID(),
+        p_charge_operation_id: selectedCharge.id,
+        p_amount: Number(customerPaymentAmount),
+        p_description: customerPaymentDescription.trim() || 'Cobro de cliente',
+        p_document_reference: customerPaymentReference.trim() || null,
+        p_occurred_at: new Date().toISOString()
+      });
+      return { error: result.error };
+    }, 'Cobro de cliente registrado.');
+    if (!error) { customerPaymentAmount = ''; customerPaymentReference = ''; await loadSummary(); }
+  }
+
+
     if (!paymentEmployee || Number(paymentAmount) <= 0) { error = 'Selecciona empleado e importe válido.'; return; }
     await runAction(async () => {
       const r = await supabase.rpc('pay_employee', {
@@ -177,7 +238,53 @@
       {#each employees as e}<tr><td>{e.full_name}<small>{e.email ?? e.phone ?? ''}</small></td><td>{e.role_title}</td><td>{e.is_active ? 'Activo' : 'Inactivo'}</td><td>{employeeBalance(e.id).toFixed(2)} USD</td><td><button class="secondary compact" onclick={() => toggleEmployee(e)} disabled={saving}>{e.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>{/each}
     </tbody></table></div></section>
   {/if}
-  <section class="panel"><h2>Libro financiero reciente</h2><p class="muted">Importes registrados; no equivalen necesariamente a entradas o salidas de caja. Los cobros y pagos de clientes requieren registro separado.</p>
+  <section class="panel"><h2>Libro financiero reciente</h2>
+  <section class="panel">
+    <h2>Cobros de clientes</h2>
+    <p class="muted">Un cargo registrado no es entrada de caja. Registra aquí el dinero recibido; cada cobro se vincula a un cargo y no puede superar su saldo pendiente.</p>
+    <div class="form-grid">
+      <label class="wide">Cargo pendiente
+        <select bind:value={selectedChargeId}>
+          {#each openCharges as charge}
+            <option value={charge.id}>{new Date(charge.occurred_at).toLocaleDateString()} · {charge.description} · Pendiente {charge.outstanding.toFixed(2)} {charge.currency}</option>
+          {/each}
+        </select>
+      </label>
+      {#if selectedCharge}
+        <p class="balance wide">Cargo: {Number(selectedCharge.amount).toFixed(2)} {selectedCharge.currency}. Pagado: {selectedCharge.paid.toFixed(2)}. Pendiente: {selectedCharge.outstanding.toFixed(2)}.</p>
+      {/if}
+      <label>Importe recibido (USD)<input type="number" min="0.01" max={selectedCharge?.outstanding ?? undefined} step="0.01" bind:value={customerPaymentAmount} /></label>
+      <label>Descripción<input bind:value={customerPaymentDescription} /></label>
+      <label class="wide">Referencia de transferencia/recibo<input bind:value={customerPaymentReference} /></label>
+    </div>
+    {#if !openCharges.length}<p class="muted">No hay cargos pendientes detectados en los últimos 500 cargos cargados.</p>{/if}
+    <button onclick={saveCustomerPayment} disabled={saving || !selectedCharge}>{saving ? 'Registrando…' : 'Registrar cobro recibido'}</button>
+  </section>
+
+  <section class="panel">
+    <h2>Informe financiero</h2>
+    <p class="muted">Resumen por fecha de operación. Flujo de caja estimado incluye cobros de clientes y aportes de capital, menos reembolsos, gastos operativos, pagos laborales y retiros; no incluye compras de inventario ni pagos a proveedores.</p>
+    <div class="report-controls">
+      <label>Desde<input type="date" bind:value={reportFrom} /></label>
+      <label>Hasta<input type="date" bind:value={reportTo} /></label>
+      <button class="secondary" onclick={loadSummary} disabled={reportLoading || !reportFrom || !reportTo || reportFrom > reportTo}>{reportLoading ? 'Consultando…' : 'Consultar periodo'}</button>
+    </div>
+    {#if summary}
+      <div class="report-grid">
+        <article><span>Ventas brutas (stock propio)</span><strong>{Number(summary.sales_gross).toFixed(2)} USD</strong></article>
+        <article><span>Comisión ventas gestionadas</span><strong>{Number(summary.managed_sales_commission).toFixed(2)} USD</strong></article>
+        <article><span>Cobros de clientes (caja)</span><strong>{Number(summary.customer_cash_in).toFixed(2)} USD</strong></article>
+        <article><span>Reembolsos</span><strong>{Number(summary.customer_refunds).toFixed(2)} USD</strong></article>
+        <article><span>Gastos operativos</span><strong>{Number(summary.operating_expenses).toFixed(2)} USD</strong></article>
+        <article><span>Compras de inventario</span><strong>{Number(summary.inventory_purchases).toFixed(2)} USD</strong></article>
+        <article><span>Mano de obra acumulada</span><strong>{Number(summary.labor_accrued).toFixed(2)} USD</strong></article>
+        <article><span>Pagos a empleados (caja)</span><strong>{Number(summary.employee_cash_out).toFixed(2)} USD</strong></article>
+        <article><span>Flujo de caja estimado</span><strong>{Number(summary.estimated_cash_flow).toFixed(2)} USD</strong></article>
+        <article><span>Cargos de clientes pendientes</span><strong>{Number(summary.unpaid_customer_charges).toFixed(2)} USD</strong></article>
+      </div>
+    {/if}
+  </section>
+<p class="muted">Importes registrados; no equivalen necesariamente a entradas o salidas de caja. Los cobros y pagos de clientes requieren registro separado.</p>
     {#if loading}<p>Cargando…</p>{:else if !operations.length}<p class="muted">Sin operaciones.</p>{:else}
       <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Estado</th><th class="number">Importe</th></tr></thead><tbody>
         {#each operations as op}<tr><td>{new Date(op.occurred_at).toLocaleDateString()}</td><td>{op.operation_type}</td><td>{op.description}<small>{op.category}</small></td><td>{op.status}</td><td class="number">{Number(op.amount).toFixed(2)} {op.currency}</td></tr>{/each}
@@ -190,11 +297,16 @@
 h1{font-size:clamp(26px,3vw,36px);margin:4px 0 8px}h2{font-size:18px;margin:0 0 18px}.subheading{margin-top:28px}
 .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-primary);font-weight:800;margin:0}.muted,small{color:var(--color-muted);font-size:13px;line-height:1.5}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}.stats article{padding:16px;border:1px solid var(--color-border);border-radius:12px;display:flex;flex-direction:column;gap:8px}.stats span{font-size:12px;color:var(--color-muted)}.stats strong{font-size:22px}
+.report-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:12px;align-items:end;margin:18px 0}
+.report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.report-grid article{padding:14px;border:1px solid var(--color-border);border-radius:10px;display:flex;flex-direction:column;gap:8px}
+.report-grid span{font-size:12px;color:var(--color-muted)}.report-grid strong{font-size:18px}
+
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.tabs button{background:var(--color-surface-2);color:var(--color-text);border:1px solid var(--color-border)}.tabs button.active{background:var(--color-primary);color:white}
 .panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;padding:22px;margin-bottom:16px}label{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:650}
 input,select{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-background);color:var(--color-text)}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0}.wide{grid-column:1/-1}
 button{border:0;border-radius:8px;padding:11px 16px;background:var(--color-primary);color:white;font-weight:750;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.secondary{background:var(--color-surface-2);color:var(--color-text);border:1px solid var(--color-border)}.compact{padding:7px 10px;font-size:12px}
 .alert,.notice{padding:12px 14px;border-radius:8px;margin:0 0 16px;font-size:13px}.alert{background:#fee2e2;color:#991b1b}.notice{background:#dcfce7;color:#166534}.balance{font-size:13px;font-weight:700}
 .table-wrap{overflow:auto;margin-top:14px}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:11px;border-bottom:1px solid var(--color-border);font-size:13px}td small{display:block}.number{text-align:right}
-@media(max-width:680px){header{align-items:flex-start;flex-direction:column}.stats{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.wide{grid-column:auto}}
+@media(max-width:680px){header{align-items:flex-start;flex-direction:column}.stats,.report-grid{grid-template-columns:1fr}.form-grid,.report-controls{grid-template-columns:1fr}.wide{grid-column:auto}}
 </style>
