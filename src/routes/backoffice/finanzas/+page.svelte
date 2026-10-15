@@ -117,6 +117,17 @@
   }
 
   async function savePayment() {
+    if (!paymentEmployee || Number(paymentAmount) <= 0) { error = 'Selecciona empleado e importe válido.'; return; }
+    await runAction(async () => {
+      const r = await supabase.rpc('pay_employee', {
+        p_operation_key: crypto.randomUUID(), p_employee_id: paymentEmployee, p_amount: Number(paymentAmount),
+        p_description: paymentDescription.trim() || 'Pago a empleado', p_document_reference: paymentReference.trim() || null
+      });
+      return { error: r.error };
+    }, 'Pago registrado y aplicado a saldos pendientes.');
+    if (!error) { paymentAmount = ''; paymentReference = ''; }
+  }
+
   async function loadSummary() {
     reportLoading = true;
     try {
@@ -148,19 +159,7 @@
       });
       return { error: result.error };
     }, 'Cobro de cliente registrado.');
-    if (!error) { customerPaymentAmount = ''; customerPaymentReference = ''; await loadSummary(); }
-  }
-
-
-    if (!paymentEmployee || Number(paymentAmount) <= 0) { error = 'Selecciona empleado e importe válido.'; return; }
-    await runAction(async () => {
-      const r = await supabase.rpc('pay_employee', {
-        p_operation_key: crypto.randomUUID(), p_employee_id: paymentEmployee, p_amount: Number(paymentAmount),
-        p_description: paymentDescription.trim() || 'Pago a empleado', p_document_reference: paymentReference.trim() || null
-      });
-      return { error: r.error };
-    }, 'Pago registrado y aplicado a saldos pendientes.');
-    if (!error) { paymentAmount = ''; paymentReference = ''; }
+    if (!error) { customerPaymentAmount = ''; customerPaymentReference = ''; }
   }
 
   async function saveEmployee() {
@@ -238,10 +237,9 @@
       {#each employees as e}<tr><td>{e.full_name}<small>{e.email ?? e.phone ?? ''}</small></td><td>{e.role_title}</td><td>{e.is_active ? 'Activo' : 'Inactivo'}</td><td>{employeeBalance(e.id).toFixed(2)} USD</td><td><button class="secondary compact" onclick={() => toggleEmployee(e)} disabled={saving}>{e.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>{/each}
     </tbody></table></div></section>
   {/if}
-  <section class="panel"><h2>Libro financiero reciente</h2>
   <section class="panel">
     <h2>Cobros de clientes</h2>
-    <p class="muted">Un cargo registrado no es entrada de caja. Registra aquí el dinero recibido; cada cobro se vincula a un cargo y no puede superar su saldo pendiente.</p>
+    <p class="muted">Un cargo no equivale a entrada de caja. Cada cobro se vincula a un cargo y no puede superar su saldo pendiente.</p>
     <div class="form-grid">
       <label class="wide">Cargo pendiente
         <select bind:value={selectedChargeId}>
@@ -263,7 +261,7 @@
 
   <section class="panel">
     <h2>Informe financiero</h2>
-    <p class="muted">Resumen por fecha de operación. Flujo de caja estimado incluye cobros de clientes y aportes de capital, menos reembolsos, gastos operativos, pagos laborales y retiros; no incluye compras de inventario ni pagos a proveedores.</p>
+    <p class="muted">Flujo estimado excluye compras de inventario y pagos a proveedores.</p>
     <div class="report-controls">
       <label>Desde<input type="date" bind:value={reportFrom} /></label>
       <label>Hasta<input type="date" bind:value={reportTo} /></label>
@@ -280,11 +278,14 @@
         <article><span>Mano de obra acumulada</span><strong>{Number(summary.labor_accrued).toFixed(2)} USD</strong></article>
         <article><span>Pagos a empleados (caja)</span><strong>{Number(summary.employee_cash_out).toFixed(2)} USD</strong></article>
         <article><span>Flujo de caja estimado</span><strong>{Number(summary.estimated_cash_flow).toFixed(2)} USD</strong></article>
-        <article><span>Cargos de clientes pendientes</span><strong>{Number(summary.unpaid_customer_charges).toFixed(2)} USD</strong></article>
+        <article><span>Cargos pendientes</span><strong>{Number(summary.unpaid_customer_charges).toFixed(2)} USD</strong></article>
       </div>
     {/if}
   </section>
-<p class="muted">Importes registrados; no equivalen necesariamente a entradas o salidas de caja. Los cobros y pagos de clientes requieren registro separado.</p>
+
+  <section class="panel">
+    <h2>Libro financiero reciente</h2>
+    <p class="muted">Importes registrados; no equivalen necesariamente a entradas o salidas de caja.</p>
     {#if loading}<p>Cargando…</p>{:else if !operations.length}<p class="muted">Sin operaciones.</p>{:else}
       <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Estado</th><th class="number">Importe</th></tr></thead><tbody>
         {#each operations as op}<tr><td>{new Date(op.occurred_at).toLocaleDateString()}</td><td>{op.operation_type}</td><td>{op.description}<small>{op.category}</small></td><td>{op.status}</td><td class="number">{Number(op.amount).toFixed(2)} {op.currency}</td></tr>{/each}
