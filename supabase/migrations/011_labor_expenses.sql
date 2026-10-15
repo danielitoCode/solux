@@ -136,8 +136,7 @@ begin
 
   select coalesce(sum(accrued_amount - paid_amount),0)
     into v_due from public.job_labor
-    where employee_id = p_employee_id and status <> 'cancelled'
-    for update;
+    where employee_id = p_employee_id and status <> 'cancelled';
   if p_amount > v_due then raise exception 'payment_exceeds_accrued_balance'; end if;
 
   insert into public.financial_operations (
