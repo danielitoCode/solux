@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
   import ResizableSplit from '$infrastructure/ui/ResizableSplit.svelte';
+  import { isCloudinaryConfigured, uploadImageToCloudinary } from '$infrastructure/media/cloudinary';
 
   type PageSlug = 'inicio' | 'servicios' | 'proyectos' | 'nosotros';
   type PageContent = {
@@ -34,6 +35,7 @@
   let error = $state('');
   let success = $state('');
   let loaded = $state<Record<string, PageContent>>({});
+  let uploadingImages = $state<Record<number, boolean>>({});
 
   async function selectPage(slug: PageSlug) {
     selectedSlug = slug;
@@ -53,6 +55,31 @@
       loaded[slug] = { ...content };
     }
     loading = false;
+  }
+
+  async function uploadImage(index: number, file?: File) {
+    if (!file) return;
+    error = '';
+    success = '';
+    if (!file.type.startsWith('image/')) {
+      error = 'Selecciona un archivo de imagen.';
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      error = 'La imagen supera el límite de 10 MB.';
+      return;
+    }
+
+    uploadingImages[index] = true;
+    try {
+      const result = await uploadImageToCloudinary(file, `solux/site-content/${selectedSlug}`);
+      content[`image_${index}`] = result.url;
+      success = `Imagen ${index} subida a Cloudinary. URL insertada automáticamente.`;
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudo subir la imagen.';
+    } finally {
+      uploadingImages[index] = false;
+    }
   }
 
   async function save() {
@@ -122,14 +149,23 @@
             <label>Descripción secundaria<textarea rows="4" bind:value={content.secondary_description}></textarea></label>
           </section>
           <section class="panel">
-            <h3>Imágenes por URL</h3>
+            <h3>Imágenes</h3>
+            {#if !isCloudinaryConfigured()}
+              <div class="notice error">Configura VITE_CLOUDINARY_CLOUD_NAME y VITE_CLOUDINARY_UPLOAD_PRESET para habilitar subidas.</div>
+            {/if}
             {#each [1, 2, 3, 4] as index}
-              <label>Imagen {index}{#if selectedSlug !== 'proyectos' && index > 1}<small>Opcional; no todas las vistas usan las cuatro imágenes.</small>{/if}
-                <input type="url" placeholder="https://…" bind:value={content[`image_${index}` as keyof PageContent]} />
-              </label>
-              {#if content[`image_${index}` as keyof PageContent]}
-                <img class="preview" src={content[`image_${index}` as keyof PageContent]} alt={`Vista previa imagen ${index}`} />
-              {/if}
+              <div class="image-field">
+                <label>Imagen {index}{#if selectedSlug !== 'proyectos' && index > 1}<small>Opcional; no todas las vistas usan las cuatro imágenes.</small>{/if}
+                  <input type="url" placeholder="Pega URL https://…" bind:value={content[`image_${index}` as keyof PageContent]} />
+                </label>
+                <label class="upload-label">O subir archivo a Cloudinary
+                  <input class="file-input" type="file" accept="image/*" disabled={!isCloudinaryConfigured() || uploadingImages[index]} onchange={(event) => uploadImage(index, event.currentTarget.files?.[0])} />
+                </label>
+                {#if uploadingImages[index]}<p class="upload-status">Subiendo imagen…</p>{/if}
+                {#if content[`image_${index}` as keyof PageContent]}
+                  <img class="preview" src={content[`image_${index}` as keyof PageContent]} alt={`Vista previa imagen ${index}`} />
+                {/if}
+              </div>
             {/each}
           </section>
           <div class="actions"><button class="primary" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button></div>
@@ -153,7 +189,7 @@
   .panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:20px;margin:14px 0}
   label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:var(--color-muted);margin:14px 0}
   input,textarea{width:100%;box-sizing:border-box;border:1px solid var(--color-border);border-radius:9px;padding:10px;background:var(--color-background);color:var(--color-text);font:inherit;font-size:14px}
-  label small{font-weight:400}.preview{display:block;width:min(100%,460px);max-height:220px;object-fit:contain;object-position:left;border:1px solid var(--color-border);border-radius:10px;margin:8px 0 18px;background:white}
+  label small{font-weight:400}.image-field{border-top:1px solid var(--color-border);padding-top:8px;margin-top:16px}.upload-label{margin-top:0}.file-input{padding:8px}.upload-status{font-size:12px;color:var(--color-primary);margin:4px 0}.preview{display:block;width:min(100%,460px);max-height:220px;object-fit:contain;object-position:left;border:1px solid var(--color-border);border-radius:10px;margin:8px 0 18px;background:white}
   .primary{background:var(--color-primary);color:white;border:0;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer;white-space:nowrap}.primary:disabled{opacity:.6}
   .notice{padding:12px;border-radius:9px;margin:12px 0;font-size:13px}.error{background:#fee2e2;color:#991b1b}.success{background:#dcfce7;color:#166534}
   .actions{display:flex;justify-content:flex-end;padding:10px 0 30px}
