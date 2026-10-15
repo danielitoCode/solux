@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
+  import { devLog, devError } from '$infrastructure/ui/dev-logger';
 
   type Profile = { id?: string; name: string; tagline: string; about: string; mission: string; vision: string; years_of_experience: number; completed_projects: number; logo_url?: string | null };
   type Contact = { id?: string; email: string; phone: string; whatsapp: string | null; address: string; city: string; country: string; map_url: string | null };
@@ -66,54 +67,54 @@
   }
 
   async function uploadLogo(event: Event) {
-    console.group('[SOLUX] Subida de logo');
+    devLog('logo-upload', 'Inicio de subida de logo');
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
-    console.log('[SOLUX] Archivo seleccionado:', file ? { name: file.name, type: file.type, size: file.size } : null);
+    devLog('logo-upload', 'Archivo seleccionado:', file ? { name: file.name, type: file.type, size: file.size } : null);
     if (!file) {
-      console.warn('[SOLUX] No se seleccionó archivo.');
-      console.groupEnd();
+      devLog('logo-upload', 'AVISO: No se seleccionó archivo.',);
+      
       return;
     }
     error = ''; success = '';
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-      console.error('[SOLUX] Formato no válido:', file.type);
-      error = 'Formato no válido. Usa PNG, JPG o WebP.'; input.value = ''; console.groupEnd(); return;
+      devLog('logo-upload', 'ERROR: Formato no válido:', file.type);
+      error = 'Formato no válido. Usa PNG, JPG o WebP.'; input.value = '';  return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      console.error('[SOLUX] Archivo supera 2 MB:', file.size);
-      error = 'El logo supera 2 MB.'; input.value = ''; console.groupEnd(); return;
+      devLog('logo-upload', 'ERROR: Archivo supera 2 MB:', file.size);
+      error = 'El logo supera 2 MB.'; input.value = '';  return;
     }
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined;
-    console.log('[SOLUX] Cloudinary config:', {
+    devLog('logo-upload', 'Cloudinary config:', {
       cloudName: cloudName ? `${cloudName.slice(0, 3)}***` : undefined,
       uploadPreset: uploadPreset ? `${uploadPreset.slice(0, 3)}***` : undefined,
       hasCloudName: Boolean(cloudName),
       hasUploadPreset: Boolean(uploadPreset)
     });
     if (!cloudName || !uploadPreset) {
-      console.error('[SOLUX] Faltan variables VITE_CLOUDINARY_CLOUD_NAME o VITE_CLOUDINARY_UPLOAD_PRESET.');
+      devLog('logo-upload', 'ERROR: Faltan variables VITE_CLOUDINARY_CLOUD_NAME o VITE_CLOUDINARY_UPLOAD_PRESET.',);
       error = 'Faltan VITE_CLOUDINARY_CLOUD_NAME y VITE_CLOUDINARY_UPLOAD_PRESET.';
       input.value = '';
-      console.groupEnd();
+      
       return;
     }
     uploadingLogo = true;
     try {
       if (!profile.id) {
-        console.log('[SOLUX] No existe company_profile.id. Creando perfil antes de subir logo...');
+        devLog('logo-upload', 'No existe company_profile.id. Creando perfil antes de subir logo...',);
         const { data, error: insertError } = await supabase.from('company_profile').insert({
           name: profile.name || 'SOLUX', tagline: profile.tagline, about: profile.about,
           mission: profile.mission, vision: profile.vision,
           years_of_experience: profile.years_of_experience, completed_projects: profile.completed_projects
         }).select('id').single();
         if (insertError) {
-          console.error('[SOLUX] Error creando company_profile:', insertError);
+          devLog('logo-upload', 'ERROR: Error creando company_profile:', insertError);
           throw insertError;
         }
         profile.id = data.id;
-        console.log('[SOLUX] company_profile creado:', profile.id);
+        devLog('logo-upload', 'company_profile creado:', profile.id);
       }
 
       const formData = new FormData();
@@ -121,7 +122,7 @@
       formData.append('upload_preset', uploadPreset);
       formData.append('folder', 'solux/company');
       formData.append('public_id', `logo-${profile.id}`);
-      console.log('[SOLUX] Enviando archivo a Cloudinary:', {
+      devLog('logo-upload', 'Enviando archivo a Cloudinary:', {
         endpoint: `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         folder: 'solux/company',
         publicId: `logo-${profile.id}`
@@ -131,32 +132,32 @@
         method: 'POST',
         body: formData
       });
-      console.log('[SOLUX] Respuesta HTTP Cloudinary:', { status: response.status, ok: response.ok });
+      devLog('logo-upload', 'Respuesta HTTP Cloudinary:', { status: response.status, ok: response.ok });
       const result = await response.json() as { secure_url?: string; public_id?: string; error?: { message?: string; http_code?: number } };
-      console.log('[SOLUX] Respuesta Cloudinary:', result);
+      devLog('logo-upload', 'Respuesta Cloudinary:', result);
       if (!response.ok || !result.secure_url) {
-        console.error('[SOLUX] Cloudinary rechazó la subida:', result.error);
+        devLog('logo-upload', 'ERROR: Cloudinary rechazó la subida:', result.error);
         throw new Error(result.error?.message || 'Cloudinary rechazó la subida.');
       }
 
-      console.log('[SOLUX] Logo subido. URL:', result.secure_url);
-      console.log('[SOLUX] Guardando logo_url en company_profile:', profile.id);
+      devLog('logo-upload', 'Logo subido. URL:', result.secure_url);
+      devLog('logo-upload', 'Guardando logo_url en company_profile:', profile.id);
       const { error: updateError } = await supabase.from('company_profile').update({ logo_url: result.secure_url }).eq('id', profile.id);
       if (updateError) {
-        console.error('[SOLUX] Error actualizando logo_url en Supabase:', updateError);
+        devLog('logo-upload', 'ERROR: Error actualizando logo_url en Supabase:', updateError);
         throw updateError;
       }
       profile.logo_url = result.secure_url;
       success = 'Logo actualizado.';
-      console.log('[SOLUX] Subida de logo completada correctamente.');
+      devLog('logo-upload', 'Subida de logo completada correctamente.',);
     } catch (e) {
-      console.error('[SOLUX] Error final en subida de logo:', e);
+      devLog('logo-upload', 'ERROR: Error final en subida de logo:', e);
       error = e instanceof Error ? e.message : 'No se pudo subir el logo.';
     } finally {
       uploadingLogo = false;
       input.value = '';
-      console.log('[SOLUX] Estado uploadingLogo:', uploadingLogo);
-      console.groupEnd();
+      devLog('logo-upload', 'Estado uploadingLogo:', uploadingLogo);
+      
     }
   }
 
