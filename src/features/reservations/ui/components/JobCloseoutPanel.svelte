@@ -135,6 +135,29 @@
 </section>
 
 <style>
+.final-invoice{display:none}
+@page{size:auto;margin:12mm}
+@media print{
+  :global(body *){visibility:hidden!important}
+  :global(body){margin:0!important;background:#fff!important}
+  .final-invoice,.final-invoice *{visibility:visible!important}
+  .final-invoice{display:block!important;position:absolute;top:0;left:0;width:100%;padding:0;box-sizing:border-box;background:#fff!important;color:#172033!important;font:11px Arial,sans-serif}
+  .closeout{border:0!important;padding:0!important;margin:0!important;background:#fff!important;color:#172033!important}
+  .closeout header,.closeout .totals,.closeout>.muted,.closeout>.error,.closeout>.notice,.print-button,.form-grid,.closeout>button{display:none!important}
+  .invoice-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #172033;padding-bottom:16px;margin-bottom:22px}
+  .brand{font-size:28px;letter-spacing:3px;font-weight:800;margin:0;color:#172033}.subtitle{font-size:9px;letter-spacing:2px;margin:4px 0;color:#475467}
+  .invoice-title{text-align:right}.invoice-title h2{font-size:19px;margin:0 0 5px;color:#172033}.invoice-title p{margin:0;color:#667085}
+  .invoice-meta{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px;margin-bottom:24px}.invoice-meta span{display:block;color:#667085;font-size:9px;text-transform:uppercase;margin-bottom:5px}.invoice-meta strong,.invoice-meta small{display:block;margin-bottom:4px;overflow-wrap:anywhere}.invoice-meta small{color:#667085;font-size:10px}
+  .final-invoice h4{font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px;color:#344054}
+  .invoice-lines{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}
+  .invoice-lines th{background:#f2f4f7!important;color:#344054!important;text-transform:uppercase;font-size:9px;letter-spacing:.03em}
+  .invoice-lines th,.invoice-lines td{padding:9px 7px;border-bottom:1px solid #eaecf0;text-align:left;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
+  .invoice-lines th:nth-child(1){width:43%}.invoice-lines th:nth-child(2){width:15%}.invoice-lines th:nth-child(3){width:20%}.invoice-lines th:nth-child(4){width:22%;text-align:right}
+  .invoice-lines td:last-child{text-align:right;font-weight:700}.invoice-lines small{display:block;color:#667085;margin-top:4px}
+  .invoice-total{display:flex;justify-content:flex-end;align-items:center;gap:28px;padding:18px 7px;border-bottom:2px solid #172033;font-size:13px}.invoice-total strong{font-size:20px}
+  .invoice-footer{margin-top:26px;padding-top:10px;border-top:1px solid #eaecf0;color:#667085;font-size:9px}
+  tr{break-inside:avoid}
+}
 .closeout{border:1px solid var(--color-border);border-radius:14px;padding:18px;margin:0 28px 24px;background:var(--color-surface);color:var(--color-text)}
 header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}h3{font-size:18px;margin:4px 0}.eyebrow{margin:0;color:var(--color-primary);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .muted{color:var(--color-muted);font-size:12px;line-height:1.5}.error,.notice{padding:10px;border-radius:8px;font-size:12px}.error{background:#fee2e2;color:#991b1b}.notice{background:#dcfce7;color:#166534}
