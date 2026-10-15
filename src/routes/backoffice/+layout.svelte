@@ -4,6 +4,10 @@
   import { logout, initAuth, getAuthUser } from '$features/auth/ui/stores/auth.store.svelte';
   import type { User, UserRole } from '$features/auth/domain/entities';
   import { onMount } from 'svelte';
+  import { supabase } from '$infrastructure/data/supabase-client';
+
+  let companyName = $state('SOLUX');
+  let logoUrl = $state('');
 
   let { children, data } = $props();
 
@@ -25,8 +29,13 @@
     user ? sections.filter((s) => s.roles.includes(user.role)) : []
   );
 
-  onMount(() => {
+  onMount(async () => {
     initAuth();
+    const { data } = await supabase.from('company_profile').select('name, logo_url').limit(1).maybeSingle();
+    if (data) {
+      companyName = data.name || 'SOLUX';
+      logoUrl = data.logo_url || '';
+    }
   });
 
   async function handleLogout() {
@@ -47,9 +56,9 @@
   <div class="bo-shell">
     <aside class="bo-sidebar">
       <div class="bo-brand">
-        <span class="brand-mark"><span></span></span>
+        {#if logoUrl}<img class="company-logo" src={logoUrl} alt={`Logo de ${companyName}`} />{:else}<span class="brand-mark"><span></span></span>{/if}
         <div>
-          <strong>SOLUX</strong>
+          <strong>{companyName}</strong>
           <small>Backoffice</small>
         </div>
       </div>
@@ -100,6 +109,13 @@
     padding: 0 8px 20px;
     border-bottom: 1px solid var(--color-border);
     margin-bottom: 16px;
+  }
+  .company-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 8px;
+    flex-shrink: 0;
   }
   .bo-brand strong {
     display: block;
