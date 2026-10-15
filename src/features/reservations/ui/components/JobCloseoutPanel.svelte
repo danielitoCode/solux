@@ -3,7 +3,7 @@
   import { supabase } from '$infrastructure/data/supabase-client';
 
   type Material = { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: 'markup' | 'discount' | 'none'; adjustment_percent: number; notes: string };
-  type Labor = { agreed_amount: number; status: string };
+  type Labor = { role_description: string; hours: number; agreed_amount: number; status: string };
   type Closeout = { id: string; material_cost: number; materials_charge: number; labor_cost: number; labor_charge: number; other_charge: number; total_charge: number; estimated_margin: number; notes: string; closed_at: string };
   let { reservationId, status, customerName, customerEmail, customerPhone, serviceCategory, address, onClosed } = $props<{ reservationId: string; status: string; customerName: string; customerEmail: string; customerPhone: string; serviceCategory: string; address: string; onClosed?: () => void }>();
   let materials = $state<Material[]>([]);
@@ -31,7 +31,7 @@
     loading = true; error = '';
     const [m,l,c] = await Promise.all([
       supabase.from('reservation_materials').select('product_name,unit,quantity,unit_cost,adjustment_type,adjustment_percent,notes').eq('reservation_id',reservationId),
-      supabase.from('job_labor').select('agreed_amount,status').eq('reservation_id',reservationId),
+      supabase.from('job_labor').select('role_description,hours,agreed_amount,status').eq('reservation_id',reservationId),
       supabase.from('job_closeouts').select('id,material_cost,materials_charge,labor_cost,labor_charge,other_charge,total_charge,estimated_margin,notes,closed_at').eq('reservation_id',reservationId).maybeSingle()
     ]);
     if (m.error || l.error || c.error) error = m.error?.message || l.error?.message || c.error?.message || 'No se pudo cargar cierre';
@@ -96,6 +96,13 @@
         <div><span>Factura / trabajo</span><strong>{closeout.id.slice(0,8).toUpperCase()}</strong><small>{serviceCategory}</small><small>{address}</small></div>
         <div><span>Fecha de emisión</span><strong>{new Date(closeout.closed_at).toLocaleDateString('es-US')}</strong><small>Referencia: {reservationId}</small></div>
       </div>
+      <h4>Detalle de mano de obra registrada</h4>
+      <table class="invoice-lines"><thead><tr><th>Concepto / función</th><th>Horas</th><th>Estado</th></tr></thead><tbody>
+        {#each labor.filter((x) => x.status !== 'cancelled') as item (item.role_description)}
+          <tr><td>{item.role_description}</td><td>{Number(item.hours).toLocaleString('es-US')}</td><td>{item.status === 'paid' ? 'Pagada' : item.status === 'partially_paid' ? 'Pago parcial' : 'Devengada'}</td></tr>
+        {/each}
+        {#if labor.filter((x) => x.status !== 'cancelled').length === 0}<tr><td colspan="3">Sin mano de obra desglosada</td></tr>{/if}
+      </tbody></table>
       <h4>Detalle facturado</h4>
       <table class="invoice-lines"><thead><tr><th>Concepto</th><th>Cantidad</th><th>Precio unitario</th><th>Importe</th></tr></thead><tbody>
         {#each materials as m (m.product_name + m.unit)}
