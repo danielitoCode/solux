@@ -1,0 +1,7 @@
+create table if not exists public.site_projects (id uuid primary key default gen_random_uuid(), title text not null, slug text not null unique, location text not null default '', category text not null default 'Instalación solar', system_name text not null default '', capacity_kw numeric, inverter text not null default '', panels text not null default '', battery text not null default '', description text not null default '', specifications jsonb not null default '[]'::jsonb, gallery jsonb not null default '[]'::jsonb, layout text not null default 'hero-left' check (layout in ('hero-left','editorial','gallery-grid','technical-report')), is_published boolean not null default false, sort_order integer not null default 0, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+create index if not exists site_projects_public_order_idx on public.site_projects (is_published, sort_order, created_at desc);
+alter table public.site_projects enable row level security;
+drop policy if exists "Public read published projects" on public.site_projects;
+create policy "Public read published projects" on public.site_projects for select using (is_published = true or public.current_user_role() = 'admin');
+drop policy if exists "Admin manage site projects" on public.site_projects;
+create policy "Admin manage site projects" on public.site_projects for all using (public.current_user_role() = 'admin') with check (public.current_user_role() = 'admin');
