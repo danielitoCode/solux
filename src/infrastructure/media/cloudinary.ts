@@ -19,7 +19,7 @@ export type CloudinaryUploadResult = {
  * Upload unsigned a Cloudinary (seguro en cliente: no usa API secret).
  * Requiere preset unsigned en el dashboard de Cloudinary.
  */
-export async function uploadImageToCloudinary(file: File): Promise<CloudinaryUploadResult> {
+export async function uploadImageToCloudinary(file: File, folder = 'solux/catalog'): Promise<CloudinaryUploadResult> {
   if (!isCloudinaryConfigured()) {
     const err = new Error(
       'Cloudinary no configurado. Define VITE_CLOUDINARY_CLOUD_NAME y VITE_CLOUDINARY_UPLOAD_PRESET'
@@ -31,7 +31,7 @@ export async function uploadImageToCloudinary(file: File): Promise<CloudinaryUpl
   const body = new FormData();
   body.append('file', file);
   body.append('upload_preset', uploadPreset);
-  body.append('folder', 'solux/catalog');
+  body.append('folder', folder);
 
   devLog('cloudinary', 'upload start', { name: file.name, size: file.size });
 
