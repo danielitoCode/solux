@@ -151,7 +151,7 @@
       success = 'Logo actualizado.';
       devLog('logo-upload', 'Subida de logo completada correctamente.',);
     } catch (e) {
-      devLog('logo-upload', 'ERROR: Error final en subida de logo:', e);
+      devError('logo-upload', 'Error final en subida de logo', e);
       error = e instanceof Error ? e.message : 'No se pudo subir el logo.';
     } finally {
       uploadingLogo = false;
