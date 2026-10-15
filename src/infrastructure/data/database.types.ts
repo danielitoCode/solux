@@ -257,6 +257,11 @@ export interface Database {
         Insert: { id?: string; reservation_id: string; product_id?: string | null; product_name: string; unit?: string; quantity?: number; unit_cost?: number; adjustment_type?: 'markup' | 'discount' | 'none'; adjustment_percent?: number; notes?: string };
         Update: Partial<Database['public']['Tables']['reservation_materials']['Insert']>;
       };
+      job_closeouts: {
+        Row: { id: string; reservation_id: string; financial_operation_id: string; material_cost: number; materials_charge: number; labor_cost: number; labor_charge: number; other_charge: number; total_charge: number; estimated_margin: number; notes: string; closed_by: string | null; closed_at: string; created_at: string };
+        Insert: { id?: string; reservation_id: string; financial_operation_id: string; material_cost?: number; materials_charge?: number; labor_cost?: number; labor_charge?: number; other_charge?: number; total_charge?: number; estimated_margin?: number; notes?: string; closed_by?: string | null; closed_at?: string; created_at?: string };
+        Update: Partial<Database['public']['Tables']['job_closeouts']['Insert']>;
+      };
       site_projects: {
         Row: { id: string; title: string; slug: string; location: string; category: string; system_name: string; capacity_kw: number | null; inverter: string; panels: string; battery: string; description: string; specifications: { label: string; value: string }[]; gallery: string[]; layout: 'hero-left' | 'editorial' | 'gallery-grid' | 'technical-report'; is_published: boolean; sort_order: number; created_at: string; updated_at: string };
         Insert: { id?: string; title: string; slug: string; location?: string; category?: string; system_name?: string; capacity_kw?: number | null; inverter?: string; panels?: string; battery?: string; description?: string; specifications?: { label: string; value: string }[]; gallery?: string[]; layout?: 'hero-left' | 'editorial' | 'gallery-grid' | 'technical-report'; is_published?: boolean; sort_order?: number; created_at?: string; updated_at?: string };
@@ -327,6 +332,7 @@ export interface Database {
       record_customer_payment: { Args: { p_operation_key: string; p_charge_operation_id: string; p_amount: number; p_description?: string; p_document_reference?: string | null; p_occurred_at?: string }; Returns: string };
       get_financial_summary: { Args: { p_from?: string; p_to?: string }; Returns: { sales_gross: number; managed_sales_commission: number; customer_cash_in: number; customer_refunds: number; operating_expenses: number; inventory_purchases: number; labor_accrued: number; employee_cash_out: number; estimated_cash_flow: number; unpaid_customer_charges: number }[] };
 
+      close_reservation_job: { Args: { p_operation_key: string; p_reservation_id: string; p_labor_charge?: number; p_other_charge?: number; p_notes?: string }; Returns: string };
       get_reservation_materials_by_tracking: {
         Args: { p_code: string };
         Returns: { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: string; adjustment_percent: number; line_total: number; notes: string; created_at: string }[];
