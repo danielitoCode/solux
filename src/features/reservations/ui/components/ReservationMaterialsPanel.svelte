@@ -155,7 +155,8 @@
   .invoice-table th:nth-child(1){width:36%}.invoice-table th:nth-child(2){width:14%}.invoice-table th:nth-child(3){width:17%}.invoice-table th:nth-child(4){width:13%}.invoice-table th:nth-child(5){width:20%;text-align:right}
   .invoice-table td:last-child{text-align:right;font-weight:700}.invoice-table td small{display:block;color:#667085;margin-top:4px}
   .invoice-total{display:flex;justify-content:flex-end;align-items:center;gap:28px;padding:18px 7px;border-bottom:2px solid #172033;font-size:13px}.invoice-total strong{font-size:19px}
-  .issuer-contact{margin-top:18px;padding:10px 12px;border:1px solid #eaecf0;border-radius:6px;display:flex;flex-direction:column;gap:4px;font-size:10px;break-inside:avoid}.issuer-contact span{color:#667085;overflow-wrap:anywhere}\n  .invoice-foot{margin-top:18px;padding-top:10px;border-top:1px solid #eaecf0;color:#667085;font-size:9px}
+  .issuer-contact{margin-top:18px;padding:10px 12px;border:1px solid #eaecf0;border-radius:6px;display:flex;flex-direction:column;gap:4px;font-size:10px;break-inside:avoid}.issuer-contact span{color:#667085;overflow-wrap:anywhere}
+  .invoice-foot{margin-top:18px;padding-top:10px;border-top:1px solid #eaecf0;color:#667085;font-size:9px}
   tr{break-inside:avoid}
 }
 .materials-panel{border:0!important;padding:0!important;margin:0!important;background:#fff!important;color:#172033!important}
