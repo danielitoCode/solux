@@ -4,6 +4,7 @@
   import type { Reservation, ReservationStatus } from '$features/reservations/domain/entities';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
   import ResizableSplit from '$infrastructure/ui/ResizableSplit.svelte';
+  import ReservationMaterialsPanel from '$features/reservations/ui/components/ReservationMaterialsPanel.svelte';
 
   const STATUSES: ReservationStatus[] = [
     'pending',
@@ -255,6 +256,10 @@
             <p class="notes">{selected.notes || 'Sin notas'}</p>
           </div>
         </div>
+
+        {#if selected.status === 'in_progress'}
+          <div style="margin: 0 28px 24px;"><ReservationMaterialsPanel reservationId={selected.id} /></div>
+        {/if}
 
         <div class="status-steps">
           <h3>Flujo de estado</h3>
