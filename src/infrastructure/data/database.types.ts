@@ -280,7 +280,47 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['business_hours']['Insert']>;
       };
     };
+    Views: {
+      public_catalog: {
+        Row: {
+          id: string;
+          type: CatalogItemType;
+          category: CatalogCategory;
+          name: string;
+          short_description: string;
+          description: string;
+          price: number | null;
+          currency: string;
+          image_url: string | null;
+          features: string[];
+          is_featured: boolean;
+          sort_order: number;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
+      receive_catalog_purchase: {
+        Args: {
+          p_operation_key: string;
+          p_catalog_item_id: string;
+          p_quantity: number;
+          p_unit_cost: number;
+          p_description?: string;
+          p_document_reference?: string | null;
+        };
+        Returns: string;
+      };
+      record_catalog_sale: {
+        Args: {
+          p_operation_key: string;
+          p_catalog_item_id: string;
+          p_quantity: number;
+          p_sale_unit_price: number;
+          p_description?: string;
+        };
+        Returns: string;
+      };
       get_reservation_materials_by_tracking: {
         Args: { p_code: string };
         Returns: { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: string; adjustment_percent: number; line_total: number; notes: string; created_at: string }[];
