@@ -141,13 +141,16 @@
       {:else}
         <form onsubmit={(event) => { event.preventDefault(); save(); }}>
           <section class="panel">
-            <h3>Textos</h3>
+            <h3>{selectedSlug === 'proyectos' ? 'Encabezado de proyectos' : 'Textos'}</h3>
             <label>Antetítulo<input bind:value={content.eyebrow} /></label>
             <label>Título principal<input bind:value={content.title} required /></label>
             <label>Descripción principal<textarea rows="4" bind:value={content.description}></textarea></label>
-            <label>Título secundario<input bind:value={content.secondary_title} /></label>
-            <label>Descripción secundaria<textarea rows="4" bind:value={content.secondary_description}></textarea></label>
+            {#if selectedSlug !== 'proyectos'}
+              <label>Título secundario<input bind:value={content.secondary_title} /></label>
+              <label>Descripción secundaria<textarea rows="4" bind:value={content.secondary_description}></textarea></label>
+            {/if}
           </section>
+          {#if selectedSlug !== 'proyectos'}
           <section class="panel">
             <h3>Imágenes</h3>
             {#if !isCloudinaryConfigured()}
@@ -168,6 +171,7 @@
               </div>
             {/each}
           </section>
+          {/if}
           <div class="actions"><button class="primary" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button></div>
         </form>
       {/if}
