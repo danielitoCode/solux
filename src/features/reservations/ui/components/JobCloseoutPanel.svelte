@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
+  import { getAuthUser } from '$features/auth/ui/stores/auth.store.svelte';
 
   type Material = { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: 'markup' | 'discount' | 'none'; adjustment_percent: number; notes: string };
   type Labor = { role_description: string; hours: number; agreed_amount: number; status: string };
@@ -16,6 +17,9 @@
   let saving = $state(false);
   let error = $state('');
   let notice = $state('');
+  let companyName = $state('SOLUX');
+  let logoUrl = $state('');
+  let issuer = $state<{ fullName: string; email: string; phone: string } | null>(null);
 
   const materialCost = $derived(materials.reduce((sum,m) => sum + Math.round(Number(m.quantity) * Number(m.unit_cost) * 100) / 100, 0));
   const materialsCharge = $derived(materials.reduce((sum,m) => {
@@ -71,7 +75,15 @@
     }
   }
 
-  onMount(load);
+  async function loadInvoiceBranding() {
+    const { data } = await supabase.from('company_profile').select('name,logo_url').limit(1).maybeSingle();
+    companyName = data?.name || 'SOLUX';
+    logoUrl = data?.logo_url || '';
+    const user = getAuthUser();
+    issuer = user ? { fullName: user.fullName, email: user.email, phone: user.phone || '' } : null;
+  }
+
+  onMount(() => { load(); loadInvoiceBranding(); });
 </script>
 
 <section class="closeout">
@@ -90,7 +102,7 @@
     <p class="muted">Cerrado {new Date(closeout.closed_at).toLocaleString()}. Cargo de cliente pendiente de cobro desde Finanzas.</p>
     <button class="print-button" type="button" onclick={() => window.print()}>Imprimir factura final</button>
     <div class="final-invoice">
-      <div class="invoice-top"><div><p class="brand">SOLUX</p><p class="subtitle">SERVICIOS TÉCNICOS</p></div><div class="invoice-title"><h2>FACTURA FINAL</h2><p>Trabajo completado</p></div></div>
+      <div class="invoice-top"><div class="invoice-branding">{#if logoUrl}<img class="company-logo" src={logoUrl} alt={`Logo de ${companyName}`} />{:else}<p class="brand">{companyName}</p>{/if}<p class="subtitle">SERVICIOS TÉCNICOS</p></div><div class="invoice-title"><h2>FACTURA FINAL</h2><p>Trabajo completado</p></div></div>
       <div class="invoice-meta">
         <div><span>Cliente</span><strong>{customerName || '—'}</strong><small>{customerEmail}</small><small>{customerPhone}</small></div>
         <div><span>Factura / trabajo</span><strong>{closeout.id.slice(0,8).toUpperCase()}</strong><small>{serviceCategory}</small><small>{address}</small></div>
@@ -145,7 +157,7 @@
   .closeout{border:0!important;padding:0!important;margin:0!important;background:#fff!important;color:#172033!important}
   .closeout header,.closeout .totals,.closeout>.muted,.closeout>.error,.closeout>.notice,.print-button,.form-grid,.closeout>button{display:none!important}
   .invoice-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #172033;padding-bottom:16px;margin-bottom:22px}
-  .brand{font-size:28px;letter-spacing:3px;font-weight:800;margin:0;color:#172033}.subtitle{font-size:9px;letter-spacing:2px;margin:4px 0;color:#475467}
+  .invoice-branding{display:flex;flex-direction:column;align-items:flex-start;gap:5px}.company-logo{display:block;max-width:170px;max-height:64px;object-fit:contain;object-position:left center}.brand{font-size:28px;letter-spacing:3px;font-weight:800;margin:0;color:#172033}.subtitle{font-size:9px;letter-spacing:2px;margin:4px 0;color:#475467}
   .invoice-title{text-align:right}.invoice-title h2{font-size:19px;margin:0 0 5px;color:#172033}.invoice-title p{margin:0;color:#667085}
   .invoice-meta{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px;margin-bottom:24px}.invoice-meta span{display:block;color:#667085;font-size:9px;text-transform:uppercase;margin-bottom:5px}.invoice-meta strong,.invoice-meta small{display:block;margin-bottom:4px;overflow-wrap:anywhere}.invoice-meta small{color:#667085;font-size:10px}
   .final-invoice h4{font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px;color:#344054}
@@ -155,7 +167,7 @@
   .invoice-lines th:nth-child(1){width:43%}.invoice-lines th:nth-child(2){width:15%}.invoice-lines th:nth-child(3){width:20%}.invoice-lines th:nth-child(4){width:22%;text-align:right}
   .invoice-lines td:last-child{text-align:right;font-weight:700}.invoice-lines small{display:block;color:#667085;margin-top:4px}
   .invoice-total{display:flex;justify-content:flex-end;align-items:center;gap:28px;padding:18px 7px;border-bottom:2px solid #172033;font-size:13px}.invoice-total strong{font-size:20px}
-  .invoice-footer{margin-top:26px;padding-top:10px;border-top:1px solid #eaecf0;color:#667085;font-size:9px}
+  .issuer-contact{margin-top:18px;padding:10px 12px;border:1px solid #eaecf0;border-radius:6px;display:flex;flex-direction:column;gap:4px;font-size:10px;break-inside:avoid}.issuer-contact h4{margin:0 0 3px}.issuer-contact span{color:#667085;overflow-wrap:anywhere}\n  .invoice-footer{margin-top:18px;padding-top:10px;border-top:1px solid #eaecf0;color:#667085;font-size:9px}
   tr{break-inside:avoid}
 }
 .closeout{border:1px solid var(--color-border);border-radius:14px;padding:18px;margin:0 28px 24px;background:var(--color-surface);color:var(--color-text)}
