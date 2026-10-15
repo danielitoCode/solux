@@ -5,6 +5,7 @@
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
   import ResizableSplit from '$infrastructure/ui/ResizableSplit.svelte';
   import ReservationMaterialsPanel from '$features/reservations/ui/components/ReservationMaterialsPanel.svelte';
+  import JobCloseoutPanel from '$features/reservations/ui/components/JobCloseoutPanel.svelte';
 
   const STATUSES: ReservationStatus[] = [
     'pending',
@@ -82,6 +83,10 @@
 
   async function changeStatus(r: Reservation, status: ReservationStatus) {
     if (r.status === status) return;
+    if (status === 'completed') {
+      error = 'Cierra el trabajo desde el panel Cierre financiero para registrar cargo y margen.';
+      return;
+    }
     updatingId = r.id;
     try {
       const updated = await getReservationRepository().updateStatus(r.id, status);
@@ -218,7 +223,7 @@
                 )}
             >
               {#each STATUSES as s}
-                <option value={s}>{statusLabel[s]}</option>
+                <option value={s} disabled={s === 'completed' && selected.status !== 'completed'}>{statusLabel[s]}</option>
               {/each}
             </select>
           </div>
@@ -260,6 +265,9 @@
         {#if selected.status === 'in_progress'}
           <div style="margin: 0 28px 24px;"><ReservationMaterialsPanel reservationId={selected.id} /></div>
         {/if}
+        {#if selected.status === 'in_progress' || selected.status === 'completed'}
+          <JobCloseoutPanel reservationId={selected.id} status={selected.status} onClosed={load} />
+        {/if}
 
         <div class="status-steps">
           <h3>Flujo de estado</h3>
@@ -273,7 +281,7 @@
                   selected.status !== 'cancelled' &&
                   s !== 'cancelled'}
                 class:cancelled={s === 'cancelled' && selected.status === 'cancelled'}
-                disabled={updatingId === selected.id}
+                disabled={updatingId === selected.id || (s === 'completed' && selected.status !== 'completed')}
                 onclick={() => changeStatus(selected!, s)}
               >
                 <span class="dot"></span>
