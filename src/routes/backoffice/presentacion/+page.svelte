@@ -76,6 +76,13 @@
     if (file.size > 2 * 1024 * 1024) {
       error = 'El logo supera 2 MB.'; input.value = ''; return;
     }
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined;
+    if (!cloudName || !uploadPreset) {
+      error = 'Faltan VITE_CLOUDINARY_CLOUD_NAME y VITE_CLOUDINARY_UPLOAD_PRESET.';
+      input.value = '';
+      return;
+    }
     uploadingLogo = true;
     try {
       if (!profile.id) {
@@ -87,13 +94,25 @@
         if (insertError) throw insertError;
         profile.id = data.id;
       }
-      const path = `company-logo/${profile.id}/logo-${Date.now()}.${file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/webp' ? 'webp' : 'png'}`;
-      const { error: uploadError } = await supabase.storage.from('company-assets').upload(path, file, { upsert: true, contentType: file.type });
-      if (uploadError) throw uploadError;
-      const { data: publicData } = supabase.storage.from('company-assets').getPublicUrl(path);
-      const { error: updateError } = await supabase.from('company_profile').update({ logo_url: publicData.publicUrl }).eq('id', profile.id);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+      formData.append('folder', 'solux/company');
+      formData.append('public_id', `logo-${profile.id}`);
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      const result = await response.json() as { secure_url?: string; error?: { message?: string } };
+      if (!response.ok || !result.secure_url) {
+        throw new Error(result.error?.message || 'Cloudinary rechazó la subida.');
+      }
+
+      const { error: updateError } = await supabase.from('company_profile').update({ logo_url: result.secure_url }).eq('id', profile.id);
       if (updateError) throw updateError;
-      profile.logo_url = publicData.publicUrl;
+      profile.logo_url = result.secure_url;
       success = 'Logo actualizado.';
     } catch (e) {
       error = e instanceof Error ? e.message : 'No se pudo subir el logo.';
