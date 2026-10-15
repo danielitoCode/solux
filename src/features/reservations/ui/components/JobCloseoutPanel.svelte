@@ -2,10 +2,10 @@
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
 
-  type Material = { quantity: number; unit_cost: number; adjustment_type: 'markup' | 'discount' | 'none'; adjustment_percent: number };
+  type Material = { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: 'markup' | 'discount' | 'none'; adjustment_percent: number; notes: string };
   type Labor = { agreed_amount: number; status: string };
   type Closeout = { id: string; material_cost: number; materials_charge: number; labor_cost: number; labor_charge: number; other_charge: number; total_charge: number; estimated_margin: number; notes: string; closed_at: string };
-  let { reservationId, status, onClosed } = $props<{ reservationId: string; status: string; onClosed?: () => void }>();
+  let { reservationId, status, customerName, customerEmail, customerPhone, serviceCategory, address, onClosed } = $props<{ reservationId: string; status: string; customerName: string; customerEmail: string; customerPhone: string; serviceCategory: string; address: string; onClosed?: () => void }>();
   let materials = $state<Material[]>([]);
   let labor = $state<Labor[]>([]);
   let closeout = $state<Closeout | null>(null);
@@ -30,7 +30,7 @@
   async function load() {
     loading = true; error = '';
     const [m,l,c] = await Promise.all([
-      supabase.from('reservation_materials').select('quantity,unit_cost,adjustment_type,adjustment_percent').eq('reservation_id',reservationId),
+      supabase.from('reservation_materials').select('product_name,unit,quantity,unit_cost,adjustment_type,adjustment_percent,notes').eq('reservation_id',reservationId),
       supabase.from('job_labor').select('agreed_amount,status').eq('reservation_id',reservationId),
       supabase.from('job_closeouts').select('id,material_cost,materials_charge,labor_cost,labor_charge,other_charge,total_charge,estimated_margin,notes,closed_at').eq('reservation_id',reservationId).maybeSingle()
     ]);
@@ -88,6 +88,25 @@
       <article><span>Margen estimado</span><strong>{money(Number(closeout.estimated_margin))}</strong></article>
     </div>
     <p class="muted">Cerrado {new Date(closeout.closed_at).toLocaleString()}. Cargo de cliente pendiente de cobro desde Finanzas.</p>
+    <button class="print-button" type="button" onclick={() => window.print()}>Imprimir factura final</button>
+    <div class="final-invoice">
+      <div class="invoice-top"><div><p class="brand">SOLUX</p><p class="subtitle">SERVICIOS TÉCNICOS</p></div><div class="invoice-title"><h2>FACTURA FINAL</h2><p>Trabajo completado</p></div></div>
+      <div class="invoice-meta">
+        <div><span>Cliente</span><strong>{customerName || '—'}</strong><small>{customerEmail}</small><small>{customerPhone}</small></div>
+        <div><span>Factura / trabajo</span><strong>{closeout.id.slice(0,8).toUpperCase()}</strong><small>{serviceCategory}</small><small>{address}</small></div>
+        <div><span>Fecha de emisión</span><strong>{new Date(closeout.closed_at).toLocaleDateString('es-US')}</strong><small>Referencia: {reservationId}</small></div>
+      </div>
+      <h4>Detalle facturado</h4>
+      <table class="invoice-lines"><thead><tr><th>Concepto</th><th>Cantidad</th><th>Precio unitario</th><th>Importe</th></tr></thead><tbody>
+        {#each materials as m (m.product_name + m.unit)}
+          <tr><td>Material: {m.product_name}{#if m.notes}<small>{m.notes}</small>{/if}</td><td>{m.quantity} {m.unit}</td><td>{money(Number(m.unit_cost))}</td><td>{money(Number(m.quantity) * Number(m.unit_cost) * (m.adjustment_type === 'markup' ? 1 + Number(m.adjustment_percent)/100 : m.adjustment_type === 'discount' ? 1 - Number(m.adjustment_percent)/100 : 1))}</td></tr>
+        {/each}
+        {#if Number(closeout.labor_charge) > 0}<tr><td>Mano de obra</td><td>1</td><td>{money(Number(closeout.labor_charge))}</td><td>{money(Number(closeout.labor_charge))}</td></tr>{/if}
+        {#if Number(closeout.other_charge) > 0}<tr><td colspan="3">Cargos adicionales{#if closeout.notes}<small>{closeout.notes}</small>{/if}</td><td>{money(Number(closeout.other_charge))}</td></tr>{/if}
+      </tbody></table>
+      <div class="invoice-total"><span>TOTAL FACTURADO</span><strong>{money(Number(closeout.total_charge))}</strong></div>
+      <div class="invoice-footer"><p>Estado de pago: <strong>Pendiente de conciliación</strong></p><p>Esta factura acredita el cargo registrado, no el pago. Los pagos se registran en Finanzas.</p></div>
+    </div>
   {:else if status === 'in_progress'}
     <p class="muted">Cierre atómico: registra cargo pendiente, guarda costos y cambia reserva a Completada. El margen es estimado y no descuenta gastos generales.</p>
     <div class="totals">
