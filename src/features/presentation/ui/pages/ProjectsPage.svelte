@@ -1,97 +1,29 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { loadSiteContent, type SitePageContent } from '$infrastructure/data/site-content';
-  let pageContent = $state<SitePageContent>({});
-  onMount(async () => { pageContent = await loadSiteContent('proyectos', { eyebrow: 'Proyectos', title: 'Casos reales, resultados que iluminan.', description: 'Cada proyecto cuenta una historia de eficiencia, confianza y compromiso con el medio ambiente.', secondary_title: 'Vivienda familiar', secondary_description: 'Guantánamo · Sistema fotovoltaico con respaldo', image_1: 'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1300&q=85', image_2: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=700&q=80', image_3: 'https://images.unsplash.com/photo-1545208942-e1c9c8c6a6d1?auto=format&fit=crop&w=700&q=80', image_4: 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=700&q=80' }); });
+import { onMount } from 'svelte';
+import { supabase } from '$infrastructure/data/supabase-client';
+type Layout='hero-left'|'editorial'|'gallery-grid'|'technical-report';
+type Spec={label:string;value:string};
+type Project={id:string;title:string;location:string;category:string;system_name:string;capacity_kw:number|null;inverter:string;panels:string;battery:string;description:string;specifications:Spec[];gallery:string[];layout:Layout};
+let projects=$state<Project[]>([]);let loading=$state(true);let loadError=$state(false);
+onMount(async()=>{const {data,error}=await supabase.from('site_projects').select('*').eq('is_published',true).order('sort_order').order('created_at',{ascending:false});if(error)loadError=true;else projects=(data??[]) as unknown as Project[];loading=false;});
 </script>
-<section class="page">
-  <div class="section-head">
-    <div>
-      <div class="eyebrow">{pageContent.eyebrow || 'Proyectos'}</div>
-      <h2>{pageContent.title || 'Casos reales, resultados que iluminan.'}</h2>
-    </div>
-    <p>{pageContent.description || 'Cada proyecto cuenta una historia de eficiencia, confianza y compromiso con el medio ambiente.'}</p>
-  </div>
-
-  <div class="project-feature">
-    <article class="project-main" style={`background-image:url("${pageContent.image_1}");`}>
-      <div class="project-caption">
-        <div class="eyebrow" style="color: var(--color-accent)">Proyecto destacado</div>
-        <h2>{pageContent.secondary_title || 'Vivienda familiar'}</h2>
-        <p>{pageContent.secondary_description || 'Guantánamo · Sistema fotovoltaico con respaldo'}</p>
-      </div>
-    </article>
-    <div class="project-side">
-      <div
-        class="project-thumb"
-        style={`background-image:url("${pageContent.image_2}")`}
-      ></div>
-      <div
-        class="project-thumb"
-        style={`background-image:url("${pageContent.image_3}")`}
-      ></div>
-      <div
-        class="project-thumb"
-        style={`background-image:url("${pageContent.image_4}")`}
-      ></div>
-    </div>
-  </div>
-
-  <div class="grid grid-3" style="margin-top: 20px">
-    <div class="card"><h3>120+</h3><p>proyectos completados</p></div>
-    <div class="card"><h3>98%</h3><p>satisfacción de clientes</p></div>
-    <div class="card"><h3>5+ MW</h3><p>capacidad instalada estimada</p></div>
-  </div>
-</section>
-
+<section class="page projects-page">
+<header class="section-head"><div><div class="eyebrow">Proyectos</div><h1>Instalaciones reales. Soluciones diseñadas para cada necesidad.</h1></div><p>Equipos, características y resultados de instalaciones solares ejecutadas por SOLUX.</p></header>
+{#if loading}<p class="state">Cargando proyectos…</p>{:else if loadError}<p class="state">No se pudieron cargar los proyectos publicados.</p>{:else if !projects.length}<div class="empty"><h2>Próximamente</h2><p>Estamos preparando casos de instalación con equipos y detalles técnicos.</p></div>{:else}
+<div class="projects-list">{#each projects as p (p.id)}<article class="project-card" class:editorial={p.layout==='editorial'} class:mosaic={p.layout==='gallery-grid'} class:technical={p.layout==='technical-report'}>
+{#if p.layout==='hero-left'}
+<div class="hero-layout"><div class="hero-photo">{#if p.gallery[0]}<img src={p.gallery[0]} alt={p.title}/>{/if}<span class="photo-label">Instalación SOLUX</span></div><div class="info"><div class="eyebrow">{p.category}{#if p.location} · {p.location}{/if}</div><h2>{p.title}</h2><p class="system">{p.system_name}</p><p>{p.description}</p><Chips p={p}/><Specs specs={p.specifications}/></div></div>
+<div class="hero-gallery">{#each p.gallery.slice(1) as url,i}<img src={url} alt={`${p.title} — detalle ${i+1}`} loading="lazy"/>{/each}</div>
+{:else if p.layout==='editorial'}
+<div class="editorial-layout"><div class="info"><div class="eyebrow">{p.category}{#if p.location} · {p.location}{/if}</div><h2>{p.title}</h2><p class="system">{p.system_name}</p><p>{p.description}</p><Specs specs={p.specifications}/><Chips p={p}/></div><div class="editorial-photo">{#if p.gallery[0]}<img src={p.gallery[0]} alt={p.title}/>{/if}</div></div><div class="hero-gallery">{#each p.gallery.slice(1) as url,i}<img src={url} alt={`${p.title} — detalle ${i+1}`} loading="lazy"/>{/each}</div>
+{:else if p.layout==='gallery-grid'}
+<div class="mosaic-head"><div class="eyebrow">{p.category}{#if p.location} · {p.location}{/if}</div><h2>{p.title}</h2><p>{p.description}</p></div><div class="mosaic-gallery">{#each p.gallery as url,i}<img src={url} alt={`${p.title} — foto ${i+1}`} class:main-shot={i===0} loading="lazy"/>{/each}</div><div class="mosaic-specs"><p class="system">{p.system_name}{#if p.capacity_kw} · {p.capacity_kw} kW{/if}</p><Specs specs={p.specifications}/></div>
+{:else}
+<div class="technical-head"><div><div class="eyebrow">Ficha de instalación · {p.category}</div><h2>{p.title}</h2><p>{p.description}</p></div><div class="capacity">{p.capacity_kw??'—'}<small>kW instalados</small></div></div><div class="technical-data"><div><small>Sistema</small><strong>{p.system_name||'—'}</strong></div><div><small>Inversor</small><strong>{p.inverter||'—'}</strong></div><div><small>Paneles</small><strong>{p.panels||'—'}</strong></div><div><small>Batería / respaldo</small><strong>{p.battery||'—'}</strong></div><div><small>Ubicación</small><strong>{p.location||'—'}</strong></div></div><Specs specs={p.specifications}/><div class="technical-gallery">{#each p.gallery as url,i}<img src={url} alt={`${p.title} — detalle ${i+1}`} loading="lazy"/>{/each}</div>
+{/if}</article>{/each}</div>{/if}</section>
+{#snippet chips(p:Project)}<div class="chips">{#if p.capacity_kw}<span>{p.capacity_kw} kW</span>{/if}{#if p.inverter}<span>{p.inverter}</span>{/if}{#if p.panels}<span>{p.panels}</span>{/if}</div>{/snippet}
+{#snippet specs(specs:Spec[])}{#if specs?.length}<div class="specs">{#each specs as s}<div><span>{s.label}</span><strong>{s.value}</strong></div>{/each}</div>{/if}{/snippet}
 <style>
-  .project-feature {
-    display: grid;
-    grid-template-columns: 1.25fr 0.75fr;
-    gap: 18px;
-  }
-  .project-main {
-    min-height: 520px;
-    border-radius: 28px;
-    overflow: hidden;
-    position: relative;
-    background-position: center;
-    background-size: cover;
-  }
-  .project-main::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(transparent 45%, rgba(0, 30, 15, 0.85));
-  }
-  .project-caption {
-    position: absolute;
-    z-index: 1;
-    bottom: 28px;
-    left: 28px;
-    color: white;
-  }
-  .project-side {
-    display: grid;
-    grid-template-rows: repeat(3, 1fr);
-    gap: 18px;
-  }
-  .project-thumb {
-    border-radius: 22px;
-    overflow: hidden;
-    min-height: 155px;
-    position: relative;
-    background: center / cover;
-  }
-  .project-thumb::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.18);
-  }
-  @media (max-width: 900px) {
-    .project-feature {
-      grid-template-columns: 1fr;
-    }
-  }
+.projects-page{padding-bottom:72px}.section-head{display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:end;margin-bottom:28px}.section-head h1{font-size:clamp(28px,4vw,46px);line-height:1.08;letter-spacing:-.045em;margin:10px 0}.section-head>p,.info>p,.mosaic-head>p,.technical-head p{color:var(--color-muted);line-height:1.7;font-size:14px}.projects-list{display:grid;gap:28px}.project-card{border:1px solid var(--color-border);border-radius:24px;background:var(--color-surface);overflow:hidden}.hero-layout{display:grid;grid-template-columns:1.1fr .9fr}.hero-photo{position:relative;min-height:420px;background:var(--color-surface-2)}.hero-photo img,.editorial-photo img{width:100%;height:100%;min-height:inherit;display:block;object-fit:cover}.photo-label{position:absolute;left:18px;bottom:18px;padding:8px 12px;border-radius:999px;background:#ffffffdc;color:#17231d;font-size:11px;font-weight:800}.info{padding:clamp(22px,4vw,44px)}.eyebrow{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary)}.info h2,.mosaic-head h2,.technical-head h2{font-size:clamp(24px,3vw,36px);line-height:1.12;letter-spacing:-.035em;margin:10px 0}.system{font-weight:750;color:var(--color-text)!important;font-size:15px}.chips{display:flex;flex-wrap:wrap;gap:7px;margin:18px 0}.chips span{border:1px solid var(--color-border);border-radius:999px;padding:7px 10px;font-size:11px;font-weight:700}.specs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px;margin-top:20px;border-top:1px solid var(--color-border)}.specs div{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--color-border);font-size:12px}.specs span{color:var(--color-muted)}.specs strong{text-align:right}.hero-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px}.hero-gallery img{width:100%;height:170px;object-fit:cover;border-radius:12px;background:var(--color-surface-2)}.editorial-layout{display:grid;grid-template-columns:.8fr 1.2fr;min-height:440px}.editorial-photo{min-height:440px;background:var(--color-surface-2)}.mosaic-head{padding:28px 30px 8px}.mosaic-gallery{display:grid;grid-template-columns:1.3fr 1fr 1fr;grid-auto-rows:190px;gap:10px;padding:14px}.mosaic-gallery img{width:100%;height:100%;object-fit:cover;border-radius:12px;background:var(--color-surface-2)}.mosaic-gallery .main-shot{grid-row:span 2}.mosaic-specs{padding:0 30px 26px}.technical-head{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:28px 30px;background:var(--color-surface-2)}.technical-head>div:first-child{max-width:760px}.capacity{flex-shrink:0;font-size:34px;font-weight:850;letter-spacing:-.05em}.capacity small{display:block;font-size:10px;letter-spacing:0;color:var(--color-muted)}.technical-data{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--color-border);border-block:1px solid var(--color-border)}.technical-data div{padding:18px;background:var(--color-surface);display:flex;flex-direction:column;gap:7px}.technical-data small{font-size:10px;color:var(--color-muted)}.technical-data strong{font-size:12px}.technical>.specs{margin:20px 28px}.technical-gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px}.technical-gallery img{width:100%;height:150px;object-fit:cover;border-radius:10px}.empty{padding:50px 20px;text-align:center;border:1px dashed var(--color-border);border-radius:18px}.empty p,.state{color:var(--color-muted);font-size:13px}
+@media(max-width:850px){.section-head{grid-template-columns:1fr;gap:8px}.hero-layout,.editorial-layout{grid-template-columns:1fr}.hero-photo{min-height:300px}.editorial-photo{min-height:280px;grid-row:1}.technical-data{grid-template-columns:repeat(2,minmax(0,1fr))}.mosaic-gallery{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:150px}.technical-head{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.hero-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-gallery img{height:130px}.specs{grid-template-columns:1fr}.mosaic-gallery{grid-template-columns:1fr;grid-auto-rows:200px}.mosaic-gallery .main-shot{grid-row:auto}.technical-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.technical-head,.mosaic-head,.mosaic-specs{padding-inline:18px}}
 </style>
