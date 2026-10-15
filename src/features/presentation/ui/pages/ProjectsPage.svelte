@@ -4,11 +4,11 @@ import { supabase } from '$infrastructure/data/supabase-client';
 type Layout='hero-left'|'editorial'|'gallery-grid'|'technical-report';
 type Spec={label:string;value:string};
 type Project={id:string;title:string;location:string;category:string;system_name:string;capacity_kw:number|null;inverter:string;panels:string;battery:string;description:string;specifications:Spec[];gallery:string[];layout:Layout};
-let projects=$state<Project[]>([]);let loading=$state(true);let loadError=$state(false);
-onMount(async()=>{const {data,error}=await supabase.from('site_projects').select('*').eq('is_published',true).order('sort_order').order('created_at',{ascending:false});if(error)loadError=true;else projects=(data??[]) as unknown as Project[];loading=false;});
+let projects=$state<Project[]>([]);let loading=$state(true);let loadError=$state(false);let header=$state({eyebrow:'Proyectos',title:'Instalaciones reales. Soluciones diseñadas para cada necesidad.',description:'Equipos, características y resultados de instalaciones solares ejecutadas por SOLUX.'});
+onMount(async()=>{const [contentResult,projectsResult]=await Promise.all([supabase.from('site_content').select('content').eq('page_slug','proyectos').maybeSingle(),supabase.from('site_projects').select('*').eq('is_published',true).order('sort_order').order('created_at',{ascending:false})]);if(contentResult.data?.content){const c=contentResult.data.content as Partial<typeof header>;header={eyebrow:c.eyebrow||header.eyebrow,title:c.title||header.title,description:c.description||header.description};}if(projectsResult.error)loadError=true;else projects=(projectsResult.data??[]) as unknown as Project[];loading=false;});
 </script>
 <section class="page projects-page">
-<header class="section-head"><div><div class="eyebrow">Proyectos</div><h1>Instalaciones reales. Soluciones diseñadas para cada necesidad.</h1></div><p>Equipos, características y resultados de instalaciones solares ejecutadas por SOLUX.</p></header>
+<header class="section-head"><div><div class="eyebrow">{header.eyebrow}</div><h1>{header.title}</h1></div><p>{header.description}</p></header>
 {#if loading}<p class="state">Cargando proyectos…</p>{:else if loadError}<p class="state">No se pudieron cargar los proyectos publicados.</p>{:else if !projects.length}<div class="empty"><h2>Próximamente</h2><p>Estamos preparando casos de instalación con equipos y detalles técnicos.</p></div>{:else}
 <div class="projects-list">{#each projects as p (p.id)}<article class="project-card" class:editorial={p.layout==='editorial'} class:mosaic={p.layout==='gallery-grid'} class:technical={p.layout==='technical-report'}>
 {#if p.layout==='hero-left'}
