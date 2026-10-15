@@ -1,32 +1,38 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { loadSiteContent, type SitePageContent } from '$infrastructure/data/site-content';
+  let pageContent = $state<SitePageContent>({});
+  onMount(async () => { pageContent = await loadSiteContent('proyectos', { eyebrow: 'Proyectos', title: 'Casos reales, resultados que iluminan.', description: 'Cada proyecto cuenta una historia de eficiencia, confianza y compromiso con el medio ambiente.', secondary_title: 'Vivienda familiar', secondary_description: 'Guantánamo · Sistema fotovoltaico con respaldo', image_1: 'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1300&q=85', image_2: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=700&q=80', image_3: 'https://images.unsplash.com/photo-1545208942-e1c9c8c6a6d1?auto=format&fit=crop&w=700&q=80', image_4: 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=700&q=80' }); });
+</script>
 <section class="page">
   <div class="section-head">
     <div>
-      <div class="eyebrow">Proyectos</div>
-      <h2>Casos reales, resultados que iluminan.</h2>
+      <div class="eyebrow">{pageContent.eyebrow || 'Proyectos'}</div>
+      <h2>{pageContent.title || 'Casos reales, resultados que iluminan.'}</h2>
     </div>
-    <p>Cada proyecto cuenta una historia de eficiencia, confianza y compromiso con el medio ambiente.</p>
+    <p>{pageContent.description || 'Cada proyecto cuenta una historia de eficiencia, confianza y compromiso con el medio ambiente.'}</p>
   </div>
 
   <div class="project-feature">
-    <article class="project-main">
+    <article class="project-main" style={`background-image:url("${pageContent.image_1}");`}>
       <div class="project-caption">
         <div class="eyebrow" style="color: var(--color-accent)">Proyecto destacado</div>
-        <h2>Vivienda familiar</h2>
-        <p>Guantánamo · Sistema fotovoltaico con respaldo</p>
+        <h2>{pageContent.secondary_title || 'Vivienda familiar'}</h2>
+        <p>{pageContent.secondary_description || 'Guantánamo · Sistema fotovoltaico con respaldo'}</p>
       </div>
     </article>
     <div class="project-side">
       <div
         class="project-thumb"
-        style="background-image: url('https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=700&q=80')"
+        style={`background-image:url("${pageContent.image_2}")`}
       ></div>
       <div
         class="project-thumb"
-        style="background-image: url('https://images.unsplash.com/photo-1545208942-e1c9c8c6a6d1?auto=format&fit=crop&w=700&q=80')"
+        style={`background-image:url("${pageContent.image_3}")`}
       ></div>
       <div
         class="project-thumb"
-        style="background-image: url('https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=700&q=80')"
+        style={`background-image:url("${pageContent.image_4}")`}
       ></div>
     </div>
   </div>
@@ -49,8 +55,8 @@
     border-radius: 28px;
     overflow: hidden;
     position: relative;
-    background: url('https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1300&q=85')
-      center / cover;
+    background-position: center;
+    background-size: cover;
   }
   .project-main::after {
     content: '';
