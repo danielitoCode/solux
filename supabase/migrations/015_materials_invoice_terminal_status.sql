@@ -52,13 +52,13 @@ begin
   select
     coalesce(sum(quantity),0) + p_quantity,
     coalesce(sum(quantity * unit_cost),0) + p_quantity * p_unit_cost,
-    coalesce(sum(quantity * (
+    coalesce(sum(quantity * unit_cost * (
       case adjustment_type
         when 'markup' then 1 + adjustment_percent / 100
         when 'discount' then 1 - adjustment_percent / 100
         else 1
       end
-    )),0) + p_quantity * v_factor,
+    )),0) + p_quantity * p_unit_cost * v_factor,
     string_agg(distinct nullif(trim(notes),''), E'\n')
   into v_qty, v_cost_total, v_factor_total, v_notes
   from public.reservation_materials
@@ -66,7 +66,7 @@ begin
 
   v_qty := round(v_qty,3);
   v_cost := round(v_cost_total / v_qty,2);
-  v_factor := v_factor_total / v_qty;
+  v_factor := case when v_cost_total > 0 then v_factor_total / v_cost_total else 1 end;
   if v_factor > 1 then
     v_adjustment_type := 'markup';
     v_adjustment_percent := round((v_factor - 1) * 100,2);
