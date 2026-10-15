@@ -117,6 +117,28 @@
 </section>
 
 <style>
-  .materials-panel{border:1px solid var(--color-border);border-radius:14px;padding:18px;margin-top:20px;background:var(--color-surface);color:var(--color-text)}
+  .invoice-print{display:none}
+@page{size:auto;margin:12mm}
+@media print{
+  :global(body *){visibility:hidden!important}
+  :global(body){margin:0!important;background:#fff!important}
+  .invoice-print,.invoice-print *{visibility:visible!important}
+  .invoice-print{display:block!important;position:absolute;top:0;left:0;width:100%;padding:0;box-sizing:border-box;background:#fff!important;color:#172033!important;font:11px Arial,sans-serif}
+  .materials-panel{border:0!important;padding:0!important;margin:0!important;background:#fff!important;color:#172033!important}
+  .materials-panel header,.add-grid,.primary,.table-wrap,.materials-panel footer,.actions,.error,.hint{display:none!important}
+  .invoice-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #172033;padding-bottom:16px;margin-bottom:22px}
+  .invoice-brand{font-size:28px;letter-spacing:3px;font-weight:800;margin:0;color:#172033}.invoice-subtitle{font-size:9px;letter-spacing:2px;margin:4px 0;color:#475467}
+  .invoice-title{text-align:right}.invoice-title h2{font-size:17px;margin:0 0 5px;color:#172033}.invoice-title p{margin:0;color:#667085}
+  .invoice-meta{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin-bottom:22px}.invoice-meta span{display:block;color:#667085;font-size:9px;text-transform:uppercase;margin-bottom:5px}.invoice-meta strong{font-size:11px;overflow-wrap:anywhere}
+  .invoice-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}
+  .invoice-table th{background:#f2f4f7!important;color:#344054!important;text-transform:uppercase;font-size:9px;letter-spacing:.03em}
+  .invoice-table th,.invoice-table td{padding:9px 7px;border-bottom:1px solid #eaecf0;text-align:left;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
+  .invoice-table th:nth-child(1){width:36%}.invoice-table th:nth-child(2){width:14%}.invoice-table th:nth-child(3){width:17%}.invoice-table th:nth-child(4){width:13%}.invoice-table th:nth-child(5){width:20%;text-align:right}
+  .invoice-table td:last-child{text-align:right;font-weight:700}.invoice-table td small{display:block;color:#667085;margin-top:4px}
+  .invoice-total{display:flex;justify-content:flex-end;align-items:center;gap:28px;padding:18px 7px;border-bottom:2px solid #172033;font-size:13px}.invoice-total strong{font-size:19px}
+  .invoice-foot{margin-top:28px;padding-top:10px;border-top:1px solid #eaecf0;color:#667085;font-size:9px}
+  tr{break-inside:avoid}
+}
+.materials-panel{border:1px solid var(--color-border);border-radius:14px;padding:18px;margin-top:20px;background:var(--color-surface);color:var(--color-text)}
   header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px}h3{margin:4px 0;font-size:18px}.eyebrow{margin:0;color:var(--color-primary);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.hint,small{color:var(--color-muted);font-size:12px}.add-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}label{display:grid;gap:6px;font-size:12px;font-weight:700}input,select{min-width:0;width:100%;padding:9px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-background);color:inherit}.primary,.secondary,.remove{border:0;border-radius:8px;padding:10px 12px;font-weight:700;cursor:pointer}.primary{background:var(--color-primary);color:white}.secondary{background:var(--color-surface-2);color:inherit}.remove{background:transparent;color:var(--color-danger,#b42318);padding:5px}.error{color:#b42318;font-size:13px}.table-wrap{overflow-x:auto;margin-top:16px}table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}th,td{padding:10px 8px;border-bottom:1px solid var(--color-border);white-space:nowrap}td:first-child{white-space:normal}td small{display:block;margin-top:3px}.empty{font-size:13px;color:var(--color-muted);padding:12px 0}footer{display:flex;justify-content:space-between;align-items:center;padding:14px 0;font-size:14px}.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}@media(max-width:800px){.add-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.add-grid{grid-template-columns:1fr}}
 </style>
