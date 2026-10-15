@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
+  import { getAuthUser } from '$features/auth/ui/stores/auth.store.svelte';
 
   type Product = { id: string; name: string; sku: string | null; category: string; unit: string; default_cost: number; default_markup_percent: number; is_active: boolean };
   type Material = { id: string; product_id: string | null; product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: 'markup' | 'discount' | 'none'; adjustment_percent: number; notes: string };
@@ -17,6 +18,9 @@
   let adjustmentPercent = $state('0');
   let notes = $state('');
   let trackingCode = $state('');
+  let companyName = $state('SOLUX');
+  let logoUrl = $state('');
+  let issuer = $state<{ fullName: string; email: string; phone: string } | null>(null);
 
   const total = $derived(materials.reduce((sum, m) => sum + lineTotal(m), 0));
   function lineTotal(m: Material) {
@@ -70,7 +74,15 @@
     else await load();
   }
 
-  onMount(load);
+  async function loadInvoiceBranding() {
+    const { data } = await supabase.from('company_profile').select('name,logo_url').limit(1).maybeSingle();
+    companyName = data?.name || 'SOLUX';
+    logoUrl = data?.logo_url || '';
+    const user = getAuthUser();
+    issuer = user ? { fullName: user.fullName, email: user.email, phone: user.phone || '' } : null;
+  }
+
+  onMount(() => { load(); loadInvoiceBranding(); });
 </script>
 
 <section class="materials-panel">
@@ -92,7 +104,7 @@
   <button type="button" class="primary" onclick={addMaterial} disabled={saving || !selectedProduct}>{saving ? 'Guardando…' : 'Agregar material al trabajo'}</button>
   {#if products.length === 0}<p class="hint">Catálogo vacío. Crea consumibles desde Backoffice → Consumibles.</p>{/if}
   <div class="invoice-print">
-    <div class="invoice-top"><div><p class="invoice-brand">SOLUX</p><p class="invoice-subtitle">SERVICIOS TÉCNICOS</p></div><div class="invoice-title"><h2>DETALLE DE MATERIALES</h2><p>Documento de consumo por trabajo</p></div></div>
+    <div class="invoice-top"><div class="invoice-branding">{#if logoUrl}<img class="company-logo" src={logoUrl} alt={`Logo de ${companyName}`} />{:else}<p class="invoice-brand">{companyName}</p>{/if}<p class="invoice-subtitle">SERVICIOS TÉCNICOS</p></div><div class="invoice-title"><h2>DETALLE DE MATERIALES</h2><p>Documento de consumo por trabajo</p></div></div>
     <div class="invoice-meta"><div><span>Referencia de trabajo</span><strong>{trackingCode || reservationId}</strong></div><div><span>Fecha de emisión</span><strong>{new Date().toLocaleDateString('es-US')}</strong></div><div><span>Estado</span><strong>En curso</strong></div></div>
     <table class="invoice-table"><thead><tr><th>Descripción</th><th>Cantidad</th><th>Costo unitario</th><th>Ajuste</th><th>Importe</th></tr></thead><tbody>
       {#each materials as m (m.id)}
@@ -100,7 +112,7 @@
       {/each}
     </tbody></table>
     <div class="invoice-total"><span>Total materiales</span><strong>{money(total)}</strong></div>
-    <p class="invoice-foot">Documento interno de materiales consumidos. No constituye factura final ni acredita pago.</p>
+    <div class="issuer-contact"><strong>Emitido por</strong>{#if issuer}<b>{issuer.fullName}</b><span>{issuer.email}</span>{#if issuer.phone}<span>{issuer.phone}</span>{/if}{:else}<span>Datos del trabajador no disponibles</span>{/if}</div>\n    <p class="invoice-foot">Documento interno de materiales consumidos. No constituye factura final ni acredita pago.</p>
   </div>
   <div class="table-wrap">
     {#if materials.length === 0}<p class="empty">{loading ? 'Cargando…' : 'Todavía no hay materiales registrados en este trabajo.'}</p>
@@ -134,7 +146,7 @@
   .materials-panel{border:0!important;padding:0!important;margin:0!important;background:#fff!important;color:#172033!important}
   .materials-panel header,.add-grid,.primary,.table-wrap,.materials-panel footer,.actions,.error,.hint{display:none!important}
   .invoice-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #172033;padding-bottom:16px;margin-bottom:22px}
-  .invoice-brand{font-size:28px;letter-spacing:3px;font-weight:800;margin:0;color:#172033}.invoice-subtitle{font-size:9px;letter-spacing:2px;margin:4px 0;color:#475467}
+  .invoice-branding{display:flex;flex-direction:column;align-items:flex-start;gap:5px}.company-logo{display:block;max-width:170px;max-height:64px;object-fit:contain;object-position:left center}.invoice-brand{font-size:28px;letter-spacing:3px;font-weight:800;margin:0;color:#172033}.invoice-subtitle{font-size:9px;letter-spacing:2px;margin:4px 0;color:#475467}
   .invoice-title{text-align:right}.invoice-title h2{font-size:17px;margin:0 0 5px;color:#172033}.invoice-title p{margin:0;color:#667085}
   .invoice-meta{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin-bottom:22px}.invoice-meta span{display:block;color:#667085;font-size:9px;text-transform:uppercase;margin-bottom:5px}.invoice-meta strong{font-size:11px;overflow-wrap:anywhere}
   .invoice-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}
@@ -143,7 +155,7 @@
   .invoice-table th:nth-child(1){width:36%}.invoice-table th:nth-child(2){width:14%}.invoice-table th:nth-child(3){width:17%}.invoice-table th:nth-child(4){width:13%}.invoice-table th:nth-child(5){width:20%;text-align:right}
   .invoice-table td:last-child{text-align:right;font-weight:700}.invoice-table td small{display:block;color:#667085;margin-top:4px}
   .invoice-total{display:flex;justify-content:flex-end;align-items:center;gap:28px;padding:18px 7px;border-bottom:2px solid #172033;font-size:13px}.invoice-total strong{font-size:19px}
-  .invoice-foot{margin-top:28px;padding-top:10px;border-top:1px solid #eaecf0;color:#667085;font-size:9px}
+  .issuer-contact{margin-top:18px;padding:10px 12px;border:1px solid #eaecf0;border-radius:6px;display:flex;flex-direction:column;gap:4px;font-size:10px;break-inside:avoid}.issuer-contact span{color:#667085;overflow-wrap:anywhere}\n  .invoice-foot{margin-top:18px;padding-top:10px;border-top:1px solid #eaecf0;color:#667085;font-size:9px}
   tr{break-inside:avoid}
 }
 .materials-panel{border:0!important;padding:0!important;margin:0!important;background:#fff!important;color:#172033!important}
