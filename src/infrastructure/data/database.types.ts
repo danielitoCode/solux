@@ -333,6 +333,7 @@ export interface Database {
       get_financial_summary: { Args: { p_from?: string; p_to?: string }; Returns: { sales_gross: number; managed_sales_commission: number; customer_cash_in: number; customer_refunds: number; operating_expenses: number; inventory_purchases: number; labor_accrued: number; employee_cash_out: number; estimated_cash_flow: number; unpaid_customer_charges: number }[] };
 
       close_reservation_job: { Args: { p_operation_key: string; p_reservation_id: string; p_labor_charge?: number; p_other_charge?: number; p_notes?: string }; Returns: string };
+      add_reservation_material: { Args: { p_reservation_id: string; p_product_id: string; p_quantity: number; p_unit_cost: number; p_adjustment_type?: string; p_adjustment_percent?: number; p_notes?: string }; Returns: string };
       get_reservation_materials_by_tracking: {
         Args: { p_code: string };
         Returns: { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: string; adjustment_percent: number; line_total: number; notes: string; created_at: string }[];
