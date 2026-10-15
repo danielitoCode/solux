@@ -83,6 +83,10 @@
 
   async function changeStatus(r: Reservation, status: ReservationStatus) {
     if (r.status === status) return;
+    if (r.status === 'completed' || r.status === 'cancelled') {
+      error = 'Las reservas completadas o canceladas son estados terminales y no se pueden modificar.';
+      return;
+    }
     if (status === 'completed') {
       error = 'Cierra el trabajo desde el panel Cierre financiero para registrar cargo y margen.';
       return;
@@ -223,7 +227,7 @@
                 )}
             >
               {#each STATUSES as s}
-                <option value={s} disabled={s === 'completed' && selected.status !== 'completed'}>{statusLabel[s]}</option>
+                <option value={s} disabled={(s === 'completed' && selected.status !== 'completed') || ((selected.status === 'completed' || selected.status === 'cancelled') && s !== selected.status)}>{statusLabel[s]}</option>
               {/each}
             </select>
           </div>
@@ -266,7 +270,7 @@
           <div style="margin: 0 28px 24px;"><ReservationMaterialsPanel reservationId={selected.id} /></div>
         {/if}
         {#if selected.status === 'in_progress' || selected.status === 'completed'}
-          <JobCloseoutPanel reservationId={selected.id} status={selected.status} onClosed={load} />
+          <JobCloseoutPanel reservationId={selected.id} status={selected.status} customerName={selected.customerName} customerEmail={selected.customerEmail} customerPhone={selected.customerPhone} serviceCategory={selected.serviceCategory} address={selected.address} onClosed={load} />
         {/if}
 
         <div class="status-steps">
@@ -281,7 +285,7 @@
                   selected.status !== 'cancelled' &&
                   s !== 'cancelled'}
                 class:cancelled={s === 'cancelled' && selected.status === 'cancelled'}
-                disabled={updatingId === selected.id || (s === 'completed' && selected.status !== 'completed')}
+                disabled={updatingId === selected.id || (s === 'completed' && selected.status !== 'completed') || ((selected.status === 'completed' || selected.status === 'cancelled') && s !== selected.status)}
                 onclick={() => changeStatus(selected!, s)}
               >
                 <span class="dot"></span>
