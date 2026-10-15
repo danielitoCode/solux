@@ -16,6 +16,7 @@
   let adjustmentType = $state<'markup' | 'discount' | 'none'>('markup');
   let adjustmentPercent = $state('0');
   let notes = $state('');
+  let trackingCode = $state('');
 
   const total = $derived(materials.reduce((sum, m) => sum + lineTotal(m), 0));
   function lineTotal(m: Material) {
@@ -26,13 +27,15 @@
 
   async function load() {
     loading = true; error = '';
-    const [p, m] = await Promise.all([
+    const [p, m, r] = await Promise.all([
       supabase.from('consumable_products').select('id,name,sku,category,unit,default_cost,default_markup_percent,is_active').eq('is_active', true).order('name'),
-      supabase.from('reservation_materials').select('*').eq('reservation_id', reservationId).order('created_at')
+      supabase.from('reservation_materials').select('*').eq('reservation_id', reservationId).order('created_at'),
+      supabase.from('reservations').select('tracking_code').eq('id', reservationId).maybeSingle()
     ]);
     if (p.error || m.error) error = p.error?.message ?? m.error?.message ?? 'Error cargando materiales';
     products = (p.data ?? []) as Product[];
     materials = (m.data ?? []) as Material[];
+    trackingCode = r.data?.tracking_code ?? '';
     loading = false;
   }
 
@@ -47,10 +50,14 @@
     if (!p) { error = 'Selecciona un consumible del catálogo'; return; }
     if (!(Number(quantity) > 0) || !(Number(cost) >= 0) || !(Number(adjustmentPercent) >= 0)) { error = 'Revisa cantidad, costo y porcentaje'; return; }
     saving = true; error = '';
-    const { error: saveError } = await supabase.from('reservation_materials').insert({
-      reservation_id: reservationId, product_id: p.id, product_name: p.name, unit: p.unit,
-      quantity: Number(quantity), unit_cost: Number(cost), adjustment_type: adjustmentType,
-      adjustment_percent: adjustmentType === 'none' ? 0 : Number(adjustmentPercent), notes
+    const { error: saveError } = await supabase.rpc('add_reservation_material', {
+      p_reservation_id: reservationId,
+      p_product_id: p.id,
+      p_quantity: Number(quantity),
+      p_unit_cost: Number(cost),
+      p_adjustment_type: adjustmentType,
+      p_adjustment_percent: adjustmentType === 'none' ? 0 : Number(adjustmentPercent),
+      p_notes: notes
     });
     if (saveError) error = saveError.message;
     else { quantity = '1'; notes = ''; await load(); }
@@ -84,6 +91,17 @@
   </div>
   <button type="button" class="primary" onclick={addMaterial} disabled={saving || !selectedProduct}>{saving ? 'Guardando…' : 'Agregar material al trabajo'}</button>
   {#if products.length === 0}<p class="hint">Catálogo vacío. Crea consumibles desde Backoffice → Consumibles.</p>{/if}
+  <div class="invoice-print">
+    <div class="invoice-top"><div><p class="invoice-brand">SOLUX</p><p class="invoice-subtitle">SERVICIOS TÉCNICOS</p></div><div class="invoice-title"><h2>DETALLE DE MATERIALES</h2><p>Documento de consumo por trabajo</p></div></div>
+    <div class="invoice-meta"><div><span>Referencia de trabajo</span><strong>{trackingCode || reservationId}</strong></div><div><span>Fecha de emisión</span><strong>{new Date().toLocaleDateString('es-US')}</strong></div><div><span>Estado</span><strong>En curso</strong></div></div>
+    <table class="invoice-table"><thead><tr><th>Descripción</th><th>Cantidad</th><th>Costo unitario</th><th>Ajuste</th><th>Importe</th></tr></thead><tbody>
+      {#each materials as m (m.id)}
+        <tr><td>{m.product_name}{#if m.notes}<small>{m.notes}</small>{/if}</td><td>{m.quantity} {m.unit}</td><td>{money(Number(m.unit_cost))}</td><td>{m.adjustment_type === 'none' ? '—' : (m.adjustment_type === 'markup' ? '+' : '−') + m.adjustment_percent + '%'}</td><td>{money(lineTotal(m))}</td></tr>
+      {/each}
+    </tbody></table>
+    <div class="invoice-total"><span>Total materiales</span><strong>{money(total)}</strong></div>
+    <p class="invoice-foot">Documento interno de materiales consumidos. No constituye factura final ni acredita pago.</p>
+  </div>
   <div class="table-wrap">
     {#if materials.length === 0}<p class="empty">{loading ? 'Cargando…' : 'Todavía no hay materiales registrados en este trabajo.'}</p>
     {:else}
@@ -95,7 +113,7 @@
     {/if}
   </div>
   <footer><span>Total materiales</span><strong>{money(total)}</strong></footer>
-  <div class="actions"><button type="button" class="secondary" onclick={() => window.print()}>Imprimir resumen</button><small>El importe se calcula con costo unitario, cantidad y ajuste.</small></div>
+  <div class="actions"><button type="button" class="secondary no-print" onclick={() => window.print()}>Imprimir documento</button><small>El importe se calcula con costo unitario, cantidad y ajuste.</small></div>
 </section>
 
 <style>
