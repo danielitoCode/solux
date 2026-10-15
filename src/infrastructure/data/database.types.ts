@@ -321,6 +321,9 @@ export interface Database {
         };
         Returns: string;
       };
+      record_operating_expense: { Args: { p_operation_key: string; p_amount: number; p_category: string; p_description: string; p_occurred_at?: string; p_document_reference?: string | null }; Returns: string };
+      accrue_job_labor: { Args: { p_operation_key: string; p_reservation_id: string; p_employee_id: string; p_role_description: string; p_hours: number; p_amount: number; p_notes?: string }; Returns: string };
+      pay_employee: { Args: { p_operation_key: string; p_employee_id: string; p_amount: number; p_description?: string; p_document_reference?: string | null }; Returns: string };
       get_reservation_materials_by_tracking: {
         Args: { p_code: string };
         Returns: { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: string; adjustment_percent: number; line_total: number; notes: string; created_at: string }[];
