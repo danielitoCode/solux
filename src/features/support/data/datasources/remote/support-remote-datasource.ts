@@ -2,6 +2,8 @@ import { assertSupabaseConfigured, supabase } from '$infrastructure/data/supabas
 import { devLog, devError } from '$infrastructure/ui/dev-logger';
 import type { CreateTicketInput } from '../../../domain/repository/support-repository';
 import type { SupportTicketDto, TicketMessageDto } from '../../dto/support.dto';
+import type { Database } from '$infrastructure/data/database.types';
+import type { TicketStatus } from '../../../domain/entities';
 
 export class SupportRemoteDataSource {
   async createTicket(input: CreateTicketInput): Promise<SupportTicketDto> {
@@ -101,10 +103,10 @@ export class SupportRemoteDataSource {
     return data as TicketMessageDto;
   }
 
-  async updateStatus(id: string, status: string): Promise<SupportTicketDto> {
+  async updateStatus(id: string, status: TicketStatus): Promise<SupportTicketDto> {
     assertSupabaseConfigured();
     devLog('support-remote', 'updateStatus', { id, status });
-    const patch: Record<string, unknown> = { status };
+    const patch: Database['public']['Tables']['support_tickets']['Update'] = { status };
     if (status === 'resolved' || status === 'closed') {
       patch.resolved_at = new Date().toISOString();
     }
