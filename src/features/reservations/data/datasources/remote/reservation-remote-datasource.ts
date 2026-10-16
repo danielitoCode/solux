@@ -2,6 +2,7 @@ import { assertSupabaseConfigured, supabase } from '$infrastructure/data/supabas
 import { devLog, devError } from '$infrastructure/ui/dev-logger';
 import type { ReservationDto } from '../../dto/reservation.dto';
 import type { CreateReservationInput } from '../../../domain/repository/reservation-repository';
+import type { ReservationStatus } from '../../../domain/entities';
 
 export class ReservationRemoteDataSource {
   async create(input: CreateReservationInput): Promise<ReservationDto> {
@@ -55,7 +56,7 @@ export class ReservationRemoteDataSource {
     return (data ?? []) as ReservationDto[];
   }
 
-  async updateStatus(id: string, status: string): Promise<ReservationDto> {
+  async updateStatus(id: string, status: ReservationStatus): Promise<ReservationDto> {
     assertSupabaseConfigured();
     devLog('reservations-remote', 'updateStatus', { id, status });
     const { data, error } = await supabase
