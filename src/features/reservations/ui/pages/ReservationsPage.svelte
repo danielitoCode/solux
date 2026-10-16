@@ -50,7 +50,6 @@
   let toastText = $state('');
   let toastShow = $state(false);
 
-  /** Reserva creada con éxito */
   let createdCode = $state<string | null>(null);
   let createdService = $state('');
 
@@ -169,9 +168,14 @@
         <p class="hint">
           SOLUX se pondrá en contacto contigo en menos de 24 horas. La solicitud no confirma automáticamente la visita.
         </p>
-        <button type="button" class="btn btn-primary" style="width: 100%" onclick={resetForm}>
-          Hacer otra solicitud
-        </button>
+        <div class="success-actions">
+          <a class="btn btn-primary" href={`/seguimiento?code=${encodeURIComponent(createdCode)}`}>
+            Ver seguimiento
+          </a>
+          <button type="button" class="btn btn-ghost" style="width: 100%" onclick={resetForm}>
+            Hacer otra solicitud
+          </button>
+        </div>
       </div>
     {:else}
       <div class="card form-card">
@@ -501,6 +505,11 @@
   .btn-copy {
     font-size: 12px;
     padding: 6px 12px;
+  }
+  .success-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
   .success-meta {
     list-style: none;
