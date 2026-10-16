@@ -9,6 +9,7 @@
   let users = $state<Profile[]>([]);
   let loading = $state(true);
   let saving = $state(false);
+  let updatingUsers = $state<string[]>([]);
   let error = $state('');
   let success = $state('');
   let search = $state('');
@@ -53,10 +54,16 @@
     role = user.role; isActive = user.is_active; error = ''; success = ''; showForm = true;
   }
 
-  function closeForm() { showForm = false; editing = null; }
+  function closeForm() {
+    if (saving) return;
+    showForm = false;
+    editing = null;
+  }
 
   async function saveUser(event: SubmitEvent) {
-    event.preventDefault(); saving = true; error = ''; success = '';
+    event.preventDefault();
+    if (saving || !editing) return;
+    saving = true; error = ''; success = '';
     try {
       if (!editing) {
         throw new Error('Para crear usuarios necesitas una Edge Function segura que cree la cuenta en Supabase Auth y su perfil. No se debe crear una cuenta escribiendo directamente en profiles.');
@@ -64,10 +71,11 @@
       if (editing.id === currentUser?.id && (!isActive || role !== 'admin')) {
         throw new Error('No puedes desactivar tu propia cuenta ni quitarte el rol de administrador.');
       }
-      const { error: updateError } = await supabase.from('profiles').update({
+      const { data: updatedUser, error: updateError } = await supabase.from('profiles').update({
         full_name: fullName.trim(), phone: phone.trim() || null, role, is_active: isActive
-      }).eq('id', editing.id);
+      }).eq('id', editing.id).select('id').maybeSingle();
       if (updateError) throw updateError;
+      if (!updatedUser) throw new Error('No se actualizó ningún usuario. Verifica permisos y vuelve a cargar la lista.');
       success = 'Usuario actualizado.';
       closeForm();
       await loadUsers();
@@ -77,17 +85,22 @@
   }
 
   async function toggleActive(user: Profile) {
+    if (saving || updatingUsers.includes(user.id)) return;
     if (user.id === currentUser?.id) { error = 'No puedes desactivar tu propia cuenta.'; return; }
     const action = user.is_active ? 'desactivar' : 'activar';
     if (!confirm(`¿Confirmas ${action} a ${user.full_name}?`)) return;
     error = ''; success = '';
+    updatingUsers = [...updatingUsers, user.id];
     try {
-      const { error: updateError } = await supabase.from('profiles').update({ is_active: !user.is_active }).eq('id', user.id);
+      const { data: updatedUser, error: updateError } = await supabase.from('profiles').update({ is_active: !user.is_active }).eq('id', user.id).select('id').maybeSingle();
       if (updateError) throw updateError;
+      if (!updatedUser) throw new Error('No se actualizó ningún usuario. Verifica permisos y vuelve a cargar la lista.');
       success = user.is_active ? 'Usuario desactivado.' : 'Usuario activado.';
       await loadUsers();
     } catch (e) {
       error = e instanceof Error ? e.message : 'No se pudo cambiar el estado.';
+    } finally {
+      updatingUsers = updatingUsers.filter((id) => id !== user.id);
     }
   }
 
@@ -114,7 +127,7 @@
     <div class="search"><label for="user-search">Buscar</label><input id="user-search" bind:value={search} placeholder="Nombre, correo o teléfono" /></div>
     <div><label for="role-filter">Rol</label><select id="role-filter" bind:value={roleFilter}><option value="all">Todos los roles</option><option value="admin">Administrador</option><option value="support">Soporte</option><option value="sales">Ventas</option></select></div>
     <div><label for="status-filter">Estado</label><select id="status-filter" bind:value={statusFilter}><option value="all">Todos</option><option value="active">Activos</option><option value="inactive">Inactivos</option></select></div>
-    <button class="btn btn-primary" type="button" onclick={openCreate}>Nuevo usuario</button>
+    <button class="btn btn-primary" type="button" onclick={openCreate} disabled={saving}>Nuevo usuario</button>
   </div>
 
   {#if error}<p class="notice error" role="alert">{error}</p>{/if}
@@ -122,7 +135,7 @@
 
   {#if showForm}
     <form class="card editor" onsubmit={saveUser}>
-      <div class="editor-head"><div><h3>{editing ? 'Editar usuario' : 'Crear usuario'}</h3><p>{editing ? 'Actualiza perfil, rol y acceso.' : 'La creación de cuentas requiere el endpoint seguro de Supabase Auth.'}</p></div><button class="btn btn-ghost" type="button" onclick={closeForm}>Cancelar</button></div>
+      <div class="editor-head"><div><h3>{editing ? 'Editar usuario' : 'Crear usuario'}</h3><p>{editing ? 'Actualiza perfil, rol y acceso.' : 'La creación de cuentas requiere el endpoint seguro de Supabase Auth.'}</p></div><button class="btn btn-ghost" type="button" onclick={closeForm} disabled={saving}>Cancelar</button></div>
       {#if !editing}<p class="notice error">Alta de cuentas no disponible todavía: requiere una Edge Function con privilegios de servidor para crear usuario en Auth y su perfil. No se expondrán credenciales administrativas en el navegador.</p>{/if}
       <div class="form-grid">
         <div><label for="user-name">Nombre completo</label><input id="user-name" bind:value={fullName} required maxlength="120" /></div>
@@ -146,7 +159,7 @@
           <td><span class="role" class:admin={user.role === 'admin'}>{roleLabels[user.role]}</span></td>
           <td><span class="status" class:inactive={!user.is_active}><i></i>{user.is_active ? 'Activo' : 'Inactivo'}</span></td>
           <td>{date(user.created_at)}</td>
-          <td><div class="actions"><button type="button" class="btn btn-ghost" onclick={() => openEdit(user)}>Editar</button><button type="button" class="btn btn-ghost" disabled={user.id === currentUser?.id} onclick={() => toggleActive(user)}>{user.is_active ? 'Desactivar' : 'Activar'}</button></div></td>
+          <td><div class="actions"><button type="button" class="btn btn-ghost" onclick={() => openEdit(user)} disabled={saving || updatingUsers.includes(user.id)}>Editar</button><button type="button" class="btn btn-ghost" disabled={user.id === currentUser?.id || saving || updatingUsers.includes(user.id)} onclick={() => toggleActive(user)}>{user.is_active ? 'Desactivar' : 'Activar'}</button></div></td>
         </tr>
       {/each}</tbody></table></div>
     {/if}
