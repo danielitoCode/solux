@@ -1,6 +1,9 @@
 import { assertSupabaseConfigured, supabase } from '$infrastructure/data/supabase-client';
 import { devLog, devError } from '$infrastructure/ui/dev-logger';
 import type { CatalogItemDto } from '../../dto/catalog-item.dto';
+import type { Database } from '$infrastructure/data/database.types';
+type CatalogItemInsert = Database['public']['Tables']['catalog_items']['Insert'];
+type CatalogItemUpdate = Database['public']['Tables']['catalog_items']['Update'];
 
 export class CatalogRemoteDataSource {
   async listActive(): Promise<CatalogItemDto[]> {
@@ -31,7 +34,7 @@ export class CatalogRemoteDataSource {
     return (data ?? []) as CatalogItemDto[];
   }
 
-  async insert(row: Record<string, unknown>): Promise<CatalogItemDto> {
+  async insert(row: CatalogItemInsert): Promise<CatalogItemDto> {
     assertSupabaseConfigured();
     const { data, error } = await supabase.from('catalog_items').insert(row).select().single();
     if (error) {
@@ -41,7 +44,7 @@ export class CatalogRemoteDataSource {
     return data as CatalogItemDto;
   }
 
-  async update(id: string, row: Record<string, unknown>): Promise<CatalogItemDto> {
+  async update(id: string, row: CatalogItemUpdate): Promise<CatalogItemDto> {
     assertSupabaseConfigured();
     const { data, error } = await supabase
       .from('catalog_items')
