@@ -39,7 +39,7 @@
   let uploadingImages = $state<Record<number, boolean>>({});
 
   let pageRequest = 0;
-  let uploadRequest = 0;
+  let uploadRequests: Record<number, number> = {};
   let saveRequest = 0;
 
   async function selectPage(slug: PageSlug) {
@@ -73,7 +73,8 @@
   async function uploadImage(index: number, file?: File) {
     if (!file || loading || saving || uploadingImages[index]) return;
     const slug = selectedSlug;
-    const request = ++uploadRequest;
+    const request = (uploadRequests[index] ?? 0) + 1;
+    uploadRequests[index] = request;
     error = '';
     success = '';
     if (!file.type.startsWith('image/')) {
@@ -88,7 +89,7 @@
     uploadingImages[index] = true;
     try {
       const result = await uploadImageToCloudinary(file, `solux/site-content/${slug}`);
-      if (request !== uploadRequest || selectedSlug !== slug) return;
+      if (uploadRequests[index] !== request || selectedSlug !== slug) return;
       content[imageKey(index)] = result.url;
       success = `Imagen ${index} subida a Cloudinary. URL insertada automáticamente.`;
     } catch (e) {
