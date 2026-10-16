@@ -161,6 +161,7 @@
   }
 
   async function save() {
+    if (saving || uploading) return;
     if (!formName.trim()) {
       error = 'El nombre es obligatorio';
       return;
@@ -428,7 +429,7 @@
             >
               Cancelar
             </button>
-            <button type="button" class="btn btn-primary" disabled={saving} onclick={save}>
+            <button type="button" class="btn btn-primary" disabled={saving || uploading} onclick={save}>
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
