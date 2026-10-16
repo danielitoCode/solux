@@ -10,7 +10,7 @@ export interface CatalogItemDto {
   price: number | null;
   currency: string;
   image_url: string | null;
-  image_urls: string[] | null;
+  image_urls?: string[] | null;
   features: string[] | null;
   is_active: boolean;
   is_featured: boolean;
