@@ -196,6 +196,7 @@ export interface Database {
           priority?: TicketPriority;
           related_reservation_id?: string | null;
           assigned_to?: string | null;
+          resolved_at?: string | null;
         };
         Update: Partial<Database['public']['Tables']['support_tickets']['Insert']>;
         Relationships: [];
