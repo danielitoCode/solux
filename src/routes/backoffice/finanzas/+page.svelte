@@ -148,7 +148,8 @@
   }
 
   async function saveCustomerPayment() {
-    if (!selectedCharge || Number(customerPaymentAmount) <= 0 || Number(customerPaymentAmount) > selectedCharge.outstanding + 0.001) {
+    const amount = Number(customerPaymentAmount);
+    if (!selectedCharge || !Number.isFinite(amount) || amount <= 0 || amount > selectedCharge.outstanding + 0.001) {
       error = 'Selecciona cargo e importe válido, sin superar saldo pendiente.';
       return;
     }
@@ -156,7 +157,7 @@
       const result = await supabase.rpc('record_customer_payment', {
         p_operation_key: crypto.randomUUID(),
         p_charge_operation_id: selectedCharge.id,
-        p_amount: Number(customerPaymentAmount),
+        p_amount: amount,
         p_description: customerPaymentDescription.trim() || 'Cobro de cliente',
         p_document_reference: customerPaymentReference.trim() || null,
         p_occurred_at: new Date().toISOString()
