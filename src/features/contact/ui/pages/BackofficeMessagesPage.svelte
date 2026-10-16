@@ -19,7 +19,8 @@
   let error = $state('');
   let filter = $state<Filter>('all');
   let search = $state('');
-  let updatingId = $state<string | null>(null);
+  let updatingIds = $state<string[]>([]);
+  let loadRequestId = 0;
   let selected = $state<ContactMessage | null>(null);
 
   const unreadCount = $derived(items.filter((m) => !m.isRead).length);
@@ -46,20 +47,23 @@
   });
 
   async function load() {
+    const requestId = ++loadRequestId;
     loading = true;
     error = '';
     try {
-      items = await getContactMessageRepository().listAll();
-      devLog('bo-messages', `loaded ${items.length}`);
+      const result = await getContactMessageRepository().listAll();
+      if (requestId !== loadRequestId) return;
+      items = result;
+      devLog('bo-messages', `loaded ${result.length}`);
       if (selected) {
-        const fresh = items.find((m) => m.id === selected!.id);
-        if (fresh) selected = fresh;
+        selected = result.find((m) => m.id === selected!.id) ?? null;
       }
     } catch (e) {
+      if (requestId !== loadRequestId) return;
       devError('bo-messages', 'listAll failed', e, { file: 'BackofficeMessagesPage.svelte' });
       error = e instanceof Error ? e.message : 'Error al cargar mensajes';
     } finally {
-      loading = false;
+      if (requestId === loadRequestId) loading = false;
     }
   }
 
@@ -71,7 +75,8 @@
   }
 
   async function setRead(m: ContactMessage, isRead: boolean) {
-    updatingId = m.id;
+    if (updatingIds.includes(m.id) || m.isRead === isRead) return;
+    updatingIds = [...updatingIds, m.id];
     try {
       const updated = await getContactMessageRepository().markRead(m.id, isRead);
       items = items.map((x) => (x.id === m.id ? updated : x));
@@ -81,7 +86,7 @@
       devError('bo-messages', 'markRead failed', e);
       error = e instanceof Error ? e.message : 'No se pudo actualizar';
     } finally {
-      updatingId = null;
+      updatingIds = updatingIds.filter((id) => id !== m.id);
     }
   }
 
@@ -117,7 +122,7 @@
           <p class="eyebrow">Backoffice</p>
           <h1>Mensajes</h1>
         </div>
-        <button type="button" class="icon-btn" onclick={load} disabled={loading} title="Actualizar">
+        <button type="button" class="icon-btn" onclick={load} disabled={loading || updatingIds.length > 0} title="Actualizar">
           {loading ? '…' : '↻'}
         </button>
       </header>
@@ -170,7 +175,7 @@
               class="item-card"
               class:selected={selected?.id === m.id}
               class:unread={!m.isRead}
-              onclick={() => openMessage(m)}
+              onclick={() => openMessage(m)} disabled={updatingIds.includes(m.id)}
             >
               <div class="item-top">
                 <span class="badge subject">{subjectLabel[m.subject]}</span>
@@ -217,7 +222,7 @@
               <button
                 type="button"
                 class="btn btn-ghost"
-                disabled={updatingId === selected.id}
+                disabled={updatingIds.includes(selected.id)}
                 onclick={() => setRead(selected!, false)}
               >
                 Marcar no leído
