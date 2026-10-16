@@ -81,7 +81,7 @@ onMount(refresh);
 </script>
 <svelte:head><title>Proyectos | SOLUX Backoffice</title></svelte:head>
 <div class="workspace">
-<aside class="project-list"><header><p class="eyebrow">Contenido público</p><h1>Proyectos</h1><p>Instalaciones reales con ficha técnica, fotografías y diseño propio.</p></header><button class="primary full" onclick={newProject}>+ Nuevo proyecto</button>
+<aside class="project-list"><header><p class="eyebrow">Contenido público</p><h1>Proyectos</h1><p>Instalaciones reales con ficha técnica, fotografías y diseño propio.</p></header><button class="primary full" onclick={newProject} disabled={saving||uploading}>+ Nuevo proyecto</button>
 {#if loading}<p>Cargando…</p>{:else if !projects.length}<p class="muted">Todavía no hay proyectos.</p>{/if}
 {#each projects as p}<button class:chosen={selectedId===p.id} class="project-option" onclick={()=>edit(p)}><strong>{p.title}</strong><small>{p.capacity_kw??'—'} kW · {p.location||p.category}</small><span class:published={p.is_published} class="status">{p.is_published?'Publicado':'Borrador'}</span></button>{/each}
 </aside>
