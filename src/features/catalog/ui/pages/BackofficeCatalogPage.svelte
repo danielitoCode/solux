@@ -206,6 +206,8 @@
   }
 
   async function toggleActive(item: CatalogItem) {
+    const action = item.isActive ? 'desactivar' : 'activar';
+    if (!window.confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} "${item.name}"?`)) return;
     try {
       const updated = await getCatalogRepository().update(item.id, { isActive: !item.isActive });
       items = items.map((i) => (i.id === updated.id ? updated : i));
@@ -365,7 +367,7 @@
             <h2>{selected.name}</h2>
           </div>
           <div class="actions">
-            <button type="button" class="btn btn-ghost" onclick={() => toggleActive(selected!)}>
+            <button type="button" class="btn btn-ghost" disabled={saving} onclick={() => toggleActive(selected!)}>
               {selected.isActive ? 'Desactivar' : 'Activar'}
             </button>
             <button type="button" class="btn btn-primary" onclick={startEdit}>Editar</button>
