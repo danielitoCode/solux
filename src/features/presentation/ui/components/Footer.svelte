@@ -23,6 +23,7 @@
     <a href="/proyectos">Proyectos</a>
     <a href="/reservas">Reservas</a>
     <a href="/seguimiento">Seguimiento</a>
+    <a href="/soporte">Soporte</a>
     <a href="/contacto">Contacto</a>
   </div>
   <span>© {new Date().getFullYear()} SOLUX · Guantánamo, Cuba</span>

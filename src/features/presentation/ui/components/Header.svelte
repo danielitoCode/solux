@@ -18,6 +18,7 @@
     { href: '/proyectos', label: 'Proyectos', route: '/proyectos' },
     { href: '/nosotros', label: 'Nosotros', route: '/nosotros' },
     { href: '/seguimiento', label: 'Seguimiento', route: '/seguimiento' },
+    { href: '/soporte', label: 'Soporte', route: '/soporte' },
     { href: '/contacto', label: 'Contacto', route: '/contacto' }
   ];
 
