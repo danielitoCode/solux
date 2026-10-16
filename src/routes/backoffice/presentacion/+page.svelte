@@ -38,28 +38,42 @@
   let loaded = $state<Record<string, PageContent>>({});
   let uploadingImages = $state<Record<number, boolean>>({});
 
+  let pageRequest = 0;
+  let uploadRequest = 0;
+  let saveRequest = 0;
+
   async function selectPage(slug: PageSlug) {
+    if (saving || Object.values(uploadingImages).some(Boolean)) return;
+    const request = ++pageRequest;
     selectedSlug = slug;
     error = '';
     success = '';
+    content = emptyContent();
     if (loaded[slug]) {
       content = { ...loaded[slug] };
+      loading = false;
       return;
     }
     loading = true;
-    const { data, error: loadError } = await supabase.from('site_content').select('content').eq('page_slug', slug).maybeSingle();
-    if (loadError) {
-      error = loadError.message;
-      content = emptyContent();
-    } else {
+    try {
+      const { data, error: loadError } = await supabase.from('site_content').select('content').eq('page_slug', slug).maybeSingle();
+      if (request !== pageRequest) return;
+      if (loadError) throw loadError;
       content = { ...emptyContent(), ...(data?.content ?? {}) };
       loaded[slug] = { ...content };
+    } catch (e) {
+      if (request !== pageRequest) return;
+      error = e instanceof Error ? e.message : 'No se pudo cargar el contenido.';
+      content = emptyContent();
+    } finally {
+      if (request === pageRequest) loading = false;
     }
-    loading = false;
   }
 
   async function uploadImage(index: number, file?: File) {
-    if (!file) return;
+    if (!file || loading || saving || uploadingImages[index]) return;
+    const slug = selectedSlug;
+    const request = ++uploadRequest;
     error = '';
     success = '';
     if (!file.type.startsWith('image/')) {
@@ -73,10 +87,12 @@
 
     uploadingImages[index] = true;
     try {
-      const result = await uploadImageToCloudinary(file, `solux/site-content/${selectedSlug}`);
+      const result = await uploadImageToCloudinary(file, `solux/site-content/${slug}`);
+      if (request !== uploadRequest || selectedSlug !== slug) return;
       content[imageKey(index)] = result.url;
       success = `Imagen ${index} subida a Cloudinary. URL insertada automáticamente.`;
     } catch (e) {
+      if (request !== uploadRequest || selectedSlug !== slug) return;
       error = e instanceof Error ? e.message : 'No se pudo subir la imagen.';
     } finally {
       uploadingImages[index] = false;
@@ -84,22 +100,30 @@
   }
 
   async function save() {
+    if (saving || loading || Object.values(uploadingImages).some(Boolean)) return;
+    const slug = selectedSlug;
+    const snapshot = { ...content };
+    const request = ++saveRequest;
     saving = true;
     error = '';
     success = '';
     try {
       const { error: saveError } = await supabase.from('site_content').upsert({
-        page_slug: selectedSlug,
-        content,
+        page_slug: slug,
+        content: snapshot,
         updated_at: new Date().toISOString()
       }, { onConflict: 'page_slug' });
       if (saveError) throw saveError;
-      loaded[selectedSlug] = { ...content };
-      success = `Vista "${pages.find(p => p.slug === selectedSlug)?.label}" guardada. La web pública cargará estos cambios.`;
+      loaded[slug] = { ...snapshot };
+      if (request === saveRequest && selectedSlug === slug) {
+        success = `Vista "${pages.find(p => p.slug === slug)?.label}" guardada. La web pública cargará estos cambios.`;
+      }
     } catch (e) {
-      error = e instanceof Error ? e.message : 'No se pudo guardar el contenido';
+      if (request === saveRequest && selectedSlug === slug) {
+        error = e instanceof Error ? e.message : 'No se pudo guardar el contenido';
+      }
     } finally {
-      saving = false;
+      if (request === saveRequest) saving = false;
     }
   }
 
@@ -118,7 +142,7 @@
       </header>
       <nav class="page-list" aria-label="Vistas públicas">
         {#each pages as item}
-          <button class:active={selectedSlug === item.slug} type="button" onclick={() => selectPage(item.slug)}>
+          <button class:active={selectedSlug === item.slug} type="button" disabled={saving || loading || Object.values(uploadingImages).some(Boolean)} onclick={() => selectPage(item.slug)}>
             <strong>{item.label}</strong>
             <small>{item.description}</small>
           </button>
@@ -133,7 +157,7 @@
           <p class="eyebrow">Contenido público</p>
           <h2>{pages.find(p => p.slug === selectedSlug)?.label}</h2>
         </div>
-        <button class="primary" type="button" onclick={save} disabled={saving || loading}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+        <button class="primary" type="button" onclick={save} disabled={saving || loading || Object.values(uploadingImages).some(Boolean)}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
       </header>
       {#if error}<div class="notice error" role="alert">{error}</div>{/if}
       {#if success}<div class="notice success" role="status">{success}</div>{/if}
@@ -163,7 +187,7 @@
                   <input type="url" placeholder="Pega URL https://…" bind:value={content[imageKey(index)]} />
                 </label>
                 <label class="upload-label">O subir archivo a Cloudinary
-                  <input class="file-input" type="file" accept="image/*" disabled={!isCloudinaryConfigured() || uploadingImages[index]} onchange={(event) => uploadImage(index, event.currentTarget.files?.[0])} />
+                  <input class="file-input" type="file" accept="image/*" disabled={!isCloudinaryConfigured() || loading || saving || uploadingImages[index]} onchange={(event) => uploadImage(index, event.currentTarget.files?.[0])} />
                 </label>
                 {#if uploadingImages[index]}<p class="upload-status">Subiendo imagen…</p>{/if}
                 {#if content[`image_${index}` as keyof PageContent]}
@@ -173,7 +197,7 @@
             {/each}
           </section>
           {/if}
-          <div class="actions"><button class="primary" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button></div>
+          <div class="actions"><button class="primary" type="submit" disabled={saving || loading || Object.values(uploadingImages).some(Boolean)}>{saving ? 'Guardando…' : 'Guardar cambios'}</button></div>
         </form>
       {/if}
     </section>
