@@ -91,11 +91,12 @@
   }
 
   async function saveExpense() {
-    if (Number(expenseAmount) <= 0 || !expenseCategory.trim() || !expenseDescription.trim()) { error = 'Importe, categoría y descripción son obligatorios.'; return; }
+    const amount = Number(expenseAmount);
+    if (!Number.isFinite(amount) || amount <= 0 || !expenseCategory.trim() || !expenseDescription.trim()) { error = 'Importe positivo, categoría y descripción son obligatorios.'; return; }
     const key = crypto.randomUUID();
     await runAction(async () => {
       const result = await supabase.rpc('record_operating_expense', {
-        p_operation_key: key, p_amount: Number(expenseAmount), p_category: expenseCategory.trim(),
+        p_operation_key: key, p_amount: amount, p_category: expenseCategory.trim(),
         p_description: expenseDescription.trim(), p_occurred_at: new Date().toISOString(),
         p_document_reference: expenseReference.trim() || null
       });
@@ -105,11 +106,13 @@
   }
 
   async function saveLabor() {
-    if (!laborReservation || !laborEmployee || !laborRole.trim() || Number(laborHours) < 0 || Number(laborAmount) <= 0) { error = 'Completa reserva, empleado, función, horas e importe válido.'; return; }
+    const hours = Number(laborHours);
+    const amount = Number(laborAmount);
+    if (!laborReservation || !laborEmployee || !laborRole.trim() || !Number.isFinite(hours) || hours < 0 || !Number.isFinite(amount) || amount <= 0) { error = 'Completa reserva, empleado, función, horas e importe válido.'; return; }
     const result = await runAction(async () => {
       const r = await supabase.rpc('accrue_job_labor', {
         p_operation_key: crypto.randomUUID(), p_reservation_id: laborReservation, p_employee_id: laborEmployee,
-        p_role_description: laborRole.trim(), p_hours: Number(laborHours), p_amount: Number(laborAmount), p_notes: laborNotes.trim()
+        p_role_description: laborRole.trim(), p_hours: hours, p_amount: amount, p_notes: laborNotes.trim()
       });
       return { error: r.error };
     }, 'Mano de obra registrada como obligación.');
@@ -117,10 +120,11 @@
   }
 
   async function savePayment() {
-    if (!paymentEmployee || Number(paymentAmount) <= 0) { error = 'Selecciona empleado e importe válido.'; return; }
+    const amount = Number(paymentAmount);
+    if (!paymentEmployee || !Number.isFinite(amount) || amount <= 0 || !paymentDescription.trim()) { error = 'Selecciona empleado, descripción e importe positivo válido.'; return; }
     await runAction(async () => {
       const r = await supabase.rpc('pay_employee', {
-        p_operation_key: crypto.randomUUID(), p_employee_id: paymentEmployee, p_amount: Number(paymentAmount),
+        p_operation_key: crypto.randomUUID(), p_employee_id: paymentEmployee, p_amount: amount,
         p_description: paymentDescription.trim() || 'Pago a empleado', p_document_reference: paymentReference.trim() || null
       });
       return { error: r.error };
