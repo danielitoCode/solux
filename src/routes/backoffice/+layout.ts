@@ -13,6 +13,26 @@ export const load: LayoutLoad = async ({ url }) => {
 
   devLog('guard', 'checking session', url.pathname);
 
+  const allowedRoles: Record<string, string[]> = {
+    '/backoffice': ['admin', 'support', 'sales'],
+    '/backoffice/reservas': ['admin', 'sales'],
+    '/backoffice/soporte': ['admin', 'support'],
+    '/backoffice/mensajes': ['admin', 'support', 'sales'],
+    '/backoffice/catalogo': ['admin', 'sales'],
+    '/backoffice/consumibles': ['admin', 'sales'],
+    '/backoffice/inventario': ['admin', 'sales'],
+    '/backoffice/finanzas': ['admin'],
+    '/backoffice/presentacion': ['admin'],
+    '/backoffice/proyectos': ['admin'],
+    '/backoffice/usuarios': ['admin']
+  };
+
+  const route = Object.keys(allowedRoles)
+    .filter((path) => path !== '/backoffice')
+    .sort((a, b) => b.length - a.length)
+    .find((path) => url.pathname === path || url.pathname.startsWith(path + '/'));
+
+
   try {
     const repo = getAuthRepository();
     const user = await repo.getSessionUser();
@@ -22,8 +42,9 @@ export const load: LayoutLoad = async ({ url }) => {
       throw redirect(303, `/backoffice/login?redirect=${encodeURIComponent(url.pathname)}`);
     }
 
-    if (url.pathname.startsWith('/backoffice/usuarios') && user.role !== 'admin') {
-      devLog('guard', 'users management requires admin', { role: user.role });
+    const requiredRoles = route ? allowedRoles[route] : allowedRoles['/backoffice'];
+    if (!requiredRoles.includes(user.role)) {
+      devLog('guard', 'role not allowed for route', { route: route ?? '/backoffice', role: user.role });
       throw redirect(303, '/backoffice');
     }
 
