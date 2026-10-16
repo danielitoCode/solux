@@ -14,6 +14,7 @@
   let markup = $state('0');
   let active = $state(true);
   let loading = $state(false);
+  let saving = $state(false);
   let error = $state('');
   let notice = $state('');
 
@@ -26,17 +27,22 @@
   function reset() { editingId = null; name = ''; sku = ''; category = 'Consumibles'; unit = 'unidad'; description = ''; cost = '0'; markup = '0'; active = true; }
   function edit(p: Product) { editingId = p.id; name = p.name; sku = p.sku ?? ''; category = p.category; unit = p.unit; description = p.description; cost = String(p.default_cost); markup = String(p.default_markup_percent); active = p.is_active; notice = ''; }
   async function save() {
+    if (saving) return;
+    saving = true;
     error = ''; notice = '';
     if (!name.trim() || !(Number(cost) >= 0) || !(Number(markup) >= 0)) { error = 'Nombre, costo y porcentaje deben ser válidos.'; return; }
     const payload = { name: name.trim(), sku: sku.trim() || null, category: category.trim() || 'Consumibles', unit: unit.trim() || 'unidad', description: description.trim(), default_cost: Number(cost), default_markup_percent: Number(markup), is_active: active };
     const result = editingId
       ? await supabase.from('consumable_products').update(payload).eq('id', editingId)
       : await supabase.from('consumable_products').insert(payload);
-    if (result.error) { error = result.error.message; return; }
+    if (result.error) { error = result.error.message; saving = false; return; }
     notice = editingId ? 'Consumible actualizado.' : 'Consumible creado.';
     reset(); await load();
+    saving = false;
   }
   async function toggle(p: Product) {
+    const action = p.is_active ? 'desactivar' : 'activar';
+    if (!window.confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} "${p.name}"?`)) return;
     const { error: e } = await supabase.from('consumable_products').update({ is_active: !p.is_active }).eq('id', p.id);
     if (e) error = e.message; else await load();
   }
@@ -56,7 +62,7 @@
       <label>Sobrecargo predeterminado (%)<input type="number" min="0" max="1000" step="0.1" bind:value={markup} /></label>
       <label>Descripción<textarea bind:value={description} rows="3" placeholder="Marca, medida, especificación…"></textarea></label>
       <label class="check"><input type="checkbox" bind:checked={active} /> Disponible para usar en trabajos</label>
-      <div class="buttons"><button class="primary" type="submit">Guardar</button>{#if editingId}<button type="button" class="secondary" onclick={reset}>Cancelar</button>{/if}</div>
+      <div class="buttons"><button class="primary" type="submit" disabled={saving || loading}>{saving ? 'Guardando…' : 'Guardar'}</button>{#if editingId}<button type="button" class="secondary" onclick={reset}>Cancelar</button>{/if}</div>
     </form>
     <section class="catalog"><div class="catalog-head"><h2>Consumibles registrados</h2><span>{products.length}</span></div>
       {#if loading}<p class="empty">Cargando…</p>{:else if products.length === 0}<p class="empty">Todavía no hay consumibles.</p>{:else}
