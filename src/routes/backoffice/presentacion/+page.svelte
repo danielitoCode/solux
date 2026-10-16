@@ -23,6 +23,7 @@
     { slug: 'proyectos', label: 'Proyectos', description: 'Galería de proyectos' },
     { slug: 'nosotros', label: 'Nosotros', description: 'Identidad y valores' }
   ];
+  const imageKey = (index: number): keyof PageContent => `image_${index}` as keyof PageContent;
   const emptyContent = (): PageContent => ({
     eyebrow: '', title: '', description: '', secondary_title: '', secondary_description: '',
     image_1: '', image_2: '', image_3: '', image_4: ''
@@ -73,7 +74,7 @@
     uploadingImages[index] = true;
     try {
       const result = await uploadImageToCloudinary(file, `solux/site-content/${selectedSlug}`);
-      content[`image_${index}`] = result.url;
+      content[imageKey(index)] = result.url;
       success = `Imagen ${index} subida a Cloudinary. URL insertada automáticamente.`;
     } catch (e) {
       error = e instanceof Error ? e.message : 'No se pudo subir la imagen.';
@@ -158,8 +159,8 @@
             {/if}
             {#each [1, 2, 3, 4] as index}
               <div class="image-field">
-                <label>Imagen {index}{#if selectedSlug !== 'proyectos' && index > 1}<small>Opcional; no todas las vistas usan las cuatro imágenes.</small>{/if}
-                  <input type="url" placeholder="Pega URL https://…" bind:value={content[`image_${index}` as keyof PageContent]} />
+                <label>Imagen {index}{#if index > 1}<small>Opcional; no todas las vistas usan las cuatro imágenes.</small>{/if}
+                  <input type="url" placeholder="Pega URL https://…" bind:value={content[imageKey(index)]} />
                 </label>
                 <label class="upload-label">O subir archivo a Cloudinary
                   <input class="file-input" type="file" accept="image/*" disabled={!isCloudinaryConfigured() || uploadingImages[index]} onchange={(event) => uploadImage(index, event.currentTarget.files?.[0])} />
