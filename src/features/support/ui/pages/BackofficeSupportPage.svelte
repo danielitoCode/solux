@@ -73,42 +73,62 @@
     return list;
   });
 
+  let loadRequest = 0;
+  let threadRequest = 0;
+
   async function load() {
+    if (loading) return;
+    const request = ++loadRequest;
     loading = true;
     error = '';
     try {
-      items = await getSupportRepository().listAll();
+      const result = await getSupportRepository().listAll();
+      if (request !== loadRequest) return;
+      items = result;
       devLog('bo-support', `loaded ${items.length}`);
       if (selected) {
         const fresh = items.find((t) => t.id === selected!.id);
         if (fresh) selected = fresh;
+        else {
+          selected = null;
+          messages = [];
+          threadRequest++;
+        }
       }
     } catch (e) {
+      if (request !== loadRequest) return;
       devError('bo-support', 'listAll failed', e, { file: 'BackofficeSupportPage.svelte' });
       error = e instanceof Error ? e.message : 'Error al cargar tickets';
     } finally {
-      loading = false;
+      if (request === loadRequest) loading = false;
     }
   }
 
   async function openTicket(t: SupportTicket) {
+    const request = ++threadRequest;
     selected = t;
     loadingThread = true;
     messages = [];
     reply = '';
     replyInternal = false;
+    error = '';
     try {
-      messages = await getSupportRepository().listMessages(t.id);
+      const result = await getSupportRepository().listMessages(t.id);
+      if (request !== threadRequest || selected?.id !== t.id) return;
+      messages = result;
     } catch (e) {
+      if (request !== threadRequest || selected?.id !== t.id) return;
       devError('bo-support', 'listMessages failed', e);
       error = e instanceof Error ? e.message : 'Error al cargar mensajes';
     } finally {
-      loadingThread = false;
+      if (request === threadRequest) loadingThread = false;
     }
   }
 
   async function changeStatus(t: SupportTicket, status: TicketStatus) {
-    if (t.status === status) return;
+    if (t.status === status || updatingId !== null || sending) return;
+    if ((status === 'resolved' || status === 'closed') && !confirm(`¿Cambiar ticket ${t.trackingCode} a ${statusLabel[status].toLowerCase()}?`)) return;
+    error = '';
     updatingId = t.id;
     try {
       const updated = await getSupportRepository().updateStatus(t.id, status);
@@ -124,20 +144,21 @@
   }
 
   async function sendReply() {
-    if (!selected || !reply.trim()) return;
+    const ticket = selected;
+    const body = reply.trim();
+    const internal = replyInternal;
+    if (!ticket || !body || sending || loadingThread || updatingId !== null) return;
     const user = getAuthUser();
     const name = user?.fullName ?? 'Agente';
+    error = '';
     sending = true;
     try {
-      const msg = await getSupportRepository().addAgentMessage(
-        selected.id,
-        name,
-        reply.trim(),
-        replyInternal
-      );
-      messages = [...messages, msg];
-      reply = '';
-      replyInternal = false;
+      const msg = await getSupportRepository().addAgentMessage(ticket.id, name, body, internal);
+      if (selected?.id === ticket.id) {
+        messages = [...messages, msg];
+        reply = '';
+        replyInternal = false;
+      }
     } catch (e) {
       devError('bo-support', 'addAgentMessage failed', e);
       error = e instanceof Error ? e.message : 'No se pudo enviar';
@@ -178,7 +199,7 @@
           <p class="eyebrow">Backoffice</p>
           <h1>Soporte</h1>
         </div>
-        <button type="button" class="icon-btn" onclick={load} disabled={loading} title="Actualizar">
+        <button type="button" class="icon-btn" onclick={load} disabled={loading || updatingId !== null || sending} title="Actualizar">
           {loading ? '…' : '↻'}
         </button>
       </header>
@@ -219,6 +240,7 @@
               type="button"
               class="ticket-card"
               class:selected={selected?.id === t.id}
+              disabled={loadingThread || sending || updatingId !== null}
               onclick={() => openTicket(t)}
             >
               <div class="ticket-top">
@@ -261,7 +283,7 @@
             <select
               id="status-select"
               value={selected.status}
-              disabled={updatingId === selected.id}
+              disabled={updatingId !== null || sending}
               onchange={(e) =>
                 changeStatus(selected!, (e.currentTarget as HTMLSelectElement).value as TicketStatus)}
             >
@@ -338,7 +360,7 @@
             <button
               type="button"
               class="btn btn-primary"
-              disabled={sending || !reply.trim()}
+              disabled={sending || loadingThread || updatingId !== null || !reply.trim()}
               onclick={sendReply}
             >
               {sending ? 'Enviando…' : replyInternal ? 'Guardar nota' : 'Enviar respuesta'}
