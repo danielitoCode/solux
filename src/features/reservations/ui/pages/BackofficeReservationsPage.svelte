@@ -29,7 +29,8 @@
   let error = $state('');
   let filter = $state<'all' | ReservationStatus>('all');
   let search = $state('');
-  let updatingId = $state<string | null>(null);
+  let updatingIds = $state<string[]>([]);
+  let loadRequestId = 0;
   let selected = $state<Reservation | null>(null);
   let cancellationTarget = $state<Reservation | null>(null);
   let cancellationReason = $state('');
@@ -64,22 +65,25 @@
   });
 
   async function load() {
+    const requestId = ++loadRequestId;
     loading = true;
     error = '';
     try {
-      items = await getReservationRepository().listAll();
-      devLog('bo-reservas', `loaded ${items.length}`);
+      const result = await getReservationRepository().listAll();
+      if (requestId !== loadRequestId) return;
+      items = result;
+      devLog('bo-reservas', `loaded ${result.length}`);
       if (selected) {
-        const fresh = items.find((r) => r.id === selected!.id);
-        if (fresh) selected = fresh;
+        selected = result.find((r) => r.id === selected!.id) ?? null;
       }
     } catch (e) {
+      if (requestId !== loadRequestId) return;
       devError('bo-reservas', 'listAll failed', e, {
         file: 'BackofficeReservationsPage.svelte'
       });
       error = e instanceof Error ? e.message : 'Error al cargar reservas';
     } finally {
-      loading = false;
+      if (requestId === loadRequestId) loading = false;
     }
   }
 
@@ -96,7 +100,7 @@
   };
 
   async function changeStatus(r: Reservation, status: ReservationStatus) {
-    if (r.status === status) return;
+    if (updatingIds.includes(r.id) || cancelling || loading || r.status === status) return;
     error = '';
     if (!ALLOWED_TRANSITIONS[r.status].includes(status)) {
       error = 'Transición de estado no permitida.';
@@ -116,7 +120,7 @@
       }
       if (!window.confirm('¿Cancelar esta reserva? Esta acción no se puede revertir.')) return;
     }
-    updatingId = r.id;
+    updatingIds = [...updatingIds, r.id];
     try {
       const updated = await getReservationRepository().updateStatus(r.id, status);
       items = items.map((x) => (x.id === r.id ? updated : x));
@@ -126,13 +130,14 @@
       devError('bo-reservas', 'updateStatus failed', e);
       error = e instanceof Error ? e.message : 'No se pudo actualizar';
     } finally {
-      updatingId = null;
+      updatingIds = updatingIds.filter((id) => id !== r.id);
     }
   }
 
   async function confirmCancellation() {
     const target = cancellationTarget;
     const charge = Number(cancellationCharge);
+    if (cancelling || updatingIds.length > 0 || loading) return;
     if (!target || !cancellationReason.trim() || !Number.isFinite(charge) || charge < 0) {
       error = 'Indica motivo y un cargo válido mayor o igual a cero.';
       return;
@@ -196,7 +201,7 @@
           <p class="eyebrow">Backoffice</p>
           <h1>Reservaciones</h1>
         </div>
-        <button type="button" class="icon-btn" onclick={load} disabled={loading} title="Actualizar">
+        <button type="button" class="icon-btn" onclick={load} disabled={loading || updatingIds.length > 0 || cancelling} title="Actualizar">
           {loading ? '…' : '↻'}
         </button>
       </header>
@@ -238,6 +243,7 @@
               class="item-card"
               class:selected={selected?.id === r.id}
               onclick={() => openReservation(r)}
+              disabled={loading || updatingIds.length > 0 || cancelling}
             >
               <div class="item-top">
                 <code>{r.trackingCode}</code>
@@ -278,7 +284,7 @@
             <select
               id="res-status"
               value={selected.status}
-              disabled={updatingId === selected.id}
+              disabled={loading || updatingIds.includes(selected.id) || updatingIds.length > 0 || cancelling}
               onchange={(e) =>
                 changeStatus(
                   selected!,
@@ -346,8 +352,8 @@
               <textarea bind:value={cancellationNotes} rows="2" maxlength="2000"></textarea>
             </label>
             <div class="cancellation-actions">
-              <button type="button" class="cancel-secondary" onclick={() => (cancellationTarget = null)} disabled={cancelling}>Volver</button>
-              <button type="button" onclick={confirmCancellation} disabled={cancelling || !cancellationReason.trim() || !Number.isFinite(Number(cancellationCharge)) || Number(cancellationCharge) < 0}>
+              <button type="button" class="cancel-secondary" onclick={() => (cancellationTarget = null)} disabled={cancelling || loading || updatingIds.length > 0}>Volver</button>
+              <button type="button" onclick={confirmCancellation} disabled={cancelling || loading || updatingIds.length > 0 || !cancellationReason.trim() || !Number.isFinite(Number(cancellationCharge)) || Number(cancellationCharge) < 0}>
                 {cancelling ? 'Liquidando…' : 'Liquidar y cancelar'}
               </button>
             </div>
@@ -366,7 +372,7 @@
                   selected.status !== 'cancelled' &&
                   s !== 'cancelled'}
                 class:cancelled={s === 'cancelled' && selected.status === 'cancelled'}
-                disabled={updatingId === selected.id || cancelling || !ALLOWED_TRANSITIONS[selected.status].includes(s) || s === 'completed'}
+                disabled={loading || updatingIds.length > 0 || cancelling || !ALLOWED_TRANSITIONS[selected.status].includes(s) || s === 'completed'}
                 onclick={() => changeStatus(selected!, s)}
               >
                 <span class="dot"></span>
