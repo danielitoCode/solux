@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { loadSiteContent, type SitePageContent } from '$infrastructure/data/site-content';
   let pageContent = $state<SitePageContent>({});
-  onMount(async () => { pageContent = await loadSiteContent('servicios', { eyebrow: 'Servicios', title: 'Todo lo necesario en un solo lugar.', description: 'Soluciones integrales para producir, almacenar, convertir y distribuir energía con seguridad.', secondary_title: 'Diseñado para tu realidad.', secondary_description: '{pageContent.secondary_description || 'No vendemos una solución estándar. Evaluamos consumo, espacio, respaldo y crecimiento antes de recomendar un sistema.'}', image_1: 'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1400&q=85' }); });
+  onMount(async () => { pageContent = await loadSiteContent('servicios', { eyebrow: 'Servicios', title: 'Todo lo necesario en un solo lugar.', description: 'Soluciones integrales para producir, almacenar, convertir y distribuir energía con seguridad.', secondary_title: 'Diseñado para tu realidad.', secondary_description: 'No vendemos una solución estándar. Evaluamos consumo, espacio, respaldo y crecimiento antes de recomendar un sistema.', image_1: 'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1400&q=85' }); });
   const services = [
     { icon: '☀', title: 'Paneles solares', text: 'Generación fotovoltaica a medida para hogares y negocios.' },
     { icon: '◈', title: 'Inversores', text: 'Conversión eficiente y gestión inteligente de la energía.' },
@@ -39,7 +39,7 @@
         <div class="eyebrow" style="color: var(--color-accent)">Ingeniería SOLUX</div>
         <h2>{pageContent.secondary_title || 'Diseñado para tu realidad.'}</h2>
         <p class="lead" style="color: rgba(255, 255, 255, 0.8)">
-          No vendemos una solución estándar. Evaluamos consumo, espacio, respaldo y crecimiento antes de recomendar un sistema.
+          {pageContent.secondary_description || 'No vendemos una solución estándar. Evaluamos consumo, espacio, respaldo y crecimiento antes de recomendar un sistema.'}
         </p>
       </div>
     </div>
