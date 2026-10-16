@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
 
   type Props = {
     /** Ancho inicial del panel izquierdo (px) */
@@ -21,18 +21,20 @@
     right
   }: Props = $props();
 
-  let leftWidth = $state(initialLeft);
+  let leftWidth = $state(untrack(() => initialLeft));
   let dragging = $state(false);
   let shellEl: HTMLDivElement | undefined = $state();
 
-  // Restaurar preferencia
-  if (typeof window !== 'undefined' && storageKey) {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
+  // Restaurar preferencia una vez montado el componente.
+  onMount(() => {
+    const key = storageKey;
+    if (!key) return;
+    const saved = localStorage.getItem(key);
+    if (saved !== null) {
       const n = Number(saved);
       if (!Number.isNaN(n)) leftWidth = clamp(n, minLeft, maxLeft);
     }
-  }
+  });
 
   function clamp(v: number, min: number, max: number) {
     return Math.min(max, Math.max(min, v));
@@ -100,6 +102,7 @@
     {@render left()}
   </div>
 
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
   <div
     class="divider"
     role="separator"
