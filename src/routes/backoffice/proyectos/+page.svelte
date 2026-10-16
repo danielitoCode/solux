@@ -65,9 +65,17 @@ async function save(){
  }
 }
 async function removeProject(p:Project){
- if(!p.id||!confirm(`¿Eliminar el proyecto "${p.title}"?`))return;
- const {error:e}=await supabase.from('site_projects').delete().eq('id',p.id);
- if(e)error=e.message;else{notice='Proyecto eliminado.';if(selectedId===p.id)newProject();await refresh();}
+ if(!p.id||saving||uploading||!confirm(`¿Eliminar el proyecto "${p.title}"?`))return;
+ error='';notice='';
+ try {
+  const {error:e}=await supabase.from('site_projects').delete().eq('id',p.id);
+  if(e)throw e;
+  notice='Proyecto eliminado.';
+  if(selectedId===p.id)newProject();
+  await refresh();
+ } catch(e) {
+  error=e instanceof Error?e.message:'No se pudo eliminar el proyecto.';
+ }
 }
 onMount(refresh);
 </script>
