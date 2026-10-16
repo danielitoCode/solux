@@ -45,8 +45,8 @@
       </div>
 
       <div class="field">
-        <label>¿Qué necesitas?</label>
-        <div class="choice-grid">
+        <p class="field-label" id="service-label">¿Qué necesitas?</p>
+        <div class="choice-grid" role="group" aria-labelledby="service-label">
           <button
             type="button"
             class="choice"
@@ -88,12 +88,12 @@
 
       <div class="two">
         <div class="field">
-          <label>Fecha preferida</label>
-          <input type="date" bind:value={date} />
+          <label for="preferred-date">Fecha preferida</label>
+          <input id="preferred-date" type="date" bind:value={date} />
         </div>
         <div class="field">
-          <label>Horario</label>
-          <select>
+          <label for="preferred-time">Horario</label>
+          <select id="preferred-time">
             <option>08:00 – 10:00</option>
             <option>10:00 – 12:00</option>
             <option>13:00 – 15:00</option>
@@ -104,23 +104,24 @@
 
       <div class="two">
         <div class="field">
-          <label>Nombre</label>
-          <input placeholder="Tu nombre" bind:value={name} />
+          <label for="customer-name">Nombre</label>
+          <input id="customer-name" placeholder="Tu nombre" bind:value={name} />
         </div>
         <div class="field">
-          <label>Teléfono</label>
-          <input placeholder="+53 ..." bind:value={phone} />
+          <label for="customer-phone">Teléfono</label>
+          <input id="customer-phone" placeholder="+53 ..." bind:value={phone} />
         </div>
       </div>
 
       <div class="field">
-        <label>Zona / dirección aproximada</label>
-        <input placeholder="Municipio, reparto o referencia" bind:value={address} />
+        <label for="customer-address">Zona / dirección aproximada</label>
+        <input id="customer-address" placeholder="Municipio, reparto o referencia" bind:value={address} />
       </div>
 
       <div class="field">
-        <label>Cuéntanos brevemente</label>
+        <label for="reservation-message">Cuéntanos brevemente</label>
         <textarea
+          id="reservation-message"
           placeholder="Por ejemplo: necesito paneles para una vivienda con refrigerador, bombas y ventiladores..."
           bind:value={message}
         ></textarea>
