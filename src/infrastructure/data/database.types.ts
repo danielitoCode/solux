@@ -326,8 +326,8 @@ export interface Database {
         Relationships: [];
       };
       site_content: {
-        Row: { id: string; page_slug: string; content: Record<string, unknown>; updated_at: string; updated_by: string | null };
-        Insert: { id?: string; page_slug: string; content?: Record<string, unknown>; updated_at?: string; updated_by?: string | null };
+        Row: { page_slug: string; content: Record<string, unknown>; updated_at: string };
+        Insert: { page_slug: string; content?: Record<string, unknown>; updated_at?: string };
         Update: Partial<Database['public']['Tables']['site_content']['Insert']>;
         Relationships: [];
       };
