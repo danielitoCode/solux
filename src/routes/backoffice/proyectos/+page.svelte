@@ -40,12 +40,29 @@ async function uploadFiles(files:FileList|null){
  catch(e){error=e instanceof Error?e.message:'Error al subir fotografías.';}finally{uploading=false;if(fileInput)fileInput.value='';}
 }
 async function save(){
- if(!form.title.trim()){error='El título es obligatorio.';return;}
+ if(saving||uploading)return;
+ const title=form.title.trim();
+ const slug=(form.slug||slugify(title)).trim();
+ const capacity=form.capacity_kw===null?null:Number(form.capacity_kw);
+ const order=Number(form.sort_order);
+ if(!title){error='El título es obligatorio.';return;}
+ if(!slug||! /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)){error='El slug debe contener letras minúsculas, números y guiones.';return;}
+ if(capacity!==null&&(!Number.isFinite(capacity)||capacity<0)){error='La potencia debe ser un número no negativo.';return;}
+ if(!Number.isFinite(order)){error='El orden debe ser numérico.';return;}
  saving=true;error='';notice='';
- const payload={...form,slug:form.slug||slugify(form.title),specifications:form.specifications.filter(s=>s.label.trim()&&s.value.trim()),updated_at:new Date().toISOString()};
- const result=selectedId?await supabase.from('site_projects').update(payload).eq('id',selectedId):await supabase.from('site_projects').insert(payload);
- if(result.error)error=result.error.message;else{notice='Proyecto guardado.';await refresh();const saved=projects.find(p=>p.slug===payload.slug);if(saved)edit(saved);}
- saving=false;
+ try {
+  const payload={...form,title,slug,capacity_kw:capacity,sort_order:order,specifications:form.specifications.filter(s=>s.label.trim()&&s.value.trim()),updated_at:new Date().toISOString()};
+  const result=selectedId?await supabase.from('site_projects').update(payload).eq('id',selectedId):await supabase.from('site_projects').insert(payload);
+  if(result.error)throw result.error;
+  notice='Proyecto guardado.';
+  await refresh();
+  const saved=projects.find(p=>p.slug===payload.slug);
+  if(saved)edit(saved);
+ } catch(e) {
+  error=e instanceof Error?e.message:'No se pudo guardar el proyecto.';
+ } finally {
+  saving=false;
+ }
 }
 async function removeProject(p:Project){
  if(!p.id||!confirm(`¿Eliminar el proyecto "${p.title}"?`))return;
