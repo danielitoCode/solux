@@ -17,6 +17,7 @@
     { href: '/catalogo', label: 'Catálogo', route: '/catalogo' },
     { href: '/proyectos', label: 'Proyectos', route: '/proyectos' },
     { href: '/nosotros', label: 'Nosotros', route: '/nosotros' },
+    { href: '/seguimiento', label: 'Seguimiento', route: '/seguimiento' },
     { href: '/contacto', label: 'Contacto', route: '/contacto' }
   ];
 
@@ -59,33 +60,34 @@
 
 <style>
   .site-header {
-    position: sticky;
-    top: 0;
-    z-index: 50;
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 18px 28px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 28px;
-    height: var(--header-height);
-    padding: 0 5vw;
-    background: color-mix(in srgb, var(--color-bg) 84%, transparent);
-    backdrop-filter: blur(18px);
-    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+    gap: 16px;
   }
   .brand {
     display: inline-flex;
     align-items: center;
     gap: 10px;
     font-weight: 800;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.03em;
+    color: var(--color-text);
   }
-  .company-logo { width: 38px; height: 38px; object-fit: contain; border-radius: 8px; }
-  .brand-mark {
+  .company-logo {
     width: 32px;
     height: 32px;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .brand-mark {
+    width: 28px;
+    height: 28px;
     display: grid;
     place-items: center;
-    border-radius: 10px;
+    border-radius: 9px;
     background: linear-gradient(145deg, var(--color-primary), var(--color-primary-2));
     position: relative;
     overflow: hidden;
@@ -93,83 +95,77 @@
   }
   .brand-mark::before {
     content: '';
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: var(--color-accent);
     position: absolute;
-    top: 3px;
+    top: 2px;
     right: 2px;
   }
   .brand-mark span {
-    width: 18px;
-    height: 9px;
-    border: 4px solid white;
+    width: 14px;
+    height: 7px;
+    border: 2.5px solid white;
     border-top: 0;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 9px 9px;
     position: relative;
     z-index: 1;
   }
   .desktop-nav {
     display: flex;
-    gap: 28px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .desktop-nav a {
+    padding: 8px 12px;
+    border-radius: 10px;
     font-size: 13px;
     font-weight: 600;
     color: var(--color-muted);
   }
-  .desktop-nav a {
-    transition:
-      color 0.2s ease,
-      transform 0.2s ease;
-  }
   .desktop-nav a:hover,
   .desktop-nav a.active {
     color: var(--color-primary);
-    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   }
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
   .theme-toggle,
   .menu-toggle {
     border: 1px solid var(--color-border);
     background: var(--color-surface);
     color: var(--color-text);
-    border-radius: var(--radius-sm);
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
   }
   .menu-toggle {
     display: none;
   }
-
   @media (max-width: 900px) {
     .desktop-nav {
       display: none;
+      position: absolute;
+      top: 64px;
+      left: 16px;
+      right: 16px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+      padding: 10px;
+      flex-direction: column;
+      z-index: 20;
     }
     .desktop-nav.open {
       display: flex;
-      position: absolute;
-      top: 74px;
-      left: 0;
-      right: 0;
-      padding: 18px;
-      background: var(--color-surface);
-      flex-direction: column;
-      border-bottom: 1px solid var(--color-border);
     }
     .menu-toggle {
-      display: block;
-    }
-  }
-  @media (max-width: 600px) {
-    .site-header {
-      padding: 0 18px;
-    }
-    .header-actions .btn {
-      display: none;
+      display: inline-grid;
+      place-items: center;
     }
   }
 </style>

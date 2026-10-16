@@ -22,6 +22,7 @@
     <a href="/catalogo">Catálogo</a>
     <a href="/proyectos">Proyectos</a>
     <a href="/reservas">Reservas</a>
+    <a href="/seguimiento">Seguimiento</a>
     <a href="/contacto">Contacto</a>
   </div>
   <span>© {new Date().getFullYear()} SOLUX · Guantánamo, Cuba</span>
@@ -38,31 +39,36 @@
     gap: 20px;
     align-items: center;
     color: var(--color-muted);
-    font-size: 11px;
+    flex-wrap: wrap;
   }
   .footer-brand {
-    color: var(--color-text);
     display: inline-flex;
     align-items: center;
     gap: 10px;
     font-weight: 800;
+    color: var(--color-text);
+    margin-bottom: 6px;
   }
-  .company-logo { width: 30px; height: 30px; object-fit: contain; border-radius: 7px; }
-  .brand-mark {
+  .company-logo {
     width: 28px;
     height: 28px;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .brand-mark {
+    width: 26px;
+    height: 26px;
     display: grid;
     place-items: center;
     border-radius: 8px;
     background: linear-gradient(145deg, var(--color-primary), var(--color-primary-2));
     position: relative;
     overflow: hidden;
-    transform: rotate(-5deg);
   }
   .brand-mark::before {
     content: '';
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: var(--color-accent);
     position: absolute;
@@ -70,31 +76,29 @@
     right: 2px;
   }
   .brand-mark span {
-    width: 14px;
-    height: 7px;
-    border: 3px solid white;
+    width: 12px;
+    height: 6px;
+    border: 2px solid white;
     border-top: 0;
-    border-radius: 0 0 10px 10px;
+    border-radius: 0 0 8px 8px;
     position: relative;
     z-index: 1;
   }
   .footer p {
-    margin: 8px 0 0;
+    margin: 0;
+    font-size: 13px;
   }
   .footer-links {
     display: flex;
-    gap: 18px;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+  }
+  .footer-links a {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-muted);
   }
   .footer-links a:hover {
     color: var(--color-primary);
-  }
-  @media (max-width: 600px) {
-    .footer {
-      display: block;
-    }
-    .footer-links {
-      margin: 20px 0;
-      flex-wrap: wrap;
-    }
   }
 </style>
