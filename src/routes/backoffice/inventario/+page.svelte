@@ -49,7 +49,8 @@
       error = queryError.message;
     } else {
       items = (data ?? []) as Item[];
-      if (!selectedId && items.length) selectedId = items[0].id;
+      const products = items.filter((item) => item.type === 'product');
+      if (!products.some((item) => item.id === selectedId)) selectedId = products[0]?.id ?? '';
       syncForm();
     }
     loading = false;
@@ -67,15 +68,21 @@
   }
 
   async function saveSupply() {
-    if (!selected || selected.type !== 'product') return;
+    if (saving || !selected || selected.type !== 'product') return;
+    const min = Number(minimumStock);
+    const commissionValue = Number(commission);
+    if (!Number.isFinite(min) || min < 0 || !Number.isFinite(commissionValue) || commissionValue < 0 || commissionValue > 100) {
+      error = 'Stock mínimo debe ser no negativo y comisión debe estar entre 0 y 100.';
+      return;
+    }
     saving = true;
     error = '';
     notice = '';
     try {
       const { error: updateError } = await supabase.from('catalog_items').update({
         fulfillment_model: fulfillment,
-        minimum_stock: Number(minimumStock),
-        commission_percent: Number(commission),
+        minimum_stock: min,
+        commission_percent: commissionValue,
         supplier_name: supplier.trim() || null,
         external_availability: availability
       }).eq('id', selected.id);
@@ -90,10 +97,20 @@
   }
 
   async function submitOperation() {
-    if (!selected || selected.type !== 'product') return;
+    if (saving || !selected || selected.type !== 'product') return;
     const qty = Number(quantity);
+    const cost = Number(unitCost);
+    const price = Number(salePrice);
     if (!Number.isFinite(qty) || qty <= 0) {
       error = 'Cantidad debe ser mayor que cero.';
+      return;
+    }
+    if (operation === 'purchase' && (!Number.isFinite(cost) || cost < 0)) {
+      error = 'Costo unitario debe ser un número no negativo.';
+      return;
+    }
+    if (operation === 'sale' && (!Number.isFinite(price) || price < 0)) {
+      error = 'Precio unitario debe ser un número no negativo.';
       return;
     }
     saving = true;
@@ -106,14 +123,14 @@
             p_operation_key: key,
             p_catalog_item_id: selected.id,
             p_quantity: qty,
-            p_unit_cost: Number(unitCost),
+            p_unit_cost: cost,
             p_description: 'Entrada de inventario desde backoffice'
           })
         : await supabase.rpc('record_catalog_sale', {
             p_operation_key: key,
             p_catalog_item_id: selected.id,
             p_quantity: qty,
-            p_sale_unit_price: Number(salePrice),
+            p_sale_unit_price: price,
             p_description: 'Venta registrada desde backoffice'
           });
       if (result.error) throw result.error;
@@ -191,7 +208,7 @@
         <button onclick={saveSupply} disabled={saving}>{saving ? 'Guardando…' : 'Guardar configuración'}</button>
         <p class="muted">Proveedor, comisión y modelo de suministro son datos internos; no aparecen en catálogo público.</p>
       {:else}
-        <p>No hay productos en catálogo.</p>
+        <p>{items.some((item) => item.type === 'product') ? 'Selecciona un producto.' : 'No hay productos en catálogo.'}</p>
       {/if}
     {/if}
   </section>
