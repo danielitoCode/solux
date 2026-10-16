@@ -77,7 +77,6 @@
   let threadRequest = 0;
 
   async function load() {
-    if (loading) return;
     const request = ++loadRequest;
     loading = true;
     error = '';
