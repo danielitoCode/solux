@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { supabase } from '$infrastructure/data/supabase-client';
   import { getReservationRepository } from '$features/reservations/di';
   import type { Reservation, ReservationStatus } from '$features/reservations/domain/entities';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
@@ -30,6 +31,11 @@
   let search = $state('');
   let updatingId = $state<string | null>(null);
   let selected = $state<Reservation | null>(null);
+  let cancellationTarget = $state<Reservation | null>(null);
+  let cancellationReason = $state('');
+  let cancellationNotes = $state('');
+  let cancellationCharge = $state('0');
+  let cancelling = $state(false);
 
   const counts = $derived(
     STATUSES.reduce(
@@ -81,15 +87,34 @@
     selected = r;
   }
 
+  const ALLOWED_TRANSITIONS: Record<ReservationStatus, ReservationStatus[]> = {
+    pending: ['confirmed', 'cancelled'],
+    confirmed: ['in_progress', 'cancelled'],
+    in_progress: ['completed', 'cancelled'],
+    completed: [],
+    cancelled: []
+  };
+
   async function changeStatus(r: Reservation, status: ReservationStatus) {
     if (r.status === status) return;
-    if (r.status === 'completed' || r.status === 'cancelled') {
-      error = 'Las reservas completadas o canceladas son estados terminales y no se pueden modificar.';
+    error = '';
+    if (!ALLOWED_TRANSITIONS[r.status].includes(status)) {
+      error = 'Transición de estado no permitida.';
       return;
     }
     if (status === 'completed') {
       error = 'Cierra el trabajo desde el panel Cierre financiero para registrar cargo y margen.';
       return;
+    }
+    if (status === 'cancelled') {
+      if (r.status === 'in_progress') {
+        cancellationTarget = r;
+        cancellationReason = '';
+        cancellationNotes = '';
+        cancellationCharge = '0';
+        return;
+      }
+      if (!window.confirm('¿Cancelar esta reserva? Esta acción no se puede revertir.')) return;
     }
     updatingId = r.id;
     try {
@@ -102,6 +127,40 @@
       error = e instanceof Error ? e.message : 'No se pudo actualizar';
     } finally {
       updatingId = null;
+    }
+  }
+
+  async function confirmCancellation() {
+    const target = cancellationTarget;
+    const charge = Number(cancellationCharge);
+    if (!target || !cancellationReason.trim() || !Number.isFinite(charge) || charge < 0) {
+      error = 'Indica motivo y un cargo válido mayor o igual a cero.';
+      return;
+    }
+    cancelling = true;
+    error = '';
+    try {
+      const { data, error: rpcError } = await supabase.rpc(
+        'cancel_reservation_job',
+        {
+          p_operation_key: crypto.randomUUID(),
+          p_reservation_id: target.id,
+          p_customer_charge: charge,
+          p_reason: cancellationReason.trim(),
+          p_notes: cancellationNotes.trim()
+        }
+      );
+      if (rpcError) throw rpcError;
+      if (!data) throw new Error('La cancelación no devolvió identificador.');
+      cancellationTarget = null;
+      await load();
+      error = '';
+      devLog('bo-reservas', 'job cancellation liquidated', { id: target.id });
+    } catch (e) {
+      devError('bo-reservas', 'cancel_reservation_job failed', e);
+      error = e instanceof Error ? e.message : 'No se pudo liquidar la cancelación';
+    } finally {
+      cancelling = false;
     }
   }
 
@@ -273,6 +332,28 @@
           <JobCloseoutPanel reservationId={selected.id} status={selected.status} customerName={selected.customerName} customerEmail={selected.customerEmail} customerPhone={selected.customerPhone} serviceCategory={selected.serviceCategory} address={selected.address} onClosed={load} />
         {/if}
 
+        {#if cancellationTarget?.id === selected.id}
+          <section class="cancellation-panel" aria-labelledby="cancel-title">
+            <h3 id="cancel-title">Liquidar y cancelar trabajo</h3>
+            <p>Se registrarán costos incurridos y cargo aprobado en una operación financiera. El cargo no implica pago recibido.</p>
+            <label>Motivo obligatorio
+              <textarea bind:value={cancellationReason} rows="2" required maxlength="1000"></textarea>
+            </label>
+            <label>Cargo aprobado al cliente (USD)
+              <input type="number" min="0" step="0.01" bind:value={cancellationCharge} required />
+            </label>
+            <label>Notas
+              <textarea bind:value={cancellationNotes} rows="2" maxlength="2000"></textarea>
+            </label>
+            <div class="cancellation-actions">
+              <button type="button" class="cancel-secondary" onclick={() => (cancellationTarget = null)} disabled={cancelling}>Volver</button>
+              <button type="button" onclick={confirmCancellation} disabled={cancelling || !cancellationReason.trim() || !Number.isFinite(Number(cancellationCharge)) || Number(cancellationCharge) < 0}>
+                {cancelling ? 'Liquidando…' : 'Liquidar y cancelar'}
+              </button>
+            </div>
+          </section>
+        {/if}
+
         <div class="status-steps">
           <h3>Flujo de estado</h3>
           <div class="steps">
@@ -285,7 +366,7 @@
                   selected.status !== 'cancelled' &&
                   s !== 'cancelled'}
                 class:cancelled={s === 'cancelled' && selected.status === 'cancelled'}
-                disabled={updatingId === selected.id || (s === 'completed' && selected.status !== 'completed') || ((selected.status === 'completed' || selected.status === 'cancelled') && s !== selected.status)}
+                disabled={updatingId === selected.id || cancelling || !ALLOWED_TRANSITIONS[selected.status].includes(s) || s === 'completed'}
                 onclick={() => changeStatus(selected!, s)}
               >
                 <span class="dot"></span>
@@ -694,6 +775,13 @@
     font-size: 14px !important;
     white-space: pre-wrap;
   }
+  .cancellation-panel { margin: 0 28px 24px; padding: 18px; border: 1px solid color-mix(in srgb, #c0392b 35%, var(--color-border)); border-radius: 14px; background: var(--color-surface); display: grid; gap: 12px; }
+  .cancellation-panel h3, .cancellation-panel p { margin: 0; }
+  .cancellation-panel p { color: var(--color-muted); font-size: 12px; line-height: 1.5; }
+  .cancellation-panel label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; }
+  .cancellation-panel input, .cancellation-panel textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-bg); color: var(--color-text); font: inherit; }
+  .cancellation-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .cancel-secondary { background: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-border); }
   .status-steps {
     margin: 0 28px 28px;
     padding: 18px 16px;
