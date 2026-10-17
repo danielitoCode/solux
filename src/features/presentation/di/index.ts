@@ -1,3 +1,4 @@
+import { GetCompanyProfile } from '../domain/usecases/get-company-profile';
 import { GetPageContent } from '../domain/usecases/get-page-content';
 import { SavePageContent } from '../domain/usecases/save-page-content';
 import { PresentationRepositoryImpl } from '../data/repository/presentation-repository-impl';
@@ -10,6 +11,7 @@ export function getPresentationRepository() {
 
 export function getPresentationUseCases() {
   return {
+    getCompanyProfile: new GetCompanyProfile(repository),
     getPageContent: new GetPageContent(repository),
     savePageContent: new SavePageContent(repository)
   };
