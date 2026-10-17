@@ -104,6 +104,7 @@
     // Lleva la vista al resultado (útil en móvil)
     if (kind && kind !== 'none') {
       await tick();
+      const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       resultsEl?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
     }
   }
