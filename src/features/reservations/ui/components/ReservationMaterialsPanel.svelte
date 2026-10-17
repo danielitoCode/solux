@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { supabase } from '$infrastructure/data/supabase-client';
+  import { reservationWorkUseCases } from '$features/reservations/di';
+  import { publicContactUseCases } from '$features/contact/di/public-contact';
   import { getAuthUser } from '$features/auth/ui/stores/auth.store.svelte';
 
   type Product = { id: string; name: string; sku: string | null; category: string; unit: string; default_cost: number; default_markup_percent: number; is_active: boolean };
@@ -31,16 +32,16 @@
 
   async function load() {
     loading = true; error = '';
-    const [p, m, r] = await Promise.all([
-      supabase.from('consumable_products').select('id,name,sku,category,unit,default_cost,default_markup_percent,is_active').eq('is_active', true).order('name'),
-      supabase.from('reservation_materials').select('*').eq('reservation_id', reservationId).order('created_at'),
-      supabase.from('reservations').select('tracking_code').eq('id', reservationId).maybeSingle()
-    ]);
-    if (p.error || m.error) error = p.error?.message ?? m.error?.message ?? 'Error cargando materiales';
-    products = (p.data ?? []) as Product[];
-    materials = (m.data ?? []) as Material[];
-    trackingCode = r.data?.tracking_code ?? '';
-    loading = false;
+    try {
+      const [p, m, tracking] = await reservationWorkUseCases.getMaterialsData.execute(reservationId);
+      products = p as Product[];
+      materials = m as Material[];
+      trackingCode = tracking;
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Error cargando materiales';
+    } finally {
+      loading = false;
+    }
   }
 
   function chooseProduct(id: string) {
@@ -54,28 +55,35 @@
     if (!p) { error = 'Selecciona un consumible del catálogo'; return; }
     if (!(Number(quantity) > 0) || !(Number(cost) >= 0) || !(Number(adjustmentPercent) >= 0)) { error = 'Revisa cantidad, costo y porcentaje'; return; }
     saving = true; error = '';
-    const { error: saveError } = await supabase.rpc('add_reservation_material', {
-      p_reservation_id: reservationId,
-      p_product_id: p.id,
-      p_quantity: Number(quantity),
-      p_unit_cost: Number(cost),
-      p_adjustment_type: adjustmentType,
-      p_adjustment_percent: adjustmentType === 'none' ? 0 : Number(adjustmentPercent),
-      p_notes: notes
-    });
-    if (saveError) error = saveError.message;
-    else { quantity = '1'; notes = ''; await load(); }
-    saving = false;
+    try {
+      await reservationWorkUseCases.addMaterial.execute({
+        reservationId,
+        productId: p.id,
+        quantity: Number(quantity),
+        unitCost: Number(cost),
+        adjustmentType,
+        adjustmentPercent: adjustmentType === 'none' ? 0 : Number(adjustmentPercent),
+        notes
+      });
+      quantity = '1'; notes = ''; await load();
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudo guardar el material';
+    } finally {
+      saving = false;
+    }
   }
 
   async function removeMaterial(id: string) {
-    const { error: removeError } = await supabase.from('reservation_materials').delete().eq('id', id);
-    if (removeError) error = removeError.message;
-    else await load();
+    try {
+      await reservationWorkUseCases.removeMaterial.execute(id);
+      await load();
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudo eliminar el material';
+    }
   }
 
   async function loadInvoiceBranding() {
-    const { data } = await supabase.from('company_profile').select('name,logo_url').limit(1).maybeSingle();
+    const data = await publicContactUseCases.getCompanyProfile.execute();
     companyName = data?.name || 'SOLUX';
     logoUrl = data?.logo_url || '';
     const user = getAuthUser();
