@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { supabase } from '$infrastructure/data/supabase-client';
+  import { reservationWorkUseCases } from '$features/reservations/di';
+  import { publicContactUseCases } from '$features/contact/di/public-contact';
   import { getAuthUser } from '$features/auth/ui/stores/auth.store.svelte';
 
   type Material = { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: 'markup' | 'discount' | 'none'; adjustment_percent: number; notes: string };
@@ -33,21 +34,21 @@
 
   async function load() {
     loading = true; error = '';
-    const [m,l,c] = await Promise.all([
-      supabase.from('reservation_materials').select('product_name,unit,quantity,unit_cost,adjustment_type,adjustment_percent,notes').eq('reservation_id',reservationId),
-      supabase.from('job_labor').select('role_description,hours,agreed_amount,status').eq('reservation_id',reservationId),
-      supabase.from('job_closeouts').select('id,material_cost,materials_charge,labor_cost,labor_charge,other_charge,total_charge,estimated_margin,notes,closed_at').eq('reservation_id',reservationId).maybeSingle()
-    ]);
-    if (m.error || l.error || c.error) error = m.error?.message || l.error?.message || c.error?.message || 'No se pudo cargar cierre';
-    materials = (m.data ?? []) as Material[];
-    labor = (l.data ?? []) as Labor[];
-    closeout = c.data as Closeout | null;
-    if (closeout) {
-      laborCharge = String(closeout.labor_charge);
-      otherCharge = String(closeout.other_charge);
-      notes = closeout.notes;
+    try {
+      const data = await reservationWorkUseCases.getCloseoutData.execute(reservationId);
+      materials = data.materials as Material[];
+      labor = data.labor as Labor[];
+      closeout = data.closeout as Closeout | null;
+      if (closeout) {
+        laborCharge = String(closeout.labor_charge);
+        otherCharge = String(closeout.other_charge);
+        notes = closeout.notes;
+      }
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'No se pudo cargar cierre';
+    } finally {
+      loading = false;
     }
-    loading = false;
   }
 
   async function closeJob() {
@@ -57,14 +58,13 @@
     }
     saving = true; error = ''; notice = '';
     try {
-      const result = await supabase.rpc('close_reservation_job', {
-        p_operation_key: crypto.randomUUID(),
-        p_reservation_id: reservationId,
-        p_labor_charge: Number(laborCharge),
-        p_other_charge: Number(otherCharge),
-        p_notes: notes.trim()
+      await reservationWorkUseCases.closeJob.execute({
+        operationKey: crypto.randomUUID(),
+        reservationId,
+        laborCharge: Number(laborCharge),
+        otherCharge: Number(otherCharge),
+        notes: notes.trim()
       });
-      if (result.error) throw new Error(result.error.message);
       notice = 'Trabajo cerrado. Cargo de cliente registrado; no implica que haya sido cobrado.';
       await load();
       onClosed?.();
@@ -76,7 +76,7 @@
   }
 
   async function loadInvoiceBranding() {
-    const { data } = await supabase.from('company_profile').select('name,logo_url').limit(1).maybeSingle();
+    const data = await publicContactUseCases.getCompanyProfile.execute();
     companyName = data?.name || 'SOLUX';
     logoUrl = data?.logo_url || '';
     const user = getAuthUser();
