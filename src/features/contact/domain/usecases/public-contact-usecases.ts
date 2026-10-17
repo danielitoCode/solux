@@ -1,16 +1,19 @@
-import { PublicContactRemoteDataSource, type CreateContactMessageDto } from '../../data/datasources/remote/public-contact-remote-datasource';
-
-const remote = new PublicContactRemoteDataSource();
+import type { PublicContactRepository } from '../repository/public-contact-repository';
+import type { CreateContactMessageDto } from '../../data/datasources/remote/public-contact-remote-datasource';
 
 export class GetPublicContactInfo {
-  execute() { return remote.getContactInfo(); }
+  constructor(private readonly repository: PublicContactRepository) {}
+  execute() { return this.repository.getContactInfo(); }
 }
 export class GetBusinessHours {
-  execute() { return remote.getBusinessHours(); }
+  constructor(private readonly repository: PublicContactRepository) {}
+  execute() { return this.repository.getBusinessHours(); }
 }
 export class SendContactMessage {
-  execute(input: CreateContactMessageDto) { return remote.sendMessage(input); }
+  constructor(private readonly repository: PublicContactRepository) {}
+  execute(input: CreateContactMessageDto) { return this.repository.sendMessage(input); }
 }
 export class GetCompanyProfile {
-  execute() { return remote.getCompanyProfile(); }
+  constructor(private readonly repository: PublicContactRepository) {}
+  execute() { return this.repository.getCompanyProfile(); }
 }
