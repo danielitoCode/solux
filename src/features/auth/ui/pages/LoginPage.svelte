@@ -3,7 +3,7 @@
   import { login, getAuthUser, initAuth, isAuthLoading } from '../stores/auth.store.svelte';
   import { onMount } from 'svelte';
   import { devLog } from '$infrastructure/ui/dev-logger';
-  import { supabase } from '$infrastructure/data/supabase-client';
+  import { publicContactUseCases } from '$features/contact/di/public-contact';
 
   let companyName = $state('SOLUX');
   let logoUrl = $state('');
@@ -15,11 +15,8 @@
 
   onMount(async () => {
     devLog('login-page', 'mount');
-    const { data } = await supabase.from('company_profile').select('name, logo_url').limit(1).maybeSingle();
-    if (data) {
-      companyName = data.name || 'SOLUX';
-      logoUrl = data.logo_url || '';
-    }
+    const data = await publicContactUseCases.getCompanyProfile.execute();
+    if (data) { companyName = data.name || 'SOLUX'; logoUrl = data.logo_url || ''; }
     await initAuth();
     if (getAuthUser()) {
       goto('/backoffice');
