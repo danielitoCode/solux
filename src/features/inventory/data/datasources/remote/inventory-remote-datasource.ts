@@ -7,7 +7,7 @@ export class InventoryRemoteDataSource {
     if (error) throw error;
     return (data ?? []) as InventoryItemDto[];
   }
-  async updateConfig(id: string, config: { fulfillment_model: string; minimum_stock: number; commission_percent: number; supplier_name: string | null; external_availability: string }): Promise<InventoryItemDto> {
+  async updateConfig(id: string, config: { fulfillment_model: 'owned_stock' | 'managed_sale'; minimum_stock: number; commission_percent: number; supplier_name: string | null; external_availability: 'available' | 'unavailable' | 'unknown' }): Promise<InventoryItemDto> {
     const { data, error } = await supabase.from('catalog_items').update(config).eq('id', id).select('id,name,type,price,currency,is_active,fulfillment_model,stock_quantity,minimum_stock,acquisition_cost,average_cost,commission_percent,supplier_name,external_availability').single();
     if (error) throw error;
     return data as InventoryItemDto;
