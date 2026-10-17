@@ -3,8 +3,10 @@
   import { Tween } from 'svelte/motion';
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { supabase } from '$infrastructure/data/supabase-client';
-  import { loadSiteContent, type SitePageContent } from '$infrastructure/data/site-content';
+  import { getPresentationUseCases } from '$features/presentation/di';
+  import type { PageContent } from '$features/presentation/domain/entities/page-content';
+
+  const presentation = getPresentationUseCases();
 
   /* ─────────── Tipos y valores por defecto ─────────── */
   type Company = {
@@ -35,7 +37,7 @@
 
   /* ─────────── Estado ─────────── */
   let company = $state<Company>({ ...FALLBACK_COMPANY });
-  let pageContent = $state<SitePageContent>({});
+  let pageContent = $state<Partial<PageContent>>({});
   let ready = $state(false);
 
   const eyebrow = $derived(pageContent.eyebrow || company.name);
@@ -68,23 +70,27 @@
   /* ─────────── Carga de datos ─────────── */
   onMount(async () => {
     try {
-      const [{ data }, savedContent] = await Promise.all([
-        supabase
-                .from('company_profile')
-                .select('name,tagline,about,years_of_experience,completed_projects')
-                .limit(1)
-                .maybeSingle(),
-        loadSiteContent('inicio', {
-          eyebrow: 'Lo que hacemos',
-          title: FALLBACK_COMPANY.tagline,
-          description: FALLBACK_COMPANY.about,
-          secondary_title: 'Más que energía, construimos confianza.',
-          secondary_description: 'Cuéntanos qué necesitas y diseñamos el siguiente paso.',
-          image_1: DEFAULT_IMAGE
-        })
+      const [profile, savedContent] = await Promise.all([
+        presentation.getCompanyProfile.execute(),
+        presentation.getPageContent.execute('inicio')
       ]);
-      if (data) company = { ...company, ...data };
-      pageContent = savedContent;
+      if (profile) {
+        company = {
+          name: profile.name,
+          tagline: profile.tagline,
+          about: profile.about,
+          years_of_experience: profile.yearsOfExperience,
+          completed_projects: profile.completedProjects
+        };
+      }
+      pageContent = {
+        eyebrow: savedContent.eyebrow,
+        title: savedContent.title,
+        description: savedContent.description,
+        secondary_title: savedContent.secondaryTitle,
+        secondary_description: savedContent.secondaryDescription,
+        image_1: savedContent.image1
+      };
     } catch (err) {
       console.error('No se pudo cargar el contenido de inicio', err);
     } finally {
