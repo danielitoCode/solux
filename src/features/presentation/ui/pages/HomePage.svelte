@@ -44,12 +44,12 @@
   const headline = $derived(pageContent.title || company.tagline);
   const words = $derived(headline.split(/\s+/).filter(Boolean));
   const lead = $derived(pageContent.description || company.about);
-  const heroImage = $derived(pageContent.image_1 || DEFAULT_IMAGE);
+  const heroImage = $derived(pageContent.image1 || DEFAULT_IMAGE);
   const bannerTitle = $derived(
-          pageContent.secondary_title || 'Más que energía, construimos confianza.'
+          pageContent.secondaryTitle || 'Más que energía, construimos confianza.'
   );
   const bannerText = $derived(
-          pageContent.secondary_description || 'Cuéntanos qué necesitas y diseñamos el siguiente paso.'
+          pageContent.secondaryDescription || 'Cuéntanos qué necesitas y diseñamos el siguiente paso.'
   );
 
   const projects = new Tween(0, { duration: ms(1400), easing: cubicOut });
@@ -87,9 +87,9 @@
         eyebrow: savedContent.eyebrow,
         title: savedContent.title,
         description: savedContent.description,
-        secondary_title: savedContent.secondaryTitle,
-        secondary_description: savedContent.secondaryDescription,
-        image_1: savedContent.image1
+        secondaryTitle: savedContent.secondaryTitle,
+        secondaryDescription: savedContent.secondaryDescription,
+        image1: savedContent.image1
       };
     } catch (err) {
       console.error('No se pudo cargar el contenido de inicio', err);
