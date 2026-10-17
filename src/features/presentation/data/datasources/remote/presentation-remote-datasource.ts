@@ -1,6 +1,7 @@
 import { supabase } from '$infrastructure/data/supabase-client';
 import type { CompanyProfileDto } from '../../dto/company-profile.dto';
 import type { PageContentDto, SiteContentDto } from '../../dto/page-content.dto';
+import type { ProjectCardDto } from '../../dto/project-card.dto';
 
 export class PresentationRemoteDataSource {
   async getCompanyProfile(): Promise<CompanyProfileDto | null> {
@@ -21,6 +22,17 @@ export class PresentationRemoteDataSource {
       .maybeSingle();
     if (error) throw error;
     return data as SiteContentDto | null;
+  }
+
+  async getPublishedProjects(): Promise<ProjectCardDto[]> {
+    const { data, error } = await supabase
+      .from('site_projects')
+      .select('*')
+      .eq('is_published', true)
+      .order('sort_order')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as unknown as ProjectCardDto[];
   }
 
   async savePageContent(slug: string, content: PageContentDto): Promise<SiteContentDto> {
