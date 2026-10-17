@@ -10,14 +10,14 @@
 </script>
 
 <footer class="footer">
-  <div>
-    <div class="brand footer-brand">
+  <div class="footer-company">
+    <a class="brand footer-brand" href="/" aria-label={`${companyName} inicio`}>
       {#if logoUrl}<img class="company-logo" src={logoUrl} alt={`Logo de ${companyName}`} />{:else}<span class="brand-mark"><span></span></span>{/if}
       <span>{companyName}</span>
-    </div>
+    </a>
     <p>Energía solar · Ingeniería eléctrica</p>
   </div>
-  <div class="footer-links">
+  <nav class="footer-links" aria-label="Enlaces del sitio">
     <a href="/servicios">Servicios</a>
     <a href="/catalogo">Catálogo</a>
     <a href="/proyectos">Proyectos</a>
@@ -25,22 +25,25 @@
     <a href="/seguimiento">Seguimiento</a>
     <a href="/soporte">Soporte</a>
     <a href="/contacto">Contacto</a>
-  </div>
-  <span>© {new Date().getFullYear()} SOLUX · Guantánamo, Cuba</span>
+  </nav>
+  <small class="footer-meta">© {new Date().getFullYear()} {companyName} · Guantánamo, Cuba</small>
 </footer>
 
 <style>
   .footer {
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 30px 28px 50px;
+    padding: 34px 28px 50px;
     border-top: 1px solid var(--color-border);
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(300px, 1.5fr) auto;
     justify-content: space-between;
-    gap: 20px;
+    gap: 24px;
     align-items: center;
     color: var(--color-muted);
-    flex-wrap: wrap;
+  }
+  .footer-company {
+    min-width: 0;
   }
   .footer-brand {
     display: inline-flex;
@@ -92,14 +95,45 @@
   .footer-links {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 16px;
+    gap: 8px 16px;
+    justify-content: center;
   }
   .footer-links a {
+    padding: 5px 0;
     font-size: 13px;
     font-weight: 600;
     color: var(--color-muted);
   }
   .footer-links a:hover {
     color: var(--color-primary);
+  }
+  .footer-meta {
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  @media (max-width: 900px) {
+    .footer {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+    .footer-links {
+      justify-content: flex-start;
+    }
+    .footer-meta {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 600px) {
+    .footer {
+      grid-template-columns: 1fr;
+      padding: 28px 18px 38px;
+    }
+    .footer-links {
+      gap: 6px 18px;
+    }
+    .footer-meta {
+      grid-column: auto;
+      white-space: normal;
+    }
   }
 </style>
