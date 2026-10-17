@@ -26,3 +26,8 @@ export class CloseReservationJob {
   constructor(private readonly repository: ReservationWorkRepository) {}
   execute(input: Parameters<ReservationWorkRepository['closeJob']>[0]) { return this.repository.closeJob(input); }
 }
+
+export class CancelReservationJob {
+  constructor(private readonly repository: ReservationWorkRepository) {}
+  execute(input: Parameters<ReservationWorkRepository['cancelJob']>[0]) { return this.repository.cancelJob(input); }
+}
