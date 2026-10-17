@@ -1,6 +1,7 @@
 import type { CompanyProfile } from '../../domain/entities/company-profile';
 import type { PageContent, PageSlug } from '../../domain/entities/page-content';
 import type { PresentationRepository } from '../../domain/repository/presentation-repository';
+import type { ProjectCardDto } from '../dto/project-card.dto';
 import { PresentationRemoteDataSource } from '../datasources/remote/presentation-remote-datasource';
 import { mapCompanyProfileDto } from '../mappers/company-profile.mapper';
 import { mapPageContentDto, toPageContentDto } from '../mappers/page-content.mapper';
@@ -14,6 +15,10 @@ export class PresentationRepositoryImpl implements PresentationRepository {
 
   async getPageContent(slug: PageSlug): Promise<PageContent> {
     return mapPageContentDto(await this.remote.getPageContent(slug));
+  }
+
+  async getPublishedProjects(): Promise<ProjectCardDto[]> {
+    return this.remote.getPublishedProjects();
   }
 
   async savePageContent(slug: PageSlug, content: PageContent): Promise<PageContent> {
