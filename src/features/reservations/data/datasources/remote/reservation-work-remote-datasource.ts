@@ -58,4 +58,17 @@ export class ReservationWorkRemoteDataSource {
     });
     if (error) throw error;
   }
+  async cancelJob(input: { reservationId: string; customerCharge: number; reason: string; notes: string; operationKey: string }): Promise<string> {
+    assertSupabaseConfigured();
+    const { data, error } = await supabase.rpc('cancel_reservation_job', {
+      p_operation_key: input.operationKey,
+      p_reservation_id: input.reservationId,
+      p_customer_charge: input.customerCharge,
+      p_reason: input.reason,
+      p_notes: input.notes
+    });
+    if (error) throw error;
+    if (!data) throw new Error('La cancelación no devolvió identificador.');
+    return String(data);
+  }
 }
