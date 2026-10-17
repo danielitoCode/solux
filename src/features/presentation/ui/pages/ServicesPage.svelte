@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import { loadSiteContent, type SitePageContent } from '$infrastructure/data/site-content';
-  import { ms, reveal, scrollDepth, spotlight } from '../util/motion';
+  import { ms, reveal, scrollDepth, spotlight } from '$infrastructure/ui/util/motion';
   import Ambient from "$infrastructure/ui/component/Ambient.svelte";
 
   /* ─────────── Contenido por defecto ─────────── */
