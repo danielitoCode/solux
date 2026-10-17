@@ -10,4 +10,5 @@ export class ReservationWorkRepositoryImpl implements ReservationWorkRepository 
   removeMaterial(id: string) { return this.remote.removeMaterial(id); }
   getCloseoutData(id: string) { return this.remote.getCloseoutData(id); }
   closeJob(input: Parameters<ReservationWorkRepository['closeJob']>[0]) { return this.remote.closeJob(input); }
+  cancelJob(input: Parameters<ReservationWorkRepository['cancelJob']>[0]) { return this.remote.cancelJob(input); }
 }
