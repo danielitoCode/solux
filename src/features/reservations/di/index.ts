@@ -11,6 +11,7 @@ export function getReservationRepository(): ReservationRepository {
 import { ReservationWorkRepositoryImpl } from '../data/repository/reservation-work-repository-impl';
 import {
   AddReservationMaterial,
+  CancelReservationJob,
   CloseReservationJob,
   GetReservationCloseoutData,
   GetReservationMaterialsData,
@@ -24,5 +25,6 @@ export const reservationWorkUseCases = {
   addMaterial: new AddReservationMaterial(workRepository),
   removeMaterial: new RemoveReservationMaterial(workRepository),
   getCloseoutData: new GetReservationCloseoutData(workRepository),
-  closeJob: new CloseReservationJob(workRepository)
+  closeJob: new CloseReservationJob(workRepository),
+  cancelJob: new CancelReservationJob(workRepository)
 };
