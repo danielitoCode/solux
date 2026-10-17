@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { supabase } from '$infrastructure/data/supabase-client';
+  import { publicContactUseCases } from '$features/contact/di/public-contact';
   import { ms, reveal, scrollDepth, spotlight } from '$infrastructure/ui/util/motion';
   import Ambient from "$infrastructure/ui/component/Ambient.svelte";
 
@@ -66,17 +66,11 @@
     loadError = '';
     try {
       const [c, h] = await Promise.all([
-        supabase
-                .from('contact_info')
-                .select('email,phone,whatsapp,address,city,country,map_url')
-                .limit(1)
-                .maybeSingle(),
-        supabase.from('business_hours').select('day,open_time,close_time,is_closed').order('day')
+        publicContactUseCases.getContactInfo.execute(),
+        publicContactUseCases.getBusinessHours.execute()
       ]);
-      if (c.error) throw c.error;
-      if (h.error) throw h.error;
-      if (c.data) contact = { ...contact, ...c.data };
-      if (h.data) hours = h.data;
+      if (c) contact = { ...contact, ...c };
+      hours = h;
     } catch (e) {
       loadError = e instanceof Error ? e.message : 'No se pudieron cargar los datos de contacto.';
     } finally {
@@ -174,14 +168,13 @@
     sending = true;
     sendError = '';
     try {
-      const { error: insertError } = await supabase.from('contact_messages').insert({
+      await publicContactUseCases.sendMessage.execute({
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim() || null,
         subject: 'general',
         message: message.trim()
       });
-      if (insertError) throw insertError;
       sent = true;
       name = '';
       email = '';
