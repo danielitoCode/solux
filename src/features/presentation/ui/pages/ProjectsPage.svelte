@@ -4,7 +4,9 @@
     import { Tween } from 'svelte/motion';
     import { fade } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
-    import { supabase } from '$infrastructure/data/supabase-client';
+    import { getPresentationUseCases } from '$features/presentation/di';
+
+    const presentation = getPresentationUseCases();
     import { ms, reveal, scrollDepth } from '$infrastructure/ui/util/motion';
     import Ambient from "$infrastructure/ui/component/Ambient.svelte";
 
@@ -43,35 +45,21 @@
         loading = true;
         loadError = false;
         try {
-            const [contentResult, projectsResult] = await Promise.all([
-                supabase.from('site_content').select('content').eq('page_slug', 'proyectos').maybeSingle(),
-                supabase
-                    .from('site_projects')
-                    .select('*')
-                    .eq('is_published', true)
-                    .order('sort_order')
-                    .order('created_at', { ascending: false })
+            const [content, publishedProjects] = await Promise.all([
+                presentation.getPageContent.execute('proyectos'),
+                presentation.getPublishedProjects.execute()
             ]);
 
-            if (contentResult.data?.content) {
-                const c = contentResult.data.content as Partial<typeof header>;
-                header = {
-                    eyebrow: c.eyebrow || header.eyebrow,
-                    title: c.title || header.title,
-                    description: c.description || header.description
-                };
-            }
-
-            if (projectsResult.error) {
-                loadError = true;
-            } else {
-                // Normaliza listas que pueden llegar vacías (null) desde la base de datos
-                projects = ((projectsResult.data ?? []) as unknown as Project[]).map((p) => ({
-                    ...p,
-                    gallery: p.gallery ?? [],
-                    specifications: p.specifications ?? []
-                }));
-            }
+            header = {
+                eyebrow: content.eyebrow || header.eyebrow,
+                title: content.title || header.title,
+                description: content.description || header.description
+            };
+            projects = publishedProjects.map((p) => ({
+                ...p,
+                gallery: p.gallery ?? [],
+                specifications: p.specifications ?? []
+            }));
         } catch (err) {
             console.error('No se pudieron cargar los proyectos', err);
             loadError = true;
