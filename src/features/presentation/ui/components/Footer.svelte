@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { supabase } from '$infrastructure/data/supabase-client';
+  import { publicContactUseCases } from '$features/contact/di/public-contact';
   let companyName = $state('SOLUX');
   let logoUrl = $state('');
   onMount(async () => {
-    const { data } = await supabase.from('company_profile').select('name, logo_url').limit(1).maybeSingle();
+    const data = await publicContactUseCases.getCompanyProfile.execute();
     if (data) { companyName = data.name || 'SOLUX'; logoUrl = data.logo_url || ''; }
   });
 </script>
