@@ -38,19 +38,59 @@ export class AuthRemoteDataSource {
   async getProfile(userId: string): Promise<ProfileDto | null> {
     assertSupabaseConfigured();
     devLog('auth-remote', 'getProfile', userId);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .eq('is_active', true)
-      .maybeSingle();
-    if (error) {
+
+    let { data, error } = await this.fetchProfile(userId);
+    if (!error) return data as ProfileDto | null;
+
+    if (!this.isExpiredJwt(error)) {
       devError('auth-remote', 'getProfile failed', error, {
         file: 'auth-remote-datasource.ts'
       });
       throw error;
     }
-    return data as ProfileDto | null;
+
+    devLog('auth-remote', 'JWT expired; attempting session refresh');
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+
+    if (refreshError || !refreshed.session) {
+      devError('auth-remote', 'session refresh failed; clearing local session', refreshError ?? error);
+      await this.clearLocalSession();
+      return null;
+    }
+
+    ({ data, error } = await this.fetchProfile(userId));
+    if (!error) return data as ProfileDto | null;
+
+    if (this.isExpiredJwt(error)) {
+      devError('auth-remote', 'JWT expired after refresh; clearing local session', error);
+      await this.clearLocalSession();
+      return null;
+    }
+
+    devError('auth-remote', 'getProfile failed after session refresh', error, {
+      file: 'auth-remote-datasource.ts'
+    });
+    throw error;
+  }
+
+  private fetchProfile(userId: string) {
+    return supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+  }
+
+  private isExpiredJwt(error: { code?: string; message?: string }): boolean {
+    return error.code === 'PGRST303' || /jwt expired/i.test(error.message ?? '');
+  }
+
+  private async clearLocalSession(): Promise<void> {
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    if (error) {
+      devError('auth-remote', 'failed to clear local session', error);
+    }
   }
 
   onAuthStateChange(cb: (userId: string | null) => void) {
