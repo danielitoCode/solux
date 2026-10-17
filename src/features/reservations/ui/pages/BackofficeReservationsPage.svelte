@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { supabase } from '$infrastructure/data/supabase-client';
+  import { reservationWorkUseCases } from '$features/reservations/di';
   import { getReservationRepository } from '$features/reservations/di';
   import type { Reservation, ReservationStatus } from '$features/reservations/domain/entities';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
@@ -145,18 +145,13 @@
     cancelling = true;
     error = '';
     try {
-      const { data, error: rpcError } = await supabase.rpc(
-        'cancel_reservation_job',
-        {
-          p_operation_key: crypto.randomUUID(),
-          p_reservation_id: target.id,
-          p_customer_charge: charge,
-          p_reason: cancellationReason.trim(),
-          p_notes: cancellationNotes.trim()
-        }
-      );
-      if (rpcError) throw rpcError;
-      if (!data) throw new Error('La cancelación no devolvió identificador.');
+      await reservationWorkUseCases.cancelJob.execute({
+        operationKey: crypto.randomUUID(),
+        reservationId: target.id,
+        customerCharge: charge,
+        reason: cancellationReason.trim(),
+        notes: cancellationNotes.trim()
+      });
       cancellationTarget = null;
       await load();
       error = '';
