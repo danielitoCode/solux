@@ -46,7 +46,7 @@
     <span>{companyName}</span>
   </a>
 
-  <nav class="desktop-nav" class:open={menuOpen} aria-label="Navegación principal">
+  <nav id="primary-navigation" class="desktop-nav" class:open={menuOpen} aria-label="Navegación principal">
     {#each links as link}
       <a href={link.href} class:active={isActive(link.href)} aria-current={isActive(link.href) ? 'page' : undefined} onclick={closeMenu}>{link.label}</a>
     {/each}
