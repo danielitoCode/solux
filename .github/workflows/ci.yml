@@ -16,8 +16,9 @@ jobs:
           node-version: 22
           cache: npm
 
+      # npm install (not ci) while lockfile catches up to adapter-node
       - name: Install
-        run: npm ci
+        run: npm install
 
       - name: Typecheck (svelte-check + tsc)
         run: npm run check
