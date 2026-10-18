@@ -29,7 +29,8 @@ export class PresentationRemoteDataSource {
       .from('site_projects')
       .select('*')
       .eq('is_published', true)
-      .order('sort_order')
+      .order('capacity_kw', { ascending: false, nullsFirst: false })
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data ?? []) as unknown as ProjectCardDto[];
