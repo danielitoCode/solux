@@ -3,6 +3,7 @@
   import Header from '$features/presentation/ui/components/Header.svelte';
   import Footer from '$features/presentation/ui/components/Footer.svelte';
   import DevDebugPanel from '$infrastructure/ui/DevDebugPanel.svelte';
+  import Seo from '$infrastructure/seo/Seo.svelte';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { devLog } from '$infrastructure/ui/dev-logger';
@@ -10,6 +11,7 @@
   let { children } = $props();
 
   const isBackoffice = $derived($page.url.pathname.startsWith('/backoffice'));
+  const isHome = $derived($page.url.pathname === '/');
 
   onMount(() => {
     const saved = localStorage.getItem('solux-theme') || 'light';
@@ -17,6 +19,11 @@
     devLog('app', 'mount', { path: location.pathname });
   });
 </script>
+
+<Seo
+  noindex={isBackoffice}
+  jsonLd={isHome ? 'both' : isBackoffice ? 'none' : 'none'}
+/>
 
 {#if !isBackoffice}
   <div class="ambient ambient-a"></div>
