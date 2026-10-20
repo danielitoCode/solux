@@ -1,20 +1,4 @@
-services:
-  - type: web
-    name: solux
-    runtime: node
-    plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
-    envVars:
-      - key: NODE_VERSION
-        value: "20"
-      - key: VITE_SUPABASE_URL
-        sync: false
-      - key: VITE_SUPABASE_ANON_KEY
-        sync: false
-      - key: VITE_SITE_URL
-        sync: false
-      - key: VITE_CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: VITE_CLOUDINARY_UPLOAD_PRESET
-        sync: false
+# Referencia Static Site. En el dashboard usa tipo "Static Site".
+# Build: npm install && npm run build
+# Publish Directory: build
+# Rewrite: /* → /200.html
