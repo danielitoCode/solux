@@ -22,15 +22,6 @@ interface NotifyBody {
   payload?: Record<string, unknown>;
 }
 
-/** Payload estándar de Database Webhooks (Supabase) */
-interface DbWebhookBody {
-  type?: string; // INSERT | UPDATE | DELETE
-  table?: string;
-  schema?: string;
-  record?: Record<string, unknown> | null;
-  old_record?: Record<string, unknown> | null;
-}
-
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -58,7 +49,6 @@ function str(v: unknown, fallback = "—"): string {
 }
 
 function normalizeBody(raw: Record<string, unknown>): NotifyBody | null {
-  // A) Formato manual: { type: "reservation", payload: {...} }
   const manualType = raw.type as string | undefined;
   if (
     manualType &&
@@ -71,13 +61,11 @@ function normalizeBody(raw: Record<string, unknown>): NotifyBody | null {
     };
   }
 
-  // B) Database Webhook Supabase
   const table = raw.table as string | undefined;
   const event = (raw.type as string | undefined)?.toUpperCase();
   const record = (raw.record ?? null) as Record<string, unknown> | null;
 
   if (!table || !record) return null;
-  // Solo INSERT (formulario completado). Evita spam en cada UPDATE de estado.
   if (event && event !== "INSERT") return null;
 
   const notifyType = TABLE_TO_TYPE[table];
@@ -87,77 +75,112 @@ function normalizeBody(raw: Record<string, unknown>): NotifyBody | null {
     type: notifyType,
     payload: {
       ...record,
-      // ayuda a plantillas catalog
       action: event === "INSERT" ? "nuevo" : event,
     },
   };
 }
 
+function brandHeader(kind: string, title: string): string {
+  // WhatsApp: *bold* _italic_ — CallMeBot free no envía imágenes del logo
+  return [
+    "🌿 *SOLUX*",
+    `┌────────────────`,
+    `│ ${kind}`,
+    `│ *${title}*`,
+    `└────────────────`,
+  ].join("\n");
+}
+
+function line(label: string, value: unknown, skipEmpty = true): string | null {
+  const v = str(value, "");
+  if (skipEmpty && (!v || v === "—")) return null;
+  return `• *${label}:* ${v || "—"}`;
+}
+
 function formatMessage(body: NotifyBody): string {
   const p = body.payload ?? {};
+  const footer = "\n_Notificación automática SOLUX_";
 
   switch (body.type) {
     case "reservation":
       return [
-        "*SOLUX — Nueva reserva / montaje*",
-        `Código: ${str(p.trackingCode ?? p.tracking_code)}`,
-        `Cliente: ${str(p.customerName ?? p.customer_name)}`,
-        `Email: ${str(p.customer_email ?? p.email)}`,
-        `Teléfono: ${str(p.phone ?? p.customer_phone)}`,
-        `Servicio: ${str(p.serviceCategory ?? p.service_category)}`,
-        `Fecha preferida: ${str(p.preferredDate ?? p.preferred_date)}`,
-        `Horario: ${str(p.preferred_time_slot)}`,
-        p.address ? `Dirección: ${str(p.address)}` : null,
-        p.notes || p.message ? `Notas: ${str(p.notes ?? p.message)}` : null,
+        brandHeader("📅 RESERVA", "Nueva solicitud de visita"),
+        "",
+        line("Código", p.trackingCode ?? p.tracking_code, false),
+        line("Cliente", p.customerName ?? p.customer_name),
+        line("Email", p.customer_email ?? p.email),
+        line("Teléfono", p.phone ?? p.customer_phone),
+        line("Servicio", p.serviceCategory ?? p.service_category),
+        line("Fecha", p.preferredDate ?? p.preferred_date),
+        line("Horario", p.preferred_time_slot),
+        line("Dirección", p.address),
+        line("Notas", p.notes ?? p.message),
+        footer,
       ]
-        .filter(Boolean)
+        .filter((x) => x !== null)
         .join("\n");
 
     case "ticket":
       return [
-        "*SOLUX — Ticket de soporte*",
-        `Código: ${str(p.trackingCode ?? p.tracking_code)}`,
-        `Cliente: ${str(p.customerName ?? p.customer_name)}`,
-        `Email: ${str(p.customer_email ?? p.email)}`,
-        `Teléfono: ${str(p.phone ?? p.customer_phone)}`,
-        `Asunto: ${str(p.subject ?? p.title)}`,
-        `Prioridad: ${str(p.priority)}`,
-        `Estado: ${str(p.status)}`,
-        p.description || p.message
-          ? `Detalle: ${str(p.description ?? p.message)}`
-          : null,
+        brandHeader("🛠️ SOPORTE", "Nuevo ticket técnico"),
+        "",
+        line("Código", p.trackingCode ?? p.tracking_code, false),
+        line("Cliente", p.customerName ?? p.customer_name),
+        line("Email", p.customer_email ?? p.email),
+        line("Teléfono", p.phone ?? p.customer_phone),
+        line("Asunto", p.subject ?? p.title),
+        line("Prioridad", p.priority),
+        line("Estado", p.status),
+        line("Detalle", p.description ?? p.message),
+        footer,
       ]
-        .filter(Boolean)
+        .filter((x) => x !== null)
         .join("\n");
 
     case "contact":
       return [
-        "*SOLUX — Mensaje de contacto*",
-        `Nombre: ${str(p.name ?? p.full_name)}`,
-        `Email: ${str(p.email)}`,
-        `Teléfono: ${str(p.phone)}`,
-        `Asunto: ${str(p.subject)}`,
-        p.message || p.body ? `Mensaje: ${str(p.message ?? p.body)}` : null,
+        brandHeader("💬 CONTACTO", "Nuevo mensaje del sitio"),
+        "",
+        line("Nombre", p.name ?? p.full_name),
+        line("Email", p.email),
+        line("Teléfono", p.phone),
+        line("Asunto", p.subject),
+        line("Mensaje", p.message ?? p.body),
+        footer,
       ]
-        .filter(Boolean)
+        .filter((x) => x !== null)
         .join("\n");
 
     case "catalog":
       return [
-        "*SOLUX — Catálogo*",
-        `Acción: ${str(p.action ?? "actualización")}`,
-        `Item: ${str(p.name ?? p.title)}`,
-        p.type ? `Tipo: ${str(p.type)}` : null,
-        p.id ? `Id: ${str(p.id)}` : null,
+        brandHeader("🛒 CATÁLOGO", "Cambio en productos / servicios"),
+        "",
+        line("Acción", p.action ?? "actualización"),
+        line("Item", p.name ?? p.title),
+        line("Tipo", p.type),
+        line("Id", p.id),
+        footer,
       ]
-        .filter(Boolean)
+        .filter((x) => x !== null)
         .join("\n");
 
-    case "custom":
-      return (body.text ?? str(p.text)).trim() || "SOLUX — Notificación";
+    case "custom": {
+      const bodyText = (body.text ?? str(p.text)).trim() || "Notificación";
+      return [
+        brandHeader("🔔 AVISO", "Mensaje personalizado"),
+        "",
+        bodyText,
+        footer,
+      ].join("\n");
+    }
 
     default:
-      return body.text?.trim() || `SOLUX — Evento: ${body.type}`;
+      return [
+        brandHeader("🔔 AVISO", String(body.type)),
+        "",
+        body.text?.trim() || "Evento SOLUX",
+        footer,
+      ].join("\n");
   }
 }
 
@@ -194,7 +217,6 @@ function isAuthorized(req: Request): boolean {
   const headerSecret = req.headers.get("x-notify-secret");
   if (headerSecret === webhookSecret) return true;
 
-  // Algunos webhooks mandan el secreto como Bearer
   const auth = req.headers.get("authorization");
   if (auth === `Bearer ${webhookSecret}`) return true;
 
@@ -223,7 +245,6 @@ Deno.serve(async (req) => {
 
   const body = normalizeBody(raw);
 
-  // UPDATE/DELETE u otra tabla: ignorar en silencio (200) para no reintentar el webhook
   if (!body) {
     return json(200, {
       ok: true,
@@ -250,7 +271,7 @@ Deno.serve(async (req) => {
     return json(200, {
       ok: true,
       type: body.type,
-      preview: message.slice(0, 200),
+      preview: message.slice(0, 280),
       provider: "callmebot",
       detail: result.detail,
     });
