@@ -21,6 +21,8 @@ export interface CreateContactMessageDto {
   phone: string | null;
   subject: 'general' | 'quote' | 'partnership' | 'other';
   message: string;
+  source?: string;
+  intent?: string;
 }
 export interface CompanyProfileDto {
   name: string | null;
@@ -51,13 +53,14 @@ export class PublicContactRemoteDataSource {
 
   async sendMessage(input: CreateContactMessageDto): Promise<void> {
     assertSupabaseConfigured();
-    // RPC security definer: mismo patrón que tickets/reservas (evita 42501)
     const { error } = await supabase.rpc('create_contact_message', {
       p_name: input.name,
       p_email: input.email,
       p_phone: input.phone,
       p_subject: input.subject,
-      p_message: input.message
+      p_message: input.message,
+      p_source: input.source ?? 'direct',
+      p_intent: input.intent ?? 'contact'
     });
     if (error) throw error;
   }

@@ -7,6 +7,8 @@ export interface CreateTicketInput {
   subject: string;
   description: string;
   relatedReservationId?: string;
+  source?: string;
+  intent?: string;
 }
 
 export interface SupportRepository {
