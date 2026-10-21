@@ -71,16 +71,55 @@
     return SERVICE_OPTIONS.find((s) => s.id === id)?.title ?? id;
   }
 
+  /** Autofill del navegador a veces no actualiza el estado; leemos el DOM al validar. */
+  function syncFromDom() {
+    if (typeof document === 'undefined') return;
+    const byId = (id: string) =>
+      (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null)?.value ?? '';
+    if (!name.trim()) name = byId('customer-name');
+    if (!email.trim()) email = byId('customer-email');
+    if (!phone.trim()) phone = byId('customer-phone');
+    if (!address.trim()) address = byId('customer-address');
+    if (!date) date = byId('preferred-date');
+    if (!timeSlot) {
+      const slot = byId('preferred-slot');
+      if (slot) timeSlot = slot as typeof timeSlot;
+    }
+  }
+
+  function missingRequired(): string[] {
+    const missing: string[] = [];
+    if (!name.trim()) missing.push('nombre');
+    if (!email.trim()) missing.push('correo');
+    if (!phone.trim()) missing.push('teléfono');
+    if (!date) missing.push('fecha preferida');
+    return missing;
+  }
+
   async function submit() {
     formError = '';
-    if (!name.trim() || !email.trim() || !date || !phone.trim()) {
-      formError = 'Completa nombre, correo, teléfono y fecha preferida.';
+    syncFromDom();
+
+    const missing = missingRequired();
+    if (missing.length) {
+      formError =
+        missing.length === 1
+          ? `Falta completar: ${missing[0]}.`
+          : `Falta completar: ${missing.join(', ')}.`;
       showToast(formError);
+      const focusMap: Record<string, string> = {
+        nombre: 'customer-name',
+        correo: 'customer-email',
+        teléfono: 'customer-phone',
+        'fecha preferida': 'preferred-date'
+      };
+      document.getElementById(focusMap[missing[0]] ?? '')?.focus();
       return;
     }
     if (!/[^\s@]+@[^\s@]+\.[^\s@]+/.test(email.trim())) {
       formError = 'Indica un correo válido.';
       showToast(formError);
+      document.getElementById('customer-email')?.focus();
       return;
     }
 
@@ -203,9 +242,9 @@
         </div>
 
         <div class="grid-2">
-          <div class="field">
-            <label for="preferred-date">Fecha preferida</label>
-            <input id="preferred-date" type="date" bind:value={date} />
+          <div class="field" class:invalid={!date && formError.includes('fecha')}>
+            <label for="preferred-date">Fecha preferida <span class="req">*</span></label>
+            <input id="preferred-date" type="date" bind:value={date} required />
           </div>
           <div class="field">
             <label for="preferred-slot">Franja horaria</label>
@@ -219,25 +258,26 @@
 
         <div class="grid-2">
           <div class="field">
-            <label for="customer-name">Nombre completo</label>
-            <input id="customer-name" placeholder="Tu nombre" bind:value={name} autocomplete="name" />
+            <label for="customer-name">Nombre completo <span class="req">*</span></label>
+            <input id="customer-name" placeholder="Tu nombre" bind:value={name} autocomplete="name" required />
           </div>
           <div class="field">
-            <label for="customer-email">Correo</label>
+            <label for="customer-email">Correo <span class="req">*</span></label>
             <input
               id="customer-email"
               type="email"
               placeholder="tu@correo.com"
               bind:value={email}
               autocomplete="email"
+              required
             />
           </div>
         </div>
 
         <div class="grid-2">
           <div class="field">
-            <label for="customer-phone">Teléfono / WhatsApp</label>
-            <input id="customer-phone" placeholder="+53 ..." bind:value={phone} autocomplete="tel" />
+            <label for="customer-phone">Teléfono / WhatsApp <span class="req">*</span></label>
+            <input id="customer-phone" placeholder="+53 ..." bind:value={phone} autocomplete="tel" required />
           </div>
           <div class="field">
             <label for="customer-address">Zona / dirección aproximada</label>
@@ -299,6 +339,12 @@
 <div class="toast" class:show={toastShow} role="status">{toastText}</div>
 
 <style>
+  .req { color: var(--color-danger, #c0392b); font-weight: 600; }
+  .field.invalid input,
+  .field.invalid select {
+    border-color: var(--color-danger, #c0392b);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger, #c0392b) 18%, transparent);
+  }
   .reservation {
     display: grid;
     grid-template-columns: 1fr 0.72fr;
@@ -412,9 +458,9 @@
   .reserve-side .icon {
     width: 44px;
     height: 44px;
-    border-radius: 14px;
     display: grid;
     place-items: center;
+    border-radius: 14px;
     background: color-mix(in srgb, var(--color-primary) 14%, transparent);
     color: var(--color-primary);
     font-size: 20px;
