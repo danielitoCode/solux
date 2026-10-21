@@ -412,6 +412,40 @@ export interface Database {
         Returns: { product_name: string; unit: string; quantity: number; unit_cost: number; adjustment_type: string; adjustment_percent: number; line_total: number; notes: string; created_at: string }[];
       };
       get_reservation_materials_total_by_tracking: { Args: { p_code: string }; Returns: number };
+      create_support_ticket: {
+        Args: {
+          p_customer_name: string;
+          p_customer_email: string;
+          p_customer_phone?: string | null;
+          p_subject?: string;
+          p_description?: string;
+          p_related_reservation_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['support_tickets']['Row'];
+      };
+      create_reservation: {
+        Args: {
+          p_customer_name: string;
+          p_customer_email: string;
+          p_customer_phone: string;
+          p_service_category: string;
+          p_preferred_date: string;
+          p_preferred_time_slot: string;
+          p_address?: string;
+          p_notes?: string | null;
+        };
+        Returns: Database['public']['Tables']['reservations']['Row'];
+      };
+      create_contact_message: {
+        Args: {
+          p_name: string;
+          p_email: string;
+          p_phone?: string | null;
+          p_subject?: ContactSubject;
+          p_message?: string;
+        };
+        Returns: Database['public']['Tables']['contact_messages']['Row'];
+      };
       get_reservation_by_tracking: {
         Args: { p_code: string };
         Returns: Database['public']['Tables']['reservations']['Row'][];
@@ -424,6 +458,17 @@ export interface Database {
         Args: { p_code: string };
         Returns: Database['public']['Tables']['ticket_messages']['Row'][];
       };
+    };
+    Enums: {
+      user_role: UserRole;
+      catalog_item_type: CatalogItemType;
+      catalog_category: CatalogCategory;
+      reservation_status: ReservationStatus;
+      ticket_status: TicketStatus;
+      ticket_priority: TicketPriority;
+      message_author: MessageAuthor;
+      contact_subject: ContactSubject;
+      day_of_week: DayOfWeek;
     };
   };
 }

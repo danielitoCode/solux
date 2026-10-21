@@ -8,25 +8,24 @@ export class ReservationRemoteDataSource {
   async create(input: CreateReservationInput): Promise<ReservationDto> {
     assertSupabaseConfigured();
     devLog('reservations-remote', 'create');
-    const { data, error } = await supabase
-      .from('reservations')
-      .insert({
-        customer_name: input.customerName,
-        customer_email: input.customerEmail,
-        customer_phone: input.customerPhone,
-        service_category: input.serviceCategory,
-        preferred_date: input.preferredDate,
-        preferred_time_slot: input.preferredTimeSlot,
-        address: input.address,
-        notes: input.notes ?? null
-      })
-      .select()
-      .single();
+    // RPC security definer: evita 42501 (insert+select sin policy SELECT para anon)
+    const { data, error } = await supabase.rpc('create_reservation', {
+      p_customer_name: input.customerName,
+      p_customer_email: input.customerEmail,
+      p_customer_phone: input.customerPhone,
+      p_service_category: input.serviceCategory,
+      p_preferred_date: input.preferredDate,
+      p_preferred_time_slot: input.preferredTimeSlot,
+      p_address: input.address,
+      p_notes: input.notes ?? null
+    });
     if (error) {
       devError('reservations-remote', 'create failed', error);
       throw error;
     }
-    return data as ReservationDto;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('No se pudo crear la reserva.');
+    return row as ReservationDto;
   }
 
   async getByTrackingCode(code: string): Promise<ReservationDto | null> {
