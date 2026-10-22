@@ -394,3 +394,5 @@
     </a>
   </div>
 </section>
+
+<style src="./HomePage.css"></style>
