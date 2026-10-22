@@ -6,6 +6,7 @@
   import { getPresentationUseCases } from '$features/presentation/di';
   import type { PageContent } from '$features/presentation/domain/entities/page-content';
   import ConversionPaths from '$features/presentation/ui/components/ConversionPaths.svelte';
+  import './HomePage.css';
 
   const presentation = getPresentationUseCases();
 
@@ -394,5 +395,3 @@
     </a>
   </div>
 </section>
-
-<style src="./HomePage.css"></style>
