@@ -9,7 +9,7 @@
     z-index: -1;
     overflow: hidden;
     pointer-events: none;
-    opacity: calc(1 - var(--scroll, 0) * 0.6);
+    opacity: calc(1 - var(--scroll, 0) * 0.8);
   }
   .glow {
     position: absolute;
@@ -22,7 +22,7 @@
     left: -20vw;
     top: 6vh;
     background: radial-gradient(circle, var(--color-primary), transparent 65%);
-    opacity: 0.28;
+    opacity: 0.14;
     animation: ambient-drift 18s ease-in-out infinite alternate;
   }
   .glow-sun {
@@ -33,7 +33,7 @@
     right: -6vw;
     top: -8vw;
     background: radial-gradient(circle, var(--color-accent), transparent 65%);
-    opacity: 0.16;
+    opacity: 0.06;
     animation: ambient-drift 14s ease-in-out infinite alternate-reverse;
   }
   .glow-deep {
@@ -42,7 +42,7 @@
     left: 34vw;
     bottom: -26vw;
     background: radial-gradient(circle, var(--color-primary), transparent 65%);
-    opacity: 0.2;
+    opacity: 0.10;
     animation: ambient-drift 22s ease-in-out infinite alternate;
   }
   @keyframes ambient-drift {
@@ -69,12 +69,12 @@
     transform-origin: top center;
     transform: rotate(16deg);
     filter: blur(28px);
-    opacity: 0.55;
-    mix-blend-mode: screen;
+    opacity: 0.18;
+    mix-blend-mode: soft-light;
     animation: beam 10s ease-in-out infinite alternate;
   }
   @keyframes beam {
-    to { transform: rotate(26deg); opacity: 0.85; }
+    to { transform: rotate(26deg); opacity: 0.28; }
   }
   .spark {
     position: absolute;
@@ -90,8 +90,8 @@
   }
   @keyframes spark-up {
     0% { transform: translate(0, 0); opacity: 0; }
-    10% { opacity: 0.7; }
-    90% { opacity: 0.45; }
+    10% { opacity: 0.4; }
+    90% { opacity: 0.25; }
     100% { transform: translate(30px, -108vh); opacity: 0; }
   }
 
