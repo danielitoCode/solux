@@ -3,7 +3,6 @@
     isolation: isolate;
   }
 
-  /* ───────── Atmósfera: una sola capa fija, coherente con todo el fondo ───────── */
   .ambient {
     position: fixed;
     inset: 0;
@@ -47,16 +46,14 @@
     animation: ambient-drift 22s ease-in-out infinite alternate;
   }
   @keyframes ambient-drift {
-    to {
-      transform: translate(5vw, 4vh) scale(1.12);
-    }
+    to { transform: translate(5vw, 4vh) scale(1.12); }
   }
   .grid-lines {
     position: absolute;
     inset: 0;
     background-image:
-            linear-gradient(var(--color-border) 1px, transparent 1px),
-            linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+      linear-gradient(var(--color-border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
     background-size: 64px 64px;
     opacity: 0.35;
     -webkit-mask-image: radial-gradient(ellipse 70% 60% at 68% 30%, #000, transparent 75%);
@@ -77,10 +74,7 @@
     animation: beam 10s ease-in-out infinite alternate;
   }
   @keyframes beam {
-    to {
-      transform: rotate(26deg);
-      opacity: 0.85;
-    }
+    to { transform: rotate(26deg); opacity: 0.85; }
   }
   .spark {
     position: absolute;
@@ -95,20 +89,10 @@
     animation: spark-up var(--d) linear var(--delay) infinite;
   }
   @keyframes spark-up {
-    0% {
-      transform: translate(0, 0);
-      opacity: 0;
-    }
-    10% {
-      opacity: 0.7;
-    }
-    90% {
-      opacity: 0.45;
-    }
-    100% {
-      transform: translate(30px, -108vh);
-      opacity: 0;
-    }
+    0% { transform: translate(0, 0); opacity: 0; }
+    10% { opacity: 0.7; }
+    90% { opacity: 0.45; }
+    100% { transform: translate(30px, -108vh); opacity: 0; }
   }
 
   .rise {
@@ -116,15 +100,10 @@
     animation-delay: calc(var(--i, 0) * 90ms);
   }
   @keyframes rise {
-    from {
-      opacity: 0;
-      transform: translateY(18px);
-    }
+    from { opacity: 0; transform: translateY(18px); }
   }
 
-  .headline {
-    margin-block: inherit;
-  }
+  .headline { margin-block: inherit; }
   .word {
     display: inline-block;
     overflow: hidden;
@@ -138,9 +117,7 @@
     animation-delay: calc(var(--w) * 70ms + 120ms);
   }
   @keyframes word-up {
-    from {
-      transform: translateY(110%);
-    }
+    from { transform: translateY(110%); }
   }
 
   .hero {
@@ -150,37 +127,29 @@
     align-items: center;
     margin-bottom: 28px;
   }
-  .hero-copy .eyebrow {
-    margin-bottom: 12px;
-  }
+  .hero-copy .eyebrow { margin-bottom: 12px; }
   .hero-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     margin: 22px 0 20px;
   }
-  .hero-actions :global(.btn),
-  .banner :global(.btn) {
+  .hero-actions .btn,
+  .banner .btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
   }
-  .hero-actions :global(.btn):hover,
-  .banner :global(.btn):hover {
-    transform: translateY(-1px);
-  }
-  .hero-actions :global(.btn):active,
-  .banner :global(.btn):active {
-    transform: translateY(0);
-  }
-  .hero-actions :global(.btn-accent) {
+  .hero-actions .btn:hover,
+  .banner .btn:hover { transform: translateY(-1px); }
+  .hero-actions .btn:active,
+  .banner .btn:active { transform: translateY(0); }
+  .hero-actions .btn-accent {
     position: relative;
     overflow: hidden;
   }
-  .hero-actions :global(.btn-accent):hover {
-    filter: brightness(1.05);
-  }
-  .hero-actions :global(.btn-accent)::after {
+  .hero-actions .btn-accent:hover { filter: brightness(1.05); }
+  .hero-actions .btn-accent::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -189,25 +158,15 @@
     animation: sheen 4.5s ease-in-out 1.2s infinite;
   }
   @keyframes sheen {
-    0%, 55% {
-      transform: translateX(-120%);
-    }
-    100% {
-      transform: translateX(120%);
-    }
+    0%, 55% { transform: translateX(-120%); }
+    100% { transform: translateX(120%); }
   }
-  .arrow {
-    transition: transform 0.2s var(--ease);
-  }
-  .hero-actions :global(.btn):hover .arrow,
+  .arrow { transition: transform 0.2s var(--ease); }
+  .hero-actions .btn:hover .arrow,
   .card-link:hover .arrow,
-  .banner :global(.btn):hover .arrow {
-    transform: translateX(4px);
-  }
+  .banner .btn:hover .arrow { transform: translateX(4px); }
 
-  .hero-stage {
-    perspective: 1000px;
-  }
+  .hero-stage { perspective: 1000px; }
   .hero-frame {
     transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
     transition: transform 0.25s var(--ease);
@@ -286,14 +245,8 @@
     color: var(--color-text);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   }
-  .chip-a {
-    top: 16px;
-    left: 16px;
-  }
-  .chip-b {
-    bottom: 88px;
-    right: 16px;
-  }
+  .chip-a { top: 16px; left: 16px; }
+  .chip-b { bottom: 88px; right: 16px; }
   .chip .dot {
     display: inline-block;
     width: 7px;
@@ -315,20 +268,14 @@
     backdrop-filter: blur(10px);
     border: 1px solid var(--color-border);
   }
-  .hero-badge strong {
-    display: block;
-    font-size: 14px;
-  }
+  .hero-badge strong { display: block; font-size: 14px; }
   .hero-badge small {
     display: block;
     margin: 2px 0 8px;
     color: var(--color-muted);
     font-size: 12px;
   }
-  .flow {
-    width: 100%;
-    height: 56px;
-  }
+  .flow { width: 100%; height: 56px; }
   .flow-line {
     fill: none;
     stroke: var(--color-border);
@@ -348,9 +295,7 @@
     opacity: 0.7;
   }
   @keyframes flow {
-    to {
-      stroke-dashoffset: -280;
-    }
+    to { stroke-dashoffset: -280; }
   }
   .flow-node {
     fill: var(--color-surface);
@@ -368,14 +313,8 @@
     gap: 18px;
     flex-wrap: wrap;
   }
-  .stat strong {
-    display: block;
-    font-size: 22px;
-  }
-  .stat span {
-    font-size: 12px;
-    color: var(--color-muted);
-  }
+  .stat strong { display: block; font-size: 22px; }
+  .stat span { font-size: 12px; color: var(--color-muted); }
   .stat-skeleton strong,
   .stat-skeleton span {
     display: block;
@@ -402,14 +341,9 @@
     font-weight: 700;
     color: var(--color-muted);
   }
-  .marquee-sep {
-    color: var(--color-primary);
-    opacity: 0.6;
-  }
+  .marquee-sep { color: var(--color-primary); opacity: 0.6; }
   @keyframes marquee {
-    to {
-      transform: translateX(-50%);
-    }
+    to { transform: translateX(-50%); }
   }
 
   .section-head {
@@ -452,13 +386,8 @@
     pointer-events: none;
     transition: opacity 0.25s;
   }
-  .service:hover::before {
-    opacity: 0.12;
-  }
-  .service .icon {
-    font-size: 22px;
-    margin-bottom: 10px;
-  }
+  .service:hover::before { opacity: 0.12; }
+  .service .icon { font-size: 22px; margin-bottom: 10px; }
   .card-link {
     font-size: 13px;
     font-weight: 700;
@@ -499,9 +428,7 @@
     transition: transform 0.4s var(--ease);
   }
   .step.rv.in::before,
-  .step:hover::before {
-    transform: scaleX(1);
-  }
+  .step:hover::before { transform: scaleX(1); }
   .step-n {
     display: inline-grid;
     place-items: center;
@@ -514,10 +441,7 @@
     font-weight: 800;
     margin-bottom: 10px;
   }
-  .step h3 {
-    margin: 0 0 6px;
-    font-size: 15px;
-  }
+  .step h3 { margin: 0 0 6px; font-size: 15px; }
   .step p {
     margin: 0;
     font-size: 13px;
@@ -558,13 +482,9 @@
   }
 
   @media (max-width: 900px) {
-    .hero {
-      grid-template-columns: 1fr;
-    }
+    .hero { grid-template-columns: 1fr; }
     .grid-3,
-    .steps {
-      grid-template-columns: 1fr;
-    }
+    .steps { grid-template-columns: 1fr; }
     .banner {
       flex-direction: column;
       align-items: start;
@@ -594,8 +514,7 @@
     .step::before,
     .step-n {
       transition: none;
+      animation: none;
     }
-    .step::before {
-      transform: scaleX(1);
-    }
+    .step::before { transform: scaleX(1); }
   }
