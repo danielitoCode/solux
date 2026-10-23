@@ -27,11 +27,13 @@ Rama: `platform-updates-coreV2`
 | B2 | Catálogo: consultar equipo + instalar con kit | **Hecho** |
 | B3 | Campos proveedor / alcance en ofertas | **Hecho** — migración `022`, BO + catálogo público |
 
-## Iteración C — pendiente
+## Iteración C
 
-- Datos comerciales reales
-- Proyectos con evidencia
-- FAQ equipo vs instalación
+| # | Tarea | Estado |
+|---|--------|--------|
+| C1 | FAQ equipo vs instalación | **Hecho** — `EquipmentInstallFaq` en catálogo + servicios |
+| C2 | Proyectos con evidencia | **Hecho** — seed 3 proyectos publicados (`023`) |
+| C3 | Datos comerciales (provider/scope en catálogo) | **Hecho** — updates en `023` |
 
 ## Iteración D — pendiente
 
@@ -41,6 +43,8 @@ Rama: `platform-updates-coreV2`
 ## Deploy (checklist)
 
 1. [x] Ejecutar `021_lead_intent_source.sql` en Supabase
-2. [ ] Ejecutar `022_catalog_provider_scope.sql` en Supabase
-3. [ ] Deploy front `platform-updates-coreV2` (o merge → master)
-4. [ ] Probar home → cada ruta → verificar `source` / `intent` en BD
+2. [x] Ejecutar `022_catalog_provider_scope.sql` en Supabase
+3. [ ] Ejecutar `023_iter_c_commercial_projects.sql` en Supabase
+4. [ ] Deploy front `platform-updates-coreV2` (o merge → master)
+5. [ ] Probar home → cada ruta → verificar `source` / `intent` en BD
+6. [ ] Probar FAQ + proyectos publicados + chips proveedor/alcance
