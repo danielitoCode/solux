@@ -5,6 +5,7 @@
   import { publicContactUseCases } from '$features/contact/di/public-contact';
   import { ms, reveal, scrollDepth, spotlight } from '$infrastructure/ui/util/motion';
   import Ambient from "$infrastructure/ui/component/Ambient.svelte";
+  import { readLeadFromLocation, type LeadIntent, type LeadSource } from '$infrastructure/ui/lead-context';
 
   /* ─────────── Tipos ─────────── */
   type ContactInfo = {
@@ -58,6 +59,9 @@
   let phone = $state('');
   let message = $state('');
 
+  let leadIntent = $state<LeadIntent>('contact');
+  let leadSource = $state<LeadSource>('direct');
+
   let mapLoaded = $state(false);
   let now = $state(new Date());
 
@@ -79,6 +83,13 @@
   }
 
   onMount(() => {
+    const lead = readLeadFromLocation({ intent: 'contact', source: 'direct' });
+    leadIntent = lead.intent;
+    leadSource = lead.source;
+    const itemName = new URLSearchParams(location.search).get('name')?.trim();
+    if (itemName && !message.trim()) {
+      message = `Consulta sobre equipo: ${itemName}`;
+    }
     load();
     // Mantiene actualizado el estado "abierto ahora" sin recargar
     const id = setInterval(() => (now = new Date()), 60_000);
@@ -172,8 +183,10 @@
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim() || null,
-        subject: 'general',
-        message: message.trim()
+        subject: leadIntent === 'buy' ? 'quote' : 'general',
+        message: message.trim(),
+        source: leadSource,
+        intent: leadIntent === 'general' ? 'contact' : leadIntent
       });
       sent = true;
       name = '';
@@ -557,15 +570,20 @@
   .field textarea {
     width: 100%;
     box-sizing: border-box;
-    transition:
-            border-color 0.25s var(--ease),
-            box-shadow 0.25s var(--ease);
+    padding: 11px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 14px;
+    transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
   }
   .field input:focus,
   .field textarea:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
   }
   .field textarea {
     min-height: 120px;
@@ -574,116 +592,88 @@
   .counter {
     position: absolute;
     right: 10px;
-    bottom: 8px;
-    color: var(--color-muted);
+    bottom: 10px;
     font-size: 11px;
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;
+    color: var(--color-muted);
   }
   .form-error {
     margin: 0 0 12px;
-    color: #b91c1c;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, #c0392b 12%, var(--color-surface));
+    border: 1px solid color-mix(in srgb, #c0392b 30%, var(--color-border));
+    color: #a93226;
     font-size: 13px;
   }
   .submit {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition:
-            transform 0.25s var(--ease),
-            opacity 0.25s var(--ease);
-  }
-  .submit:not(:disabled):hover {
-    transform: translateY(-2px);
-  }
-  .submit:not(:disabled):active {
-    transform: scale(0.98);
-  }
-  .submit:disabled {
-    opacity: 0.8;
-    cursor: progress;
+    width: 100%;
+    margin-top: 4px;
   }
   .spinner {
+    display: inline-block;
     width: 14px;
     height: 14px;
-    border: 2px solid currentColor;
-    border-right-color: transparent;
+    margin-right: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: white;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
+    vertical-align: -2px;
   }
   @keyframes spin {
     to {
       transform: rotate(360deg);
     }
   }
-
-  /* Estado de éxito */
   .success {
-    display: grid;
-    justify-items: center;
-    gap: 10px;
-    padding: 36px 10px;
     text-align: center;
-  }
-  .success h3 {
-    margin: 6px 0 0;
-    outline: none;
-  }
-  .success p {
-    margin: 0 0 8px;
-    color: var(--color-muted);
+    padding: 28px 12px;
   }
   .check {
-    width: 64px;
-    height: 64px;
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+  }
+  .check circle {
     fill: none;
-    stroke: var(--color-primary);
+    stroke: color-mix(in srgb, #27ae60 55%, transparent);
+    stroke-width: 2;
+  }
+  .check path {
+    fill: none;
+    stroke: #1e8449;
     stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  .check circle {
-    stroke-dasharray: 152;
-    stroke-dashoffset: 152;
-    animation: draw 0.8s var(--ease) 0.1s forwards;
+  .success h3 {
+    margin: 0 0 8px;
   }
-  .check path {
-    stroke-dasharray: 40;
-    stroke-dashoffset: 40;
-    animation: draw 0.5s var(--ease) 0.7s forwards;
-  }
-  @keyframes draw {
-    to {
-      stroke-dashoffset: 0;
-    }
+  .success p {
+    margin: 0 0 16px;
+    color: var(--color-muted);
   }
 
-  /* Mapa */
   .contact-side {
     min-width: 0;
   }
   .map-frame {
     position: relative;
-    display: flex;
-    flex-direction: column;
     height: 100%;
-    min-height: 380px;
-    border: 1px solid var(--color-border);
-    border-radius: 22px;
+    min-height: 320px;
+    border-radius: 18px;
     overflow: hidden;
-    background: var(--color-surface);
-    box-shadow: var(--color-shadow);
+    border: 1px solid var(--color-border);
+    background: var(--media-bg);
   }
   .map-frame iframe {
-    position: relative;
-    z-index: 1;
-    display: block;
+    position: absolute;
+    inset: 0;
     width: 100%;
-    flex: 1;
-    min-height: 380px;
+    height: 100%;
     border: 0;
     opacity: 0;
-    transition: opacity 0.6s var(--ease);
+    transition: opacity 0.4s var(--ease);
   }
   .map-frame iframe.loaded {
     opacity: 1;
@@ -692,17 +682,16 @@
     position: absolute;
     inset: 0;
     background: linear-gradient(
-            90deg,
-            var(--color-border) 25%,
-            rgba(255, 255, 255, 0.12) 50%,
-            var(--color-border) 75%
+      90deg,
+      var(--color-border) 25%,
+      rgba(255, 255, 255, 0.12) 50%,
+      var(--color-border) 75%
     )
     0 0 / 200% 100%;
     animation: shimmer 1.5s linear infinite;
-    transition: opacity 0.4s;
   }
   .map-skeleton.hidden {
-    opacity: 0;
+    display: none;
   }
   @keyframes shimmer {
     to {
@@ -711,314 +700,215 @@
   }
   .map-open {
     position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
     z-index: 2;
-    left: 14px;
-    bottom: 14px;
-    padding: 9px 16px;
-    border-radius: 999px;
-    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    color: var(--color-text);
     font-size: 12px;
     font-weight: 700;
     text-decoration: none;
-    background: rgba(8, 120, 62, 0.82);
-    backdrop-filter: blur(12px);
-    transition: transform 0.25s var(--ease);
-  }
-  .map-open:hover {
-    transform: translateY(-2px);
   }
   .map-empty {
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 24px;
-    text-align: center;
-    color: var(--color-muted);
-    background: linear-gradient(135deg, var(--media-bg), var(--color-surface));
-  }
-  .map-empty-icon {
-    font-size: 44px;
-    color: var(--color-primary);
-  }
-  .map-empty p {
-    margin: 0;
-  }
-
-  /* ───────── Datos de contacto ───────── */
-  .contact-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 12px;
-    margin-top: 18px;
-  }
-  .contact-item {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    height: 100%;
-    box-sizing: border-box;
-    padding: 14px;
-    min-width: 0;
-    color: inherit;
-    text-decoration: none;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 16px;
-    transition:
-            transform 0.3s var(--ease),
-            border-color 0.3s var(--ease),
-            box-shadow 0.3s var(--ease);
-  }
-  .contact-item.action::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: radial-gradient(
-            220px circle at var(--sx, 50%) var(--sy, 50%),
-            rgba(255, 191, 25, 0.16),
-            transparent 65%
-    );
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .contact-item.action:hover {
-    transform: translateY(-4px);
-    border-color: var(--color-primary);
-    box-shadow: var(--color-shadow);
-  }
-  .contact-item.action:hover::before {
-    opacity: 1;
-  }
-  .contact-item.action:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 3px;
-  }
-  .ci-icon {
-    flex: 0 0 38px;
-    width: 38px;
-    height: 38px;
     display: grid;
     place-items: center;
-    border-radius: 11px;
-    color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-    transition: transform 0.35s var(--ease);
+    text-align: center;
+    padding: 24px;
+    color: var(--color-muted);
   }
-  .contact-item.action:hover .ci-icon {
-    transform: scale(1.1) rotate(-6deg);
+  .map-empty-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
   }
-  .contact-item div {
-    min-width: 0;
+
+  /* ───────── Lista de contacto ───────── */
+  .contact-list {
     display: grid;
-    gap: 3px;
-    overflow-wrap: anywhere;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 22px;
+  }
+  .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-surface);
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.25s var(--ease), border-color 0.25s var(--ease);
+  }
+  .contact-item.action:hover {
+    transform: translateY(-3px);
+    border-color: var(--color-primary);
+  }
+  .ci-icon {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+    font-size: 18px;
+  }
+  .contact-item strong {
+    display: block;
+    font-size: 13px;
   }
   .contact-item small {
-    line-height: 1.4;
     color: var(--color-muted);
+    font-size: 12px;
   }
   .go {
     margin-left: auto;
-    color: var(--color-primary);
-    opacity: 0;
-    transform: translateX(-6px);
-    transition:
-            opacity 0.3s var(--ease),
-            transform 0.3s var(--ease);
-  }
-  .contact-item.action:hover .go {
-    opacity: 1;
-    transform: none;
-  }
-  .contact-item.sk {
-    min-height: 68px;
-  }
-  .sk-block {
-    display: block;
-    border-radius: 8px;
-    background: linear-gradient(
-            90deg,
-            var(--color-border) 25%,
-            rgba(255, 255, 255, 0.12) 50%,
-            var(--color-border) 75%
-    )
-    0 0 / 200% 100%;
-    animation: shimmer 1.5s linear infinite;
-  }
-  .ci-icon.sk-block {
-    flex: 0 0 38px;
-    height: 38px;
-  }
-  .sk-line {
-    height: 11px;
-    width: 90px;
-  }
-  .sk-line.short {
-    width: 50px;
+    color: var(--color-muted);
+    font-weight: 700;
   }
 
   /* ───────── Horario ───────── */
   .hours-card {
-    margin-top: 18px;
-    padding: clamp(16px, 2vw, 24px);
+    margin-top: 22px;
+    padding: 22px 24px;
     border: 1px solid var(--color-border);
-    border-radius: 22px;
+    border-radius: 18px;
     background: var(--color-surface);
   }
   .hours-heading {
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
     align-items: center;
-    margin-bottom: 18px;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
   }
   .hours-icon {
-    display: grid;
-    place-items: center;
     width: 42px;
     height: 42px;
+    display: grid;
+    place-items: center;
     border-radius: 12px;
-    font-size: 20px;
-    color: var(--color-primary);
     background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+    font-size: 18px;
   }
   .hours-heading h3 {
-    margin: 0;
-    font-size: 1.05rem;
+    margin: 0 0 2px;
+    font-size: 16px;
   }
   .hours-heading p {
-    margin: 3px 0 0;
+    margin: 0;
     color: var(--color-muted);
-    font-size: 0.9rem;
+    font-size: 13px;
   }
   .status {
+    margin-left: auto;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    margin-left: auto;
-    padding: 7px 14px;
-    border: 1px solid var(--color-border);
+    padding: 6px 12px;
     border-radius: 999px;
-    color: var(--color-muted);
+    background: color-mix(in srgb, #c0392b 12%, transparent);
+    color: #a93226;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
+  }
+  .status.open {
+    background: color-mix(in srgb, #27ae60 14%, transparent);
+    color: #1e8449;
   }
   .status-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--color-muted);
-  }
-  .status.open {
-    color: var(--color-primary);
-    border-color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-  }
-  .status.open .status-dot {
-    background: var(--color-primary);
-    animation: ping 1.8s ease-out infinite;
-  }
-  @keyframes ping {
-    0% {
-      box-shadow: 0 0 0 0 rgba(8, 120, 62, 0.6);
-    }
-    100% {
-      box-shadow: 0 0 0 9px rgba(8, 120, 62, 0);
-    }
+    background: currentColor;
   }
   .hours-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
   }
   .hours-row {
-    display: grid;
-    gap: 6px;
-    padding: 14px;
-    min-width: 0;
-    border: 1px solid var(--color-border);
-    border-radius: 14px;
-    animation: rise 0.6s var(--ease) both;
-    animation-delay: calc(var(--i) * 50ms);
-    transition:
-            transform 0.3s var(--ease),
-            border-color 0.3s var(--ease);
-  }
-  .hours-row:hover {
-    transform: translateY(-3px);
-    border-color: var(--color-primary);
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--color-surface-2);
+    font-size: 13px;
   }
   .hours-row.today {
-    border-color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    outline: 1px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
   }
   .hours-day {
-    display: flex;
-    align-items: center;
-    gap: 7px;
     font-weight: 700;
   }
   .hours-day small {
-    font-size: 0.7rem;
-    padding: 2px 7px;
-    border-radius: 6px;
-    background: var(--color-primary);
-    color: white;
-  }
-  .hours-time {
-    white-space: nowrap;
-    font-size: 13px;
-    font-variant-numeric: tabular-nums;
-  }
-  .hours-time span {
-    color: var(--color-muted);
+    margin-left: 6px;
+    color: var(--color-primary);
+    font-size: 10px;
+    text-transform: uppercase;
   }
   .hours-closed {
     color: var(--color-muted);
-    font-size: 0.88rem;
+  }
+  .hours-time span {
+    opacity: 0.55;
   }
   .hours-empty {
     margin: 0;
     color: var(--color-muted);
+    font-size: 13px;
   }
 
-  /* ───────── Responsive ───────── */
-  @media (max-width: 900px) {
+  .contact-item.sk .sk-block {
+    display: block;
+    border-radius: 8px;
+    background: linear-gradient(
+      90deg,
+      var(--color-border) 25%,
+      rgba(255, 255, 255, 0.12) 50%,
+      var(--color-border) 75%
+    )
+    0 0 / 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+  }
+  .sk-line {
+    height: 10px;
+    margin: 4px 0;
+  }
+  .sk-line.short {
+    width: 45%;
+  }
+
+  @media (max-width: 820px) {
     .contact-grid {
       grid-template-columns: 1fr;
     }
-    .map-frame,
-    .map-frame iframe {
-      min-height: 300px;
+    .map-frame {
+      min-height: 260px;
     }
-  }
-  @media (max-width: 560px) {
     .row {
       grid-template-columns: 1fr;
     }
-    .status {
-      margin-left: 0;
-    }
   }
 
-  /* ───────── Accesibilidad: reduce el movimiento ───────── */
   @media (prefers-reduced-motion: reduce) {
     .rise,
     .word-in,
-    .hours-row,
-    .spinner,
     .map-skeleton,
-    .sk-block,
-    .status.open .status-dot {
+    .contact-item.sk .sk-block {
       animation: none;
-    }
-    .check circle,
-    .check path {
-      animation: none;
-      stroke-dashoffset: 0;
     }
     .rv {
       opacity: 1;
