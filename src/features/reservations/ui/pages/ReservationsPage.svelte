@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { getReservationRepository } from '$features/reservations/di';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
+  import { readLeadFromLocation, type LeadIntent, type LeadSource } from '$infrastructure/ui/lead-context';
 
   const SERVICE_OPTIONS = [
     {
@@ -44,6 +46,9 @@
   let phone = $state('');
   let address = $state('');
   let message = $state('');
+
+  let leadIntent = $state<LeadIntent>('install');
+  let leadSource = $state<LeadSource>('direct');
 
   let submitting = $state(false);
   let formError = $state('');
@@ -94,7 +99,9 @@
         preferredDate: date,
         preferredTimeSlot: timeSlot,
         address: address.trim() || 'Guantánamo',
-        notes: message.trim() || undefined
+        notes: message.trim() || undefined,
+        source: leadSource,
+        intent: leadIntent
       });
       devLog('reservas-public', 'created', reservation.trackingCode);
       createdCode = reservation.trackingCode;
@@ -135,6 +142,25 @@
       showToast(createdCode);
     }
   }
+
+  onMount(() => {
+    const lead = readLeadFromLocation({ intent: 'install', source: 'direct' });
+    leadIntent = lead.intent;
+    leadSource = lead.source;
+    const q = new URLSearchParams(location.search);
+    const itemName = q.get('name')?.trim();
+    if (itemName && !message.trim()) {
+      message = `Interesado en instalar / kit: ${itemName}`;
+    }
+    // Prefer solar kit service when coming from catalog install
+    if (lead.source === 'catalog' && lead.intent === 'install') {
+      selectedService = 'solar';
+    } else if (lead.intent === 'maintain') {
+      selectedService = 'maintenance';
+    } else if (lead.intent === 'advisory') {
+      selectedService = 'advice';
+    }
+  });
 </script>
 
 <section class="page">
