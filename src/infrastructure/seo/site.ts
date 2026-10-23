@@ -106,6 +106,12 @@ export const PUBLIC_PAGES: SeoPageConfig[] = [
     title: 'Soporte técnico | SOLUX',
     description:
       'Abre un ticket de soporte técnico para instalaciones solares y eléctricas SOLUX. Seguimiento por código.'
+  },
+  {
+    path: '/facebook',
+    title: 'Energía solar en Guantánamo | SOLUX',
+    description:
+      'Kits solares, instalación y mantenimiento en Guantánamo. Reserva visita técnica o consulta el catálogo SOLUX desde Facebook.'
   }
 ];
 
