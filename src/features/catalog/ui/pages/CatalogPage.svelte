@@ -37,6 +37,32 @@
   };
   const iconFor = (category: string) => categoryIcon[category] ?? '⌁';
 
+  /** Links comerciales desde el catálogo (source=catalog + intent + ítem). */
+  function catalogQuery(item: CatalogItem, intent: string) {
+    const p = new URLSearchParams({
+      intent,
+      source: 'catalog',
+      item: item.id,
+      name: item.name
+    });
+    return p.toString();
+  }
+  function consultUrl(item: CatalogItem) {
+    return `/contacto?${catalogQuery(item, 'buy')}`;
+  }
+  function installUrl(item: CatalogItem) {
+    return `/reservas?${catalogQuery(item, 'install')}`;
+  }
+  function serviceUrl(item: CatalogItem) {
+    const intent =
+      item.category === 'maintenance'
+        ? 'maintain'
+        : item.category === 'advisory'
+          ? 'advisory'
+          : 'install';
+    return `/reservas?${catalogQuery(item, intent)}`;
+  }
+
   async function load() {
     loading = true;
     error = '';
@@ -311,9 +337,20 @@
                 <strong class="price">A consultar</strong>
               {/if}
             </div>
-            <a class="btn btn-small btn-primary" href="/reservas">
-              Solicitar <span class="arrow" aria-hidden="true">→</span>
-            </a>
+            <div class="card-actions">
+              {#if item.type === 'product'}
+                <a class="btn btn-small btn-ghost" href={consultUrl(item)}>
+                  Consultar equipo
+                </a>
+                <a class="btn btn-small btn-primary" href={installUrl(item)}>
+                  Instalar con kit <span class="arrow" aria-hidden="true">→</span>
+                </a>
+              {:else}
+                <a class="btn btn-small btn-primary" href={serviceUrl(item)}>
+                  Solicitar servicio <span class="arrow" aria-hidden="true">→</span>
+                </a>
+              {/if}
+            </div>
           </div>
         </article>
       {/each}
@@ -326,7 +363,7 @@
       <strong>¿No encuentras lo que buscas?</strong>
       <p>Diseñamos soluciones a medida. Solicita una visita técnica.</p>
     </div>
-    <a class="btn btn-accent" href="/reservas">
+    <a class="btn btn-accent" href="/reservas?intent=install&source=catalog">
       Reservar visita <span class="arrow" aria-hidden="true">→</span>
     </a>
   </div>
@@ -610,11 +647,10 @@
     position: absolute;
     inset: 0;
     display: block;
-    width: 100%;
     padding: 0;
     border: 0;
-    background: transparent;
     cursor: zoom-in;
+    background: transparent;
   }
   .media-main img {
     position: absolute;
@@ -623,113 +659,96 @@
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    transform: scale(1.001);
-    transition:
-            opacity 0.5s var(--ease),
-            transform 0.8s var(--ease);
+    transition: opacity 0.45s var(--ease);
   }
   .media-main img.on {
     opacity: 1;
-  }
-  .catalog-card:hover .media-main img.on {
-    transform: scale(1.06);
-  }
-  .media-main:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: -2px;
   }
   .media-fallback {
     position: absolute;
     inset: 0;
     display: grid;
     place-items: center;
-    background:
-            radial-gradient(circle at 70% 25%, color-mix(in srgb, var(--color-accent) 22%, transparent), transparent 55%),
-            linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 26%, transparent), transparent);
-  }
-  .media-fallback span {
-    font-size: 54px;
-    color: var(--color-primary);
-    transition: transform 0.5s var(--ease);
-  }
-  .catalog-card:hover .media-fallback span {
-    transform: scale(1.12) rotate(-6deg);
+    font-size: 42px;
+    color: var(--color-muted);
   }
   .badge {
     position: absolute;
     top: 12px;
     left: 12px;
     z-index: 2;
-    padding: 4px 11px;
+    padding: 5px 10px;
     border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+    backdrop-filter: blur(8px);
+    color: var(--color-text);
     font-size: 11px;
     font-weight: 800;
-    color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
-    backdrop-filter: blur(10px);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .image-strip {
     display: flex;
     gap: 6px;
-    margin: 0 0 14px;
+    margin: -6px 0 12px;
     overflow-x: auto;
-    padding: 2px;
+    padding-bottom: 2px;
   }
   .image-strip button {
-    flex: 0 0 48px;
+    flex: none;
     width: 48px;
-    height: 38px;
+    height: 36px;
     padding: 0;
     border: 2px solid transparent;
     border-radius: 8px;
     overflow: hidden;
-    background: transparent;
     cursor: pointer;
-    opacity: 0.6;
-    transition:
-            opacity 0.25s var(--ease),
-            border-color 0.25s var(--ease),
-            transform 0.25s var(--ease);
-  }
-  .image-strip button:hover {
-    opacity: 1;
-    transform: translateY(-2px);
+    background: var(--color-border);
+    transition: border-color 0.25s var(--ease);
   }
   .image-strip button.active {
     border-color: var(--color-primary);
-    opacity: 1;
   }
   .image-strip img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
   }
 
   .cat-label {
-    margin: 0 0 6px;
-    color: var(--color-primary);
-    font-size: 12px;
+    margin: 0 0 4px;
+    color: var(--color-muted);
+    font-size: 11px;
     font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
   .catalog-card h3 {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
+    font-size: 17px;
+    line-height: 1.25;
   }
   .desc {
-    margin: 0;
+    margin: 0 0 12px;
+    color: var(--color-muted);
+    font-size: 13px;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .feat-list {
-    flex: 1;
-    list-style: none;
+    margin: 0 0 auto;
     padding: 0;
-    margin: 14px 0 0;
+    list-style: none;
+    min-height: 54px;
   }
   .feat-list li {
-    margin: 6px 0;
-    color: var(--color-muted);
     font-size: 12px;
+    color: var(--color-muted);
+    padding: 2px 0;
   }
   .feat-list li::before {
     content: '✓';
@@ -758,6 +777,13 @@
     font-size: 16px;
     font-variant-numeric: tabular-nums;
   }
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    max-width: 100%;
+  }
   .catalog-footer .btn {
     position: relative;
     z-index: 2;
@@ -784,15 +810,15 @@
   }
   .sk-media {
     aspect-ratio: 16 / 10;
-    margin: -6px -6px 18px;
+    margin: -6px -6px 14px;
     border-radius: 18px;
   }
   .sk-line {
     height: 12px;
-    margin: 12px 0;
+    margin: 8px 0;
   }
   .sk-line.short {
-    width: 35%;
+    width: 40%;
   }
   .sk-line.mid {
     width: 70%;
@@ -803,157 +829,101 @@
     }
   }
 
-  /* ───────── Error y vacío ───────── */
+  .empty {
+    text-align: center;
+    padding: 48px 20px;
+  }
   .banner-error {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
+    margin: 20px 0;
   }
-  .empty {
-    display: grid;
-    justify-items: center;
-    gap: 14px;
-    padding: 54px 20px;
-    text-align: center;
+
+  /* ───────── Banner CTA ───────── */
+  .banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 40px;
+    padding: 22px 26px;
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
   }
-  .empty p {
+  .banner strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+  .banner p {
     margin: 0;
+    color: var(--color-muted);
+    font-size: 14px;
   }
 
   /* ───────── Lightbox ───────── */
   .lightbox {
     position: fixed;
     inset: 0;
-    z-index: 100;
+    z-index: 80;
     display: grid;
     place-items: center;
-    padding: 24px;
   }
   .lb-backdrop {
     position: absolute;
     inset: 0;
     border: 0;
-    background: rgba(0, 0, 0, 0.82);
-    backdrop-filter: blur(8px);
-    cursor: zoom-out;
+    background: rgba(0, 0, 0, 0.72);
+    cursor: pointer;
   }
   .lb-dialog {
     position: relative;
-    max-width: min(1100px, 100%);
-    max-height: 100%;
+    max-width: min(92vw, 960px);
+    max-height: 88vh;
   }
   .lb-dialog img {
     display: block;
     max-width: 100%;
-    max-height: calc(100vh - 48px);
-    border-radius: 18px;
-    box-shadow: var(--color-shadow);
+    max-height: 88vh;
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
   }
   .lb-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 38px;
-    height: 38px;
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
     border: 0;
-    border-radius: 50%;
-    color: white;
-    font-size: 15px;
-    cursor: pointer;
+    border-radius: 999px;
     background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(8px);
-    transition: transform 0.25s var(--ease);
-  }
-  .lb-close:hover {
-    transform: scale(1.1) rotate(90deg);
-  }
-  .lb-close:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
-  /* ───────── Banner final ───────── */
-  .banner {
-    position: relative;
-    overflow: hidden;
-    margin-top: 45px;
-    border-radius: 26px;
-    padding: 30px;
-    background: linear-gradient(115deg, var(--color-primary), #07572f, var(--color-primary));
-    background-size: 200% 100%;
     color: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    animation: banner-shift 10s ease-in-out infinite alternate;
-  }
-  .banner > * {
-    position: relative;
-    z-index: 1;
-  }
-  .banner::after {
-    content: '';
-    position: absolute;
-    right: -40px;
-    top: -60px;
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    filter: blur(40px);
-    opacity: 0.2;
-    animation: glow 5s ease-in-out infinite;
-  }
-  .banner p {
-    margin: 6px 0 0;
-    opacity: 0.8;
-  }
-  .banner .btn {
-    transition: transform 0.25s var(--ease);
-  }
-  .banner .btn:hover {
-    transform: translateY(-3px);
-  }
-  @keyframes banner-shift {
-    to {
-      background-position: 100% 0;
-    }
-  }
-  @keyframes glow {
-    50% {
-      transform: scale(1.12);
-      opacity: 0.32;
-    }
+    font-size: 16px;
+    cursor: pointer;
   }
 
-  /* ───────── Responsive ───────── */
-  @media (max-width: 600px) {
-    .toolbar-row {
+  @media (max-width: 640px) {
+    .catalog-footer {
+      flex-direction: column;
       align-items: stretch;
     }
-    .seg,
-    .search {
-      flex: 1 1 100%;
-      max-width: none;
+    .card-actions {
+      justify-content: stretch;
     }
-    .banner {
-      display: block;
-    }
-    .banner .btn {
-      margin-top: 18px;
+    .card-actions .btn {
+      flex: 1;
+      text-align: center;
     }
   }
 
-  /* ───────── Accesibilidad: reduce el movimiento ───────── */
   @media (prefers-reduced-motion: reduce) {
     .rise,
     .word-in,
-    .sk-block,
-    .banner,
-    .banner::after {
+    .sk-block {
       animation: none;
     }
     .rv {
@@ -962,11 +932,10 @@
       filter: none;
       transition: none;
     }
-    .seg::before,
     .catalog-card,
-    .media-main img,
-    .media-fallback span,
     .chip,
+    .seg::before,
+    .media-main img,
     .image-strip button,
     .arrow {
       transition: none;
