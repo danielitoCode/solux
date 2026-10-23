@@ -10,6 +10,8 @@ export function mapContactMessageDto(dto: ContactMessageDto): ContactMessage {
     subject: dto.subject,
     message: dto.message,
     isRead: dto.is_read,
+    source: dto.source?.trim() || 'direct',
+    intent: dto.intent?.trim() || 'contact',
     createdAt: dto.created_at
   };
 }

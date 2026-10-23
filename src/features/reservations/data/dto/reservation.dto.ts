@@ -13,6 +13,8 @@ export interface ReservationDto {
   notes: string | null;
   status: ReservationStatus;
   assigned_to: string | null;
+  source?: string | null;
+  intent?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -9,5 +9,7 @@ export interface ContactMessageDto {
   message: string;
   is_read: boolean;
   assigned_to: string | null;
+  source?: string | null;
+  intent?: string | null;
   created_at: string;
 }

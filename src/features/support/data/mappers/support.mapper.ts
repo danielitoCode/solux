@@ -14,6 +14,8 @@ export function mapTicketDto(dto: SupportTicketDto): SupportTicket {
     priority: dto.priority,
     relatedReservationId: dto.related_reservation_id ?? undefined,
     assignedTo: dto.assigned_to ?? undefined,
+    source: dto.source?.trim() || 'direct',
+    intent: dto.intent?.trim() || 'maintain',
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
     resolvedAt: dto.resolved_at ?? undefined

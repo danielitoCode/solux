@@ -19,6 +19,8 @@ export interface SupportTicket {
   priority: TicketPriority;
   relatedReservationId?: string;
   assignedTo?: string;
+  source: string;
+  intent: string;
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;

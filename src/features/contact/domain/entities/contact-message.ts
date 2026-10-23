@@ -14,6 +14,8 @@ export interface ContactMessage {
   phone?: string;
   subject: ContactSubject;
   message: string;
-  createdAt: string; // ISO date
+  createdAt: string;
   isRead: boolean;
+  source: string;
+  intent: string;
 }

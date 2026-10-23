@@ -12,18 +12,20 @@ Rama: `platform-updates-coreV2`
 | A4 | Home: tres rutas comprar / instalar / mantener | Hecho — `ConversionPaths` |
 | A5 | CTAs catálogo / reservas con intent + source | Hecho |
 | A6 | Aplicar migración en Supabase | **Hecho** (021 aplicada) |
-| A7 | Deploy Render | **Pendiente** |
+| A7 | Deploy Render | **Pendiente** (al final) |
 
 ### Notas A (UI home)
 
 - Home restaurada con estilos de master + `import './HomePage.css'`.
 - Intensidad de sol/glow de fondo reducida para legibilidad del hero.
 
-## Iteración B — pendiente
+## Iteración B
 
-- Backoffice: chips / filtros por `source` e `intent`
-- Catálogo: consultar equipo + instalar con kit
-- Campos proveedor / alcance en ofertas
+| # | Tarea | Estado |
+|---|--------|--------|
+| B1 | Backoffice: chips / filtros por `source` e `intent` (reservas, tickets, contacto) | **Hecho** |
+| B2 | Catálogo: consultar equipo + instalar con kit | Pendiente |
+| B3 | Campos proveedor / alcance en ofertas | Pendiente |
 
 ## Iteración C — pendiente
 

@@ -15,6 +15,8 @@ export function mapReservationDto(dto: ReservationDto): Reservation {
     notes: dto.notes ?? undefined,
     status: dto.status,
     assignedTo: dto.assigned_to ?? undefined,
+    source: dto.source?.trim() || 'direct',
+    intent: dto.intent?.trim() || 'install',
     createdAt: dto.created_at,
     updatedAt: dto.updated_at
   };
