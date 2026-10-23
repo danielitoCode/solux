@@ -15,6 +15,15 @@ export type CatalogCategory =
   | 'maintenance'
   | 'advisory';
 
+/** Alcance comercial de la oferta (qué incluye). */
+export type CatalogScope =
+  | 'equipment_only'
+  | 'kit_install'
+  | 'install_only'
+  | 'maintenance'
+  | 'advisory'
+  | 'custom';
+
 export interface CatalogItem {
   id: string;
   type: CatalogItemType;
@@ -29,6 +38,10 @@ export interface CatalogItem {
   /** URLs Cloudinary (múltiples fotos) */
   imageUrls: string[];
   features: string[];
+  /** Marca / proveedor del equipo (texto libre). */
+  provider?: string;
+  /** Qué incluye la oferta. */
+  scope?: CatalogScope | string;
   isActive: boolean;
   isFeatured: boolean;
   sortOrder: number;
