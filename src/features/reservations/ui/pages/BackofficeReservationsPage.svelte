@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { reservationWorkUseCases } from '$features/reservations/di';
   import { getReservationRepository } from '$features/reservations/di';
   import type { Reservation, ReservationStatus } from '$features/reservations/domain/entities';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
@@ -436,8 +435,8 @@
     color: #a93226;
     padding: 10px 12px;
     border-radius: 10px;
-    font-size: 12px;
     flex-shrink: 0;
+    font-size: 12px;
   }
   .item-list {
     flex: 1;
