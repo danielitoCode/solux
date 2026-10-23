@@ -37,6 +37,17 @@
   };
   const iconFor = (category: string) => categoryIcon[category] ?? '⌁';
 
+  const scopeLabel: Record<string, string> = {
+    equipment_only: 'Solo equipo',
+    kit_install: 'Equipo + instalación',
+    install_only: 'Solo instalación',
+    maintenance: 'Mantenimiento',
+    advisory: 'Asesoría',
+    custom: 'A medida'
+  };
+  const labelScope = (scope: string | undefined) =>
+    scope ? (scopeLabel[scope] ?? scope) : '';
+
   /** Links comerciales desde el catálogo (source=catalog + intent + ítem). */
   function catalogQuery(item: CatalogItem, intent: string) {
     const p = new URLSearchParams({
@@ -94,7 +105,6 @@
   let type = $state<TypeFilter>('all');
   let category = $state('all');
 
-  // Normaliza para buscar sin distinguir mayúsculas ni tildes
   const norm = (text: string) =>
           text
                   .normalize('NFD')
@@ -103,14 +113,13 @@
 
   const typeIndex = $derived(typeOptions.findIndex((o) => o.value === type));
 
-  // Resultado por tipo y búsqueda (las categorías se cuentan sobre este conjunto)
   const base = $derived.by(() => {
     const q = norm(query.trim());
     return items.filter((item) => {
       if (type !== 'all' && item.type !== type) return false;
       if (!q) return true;
       const haystack = norm(
-              `${item.name} ${item.shortDescription ?? ''} ${categoryLabel[item.category] ?? item.category}`
+              `${item.name} ${item.shortDescription ?? ''} ${categoryLabel[item.category] ?? item.category} ${item.provider ?? ''}`
       );
       return haystack.includes(q);
     });
@@ -125,7 +134,6 @@
   const filtered = $derived(category === 'all' ? base : base.filter((i) => i.category === category));
   const hasFilters = $derived(query.trim() !== '' || type !== 'all' || category !== 'all');
 
-  // Si la categoría elegida deja de existir tras otro filtro, vuelve a "Todas"
   $effect(() => {
     if (category !== 'all' && !categories.some(([c]) => c === category)) category = 'all';
   });
@@ -138,7 +146,6 @@
 
   const formatPrice = (value: number) => new Intl.NumberFormat('es').format(value);
 
-  /* ─────────── Lightbox ─────────── */
   let lightbox = $state<{ src: string; alt: string } | null>(null);
   const openLightbox = (src: string, alt: string) => (lightbox = { src, alt });
   const closeLightbox = () => (lightbox = null);
@@ -147,7 +154,6 @@
     node.focus();
   }
 
-  /* ─────────── Encabezado ─────────── */
   const title = 'Productos y servicios.';
   const words = title.split(/\s+/);
 </script>
@@ -157,7 +163,6 @@
 <section class="page" use:scrollDepth>
   <Ambient />
 
-  <!-- ───────── Encabezado ───────── -->
   <div class="section-head intro">
     <div>
       <div class="eyebrow rise" style="--i: 0">Catálogo</div>
@@ -175,7 +180,6 @@
     </p>
   </div>
 
-  <!-- ───────── Filtros ───────── -->
   {#if !loading && !error && items.length}
     <div class="toolbar rise" style="--i: 4">
       <div class="toolbar-row">
@@ -233,7 +237,6 @@
     </div>
   {/if}
 
-  <!-- ───────── Contenido ───────── -->
   {#if loading}
     <div class="cards" aria-busy="true" aria-label="Cargando catálogo">
       {#each [1, 2, 3, 4, 5, 6] as n (n)}
@@ -316,6 +319,12 @@
 
           <p class="cat-label">{categoryLabel[item.category] ?? item.category}</p>
           <h3>{item.name}</h3>
+          {#if item.provider || item.scope}
+            <p class="offer-meta">
+              {#if item.provider}<span class="meta-chip">{item.provider}</span>{/if}
+              {#if item.scope}<span class="meta-chip muted">{labelScope(item.scope)}</span>{/if}
+            </p>
+          {/if}
           <p class="desc">{item.shortDescription}</p>
 
           {#if item.features?.length}
@@ -357,7 +366,6 @@
     </div>
   {/if}
 
-  <!-- ───────── CTA final ───────── -->
   <div class="banner rv" use:reveal>
     <div>
       <strong>¿No encuentras lo que buscas?</strong>
@@ -369,7 +377,6 @@
   </div>
 </section>
 
-<!-- ───────── Lightbox ───────── -->
 {#if lightbox}
   <div class="lightbox" transition:fade={{ duration: ms(200) }}>
     <button type="button" class="lb-backdrop" aria-label="Cerrar" onclick={closeLightbox}></button>
@@ -391,8 +398,6 @@
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
     isolation: isolate;
   }
-
-  /* ───────── Entrada del encabezado ───────── */
   .rise {
     animation: rise 0.8s var(--ease) both;
     animation-delay: calc(var(--i, 0) * 90ms);
@@ -427,8 +432,6 @@
       transform: translateY(115%) rotate(4deg);
     }
   }
-
-  /* ───────── Revelado al hacer scroll ───────── */
   .rv {
     opacity: 0;
     transform: translateY(28px) scale(0.98);
@@ -444,7 +447,6 @@
     transform: none;
     filter: none;
   }
-
   .arrow {
     display: inline-block;
     transition: transform 0.25s var(--ease);
@@ -453,8 +455,6 @@
   a:focus-visible > .arrow {
     transform: translateX(4px);
   }
-
-  /* ───────── Barra de filtros ───────── */
   .toolbar {
     display: grid;
     gap: 16px;
@@ -466,8 +466,6 @@
     align-items: center;
     gap: 14px;
   }
-
-  /* Selector de tipo con indicador deslizante */
   .seg {
     position: relative;
     display: grid;
@@ -511,7 +509,6 @@
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
-
   .search {
     position: relative;
     flex: 1 1 240px;
@@ -546,8 +543,6 @@
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
-
-  /* Categorías */
   .chips {
     display: flex;
     gap: 8px;
@@ -594,8 +589,6 @@
     color: var(--color-muted);
     font-size: 12px;
   }
-
-  /* ───────── Tarjetas ───────── */
   .cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
@@ -615,26 +608,6 @@
     box-shadow: var(--color-shadow);
     border-color: var(--color-primary);
   }
-  .catalog-card:not(.sk)::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    z-index: 1;
-    background: radial-gradient(
-            280px circle at var(--sx, 50%) var(--sy, 50%),
-            rgba(255, 191, 25, 0.14),
-            transparent 65%
-    );
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .catalog-card:not(.sk):hover::before {
-    opacity: 1;
-  }
-
-  /* Media: foto principal con fundido entre imágenes */
   .media {
     position: relative;
     margin: -6px -6px 14px;
@@ -647,10 +620,10 @@
     position: absolute;
     inset: 0;
     display: block;
-    padding: 0;
     border: 0;
-    cursor: zoom-in;
+    padding: 0;
     background: transparent;
+    cursor: zoom-in;
   }
   .media-main img {
     position: absolute;
@@ -659,7 +632,7 @@
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    transition: opacity 0.45s var(--ease);
+    transition: opacity 0.35s var(--ease);
   }
   .media-main img.on {
     opacity: 1;
@@ -679,35 +652,33 @@
     z-index: 2;
     padding: 5px 10px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
     backdrop-filter: blur(8px);
-    color: var(--color-text);
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-
   .image-strip {
     display: flex;
     gap: 6px;
     margin: -6px 0 12px;
     overflow-x: auto;
-    padding-bottom: 2px;
   }
   .image-strip button {
     flex: none;
     width: 48px;
     height: 36px;
-    padding: 0;
-    border: 2px solid transparent;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
+    padding: 0;
     overflow: hidden;
+    background: transparent;
     cursor: pointer;
-    background: var(--color-border);
-    transition: border-color 0.25s var(--ease);
+    opacity: 0.55;
   }
   .image-strip button.active {
+    opacity: 1;
     border-color: var(--color-primary);
   }
   .image-strip img {
@@ -715,7 +686,6 @@
     height: 100%;
     object-fit: cover;
   }
-
   .cat-label {
     margin: 0 0 4px;
     color: var(--color-muted);
@@ -724,36 +694,53 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
+  .offer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 8px;
+  }
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .meta-chip.muted {
+    border-color: var(--color-border);
+    background: var(--color-surface-2, transparent);
+    color: var(--color-muted);
+  }
   .catalog-card h3 {
     margin: 0 0 8px;
     font-size: 17px;
-    line-height: 1.25;
   }
   .desc {
     margin: 0 0 12px;
     color: var(--color-muted);
     font-size: 13px;
     line-height: 1.45;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    flex: 1;
   }
   .feat-list {
-    margin: 0 0 auto;
-    padding: 0;
     list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
     min-height: 54px;
+    font-size: 12px;
   }
   .feat-list li {
-    font-size: 12px;
-    color: var(--color-muted);
-    padding: 2px 0;
+    padding: 3px 0;
   }
   .feat-list li::before {
     content: '✓';
     margin-right: 8px;
-    color: var(--color-primary-2);
+    color: var(--color-primary-2, var(--color-primary));
     font-weight: 800;
   }
   .catalog-footer {
@@ -761,7 +748,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-top: 20px;
+    margin-top: auto;
     padding-top: 16px;
     border-top: 1px solid var(--color-border);
   }
@@ -782,20 +769,43 @@
     flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-end;
-    max-width: 100%;
   }
   .catalog-footer .btn {
     position: relative;
     z-index: 2;
-    transition: transform 0.25s var(--ease);
   }
-  .catalog-footer .btn:hover {
-    transform: translateY(-2px);
+  .banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 36px;
+    padding: 22px 24px;
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
   }
-
-  /* ───────── Carga (esqueleto con la forma de la tarjeta) ───────── */
-  .sk {
-    min-height: 360px;
+  .banner strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+  .banner p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 13px;
+  }
+  .banner-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--color-muted);
   }
   .sk-block {
     border-radius: 10px;
@@ -810,12 +820,11 @@
   }
   .sk-media {
     aspect-ratio: 16 / 10;
-    margin: -6px -6px 14px;
-    border-radius: 18px;
+    margin-bottom: 14px;
   }
   .sk-line {
     height: 12px;
-    margin: 8px 0;
+    margin-bottom: 10px;
   }
   .sk-line.short {
     width: 40%;
@@ -828,44 +837,6 @@
       background-position: -200% 0;
     }
   }
-
-  .empty {
-    text-align: center;
-    padding: 48px 20px;
-  }
-  .banner-error {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin: 20px 0;
-  }
-
-  /* ───────── Banner CTA ───────── */
-  .banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-top: 40px;
-    padding: 22px 26px;
-    border: 1px solid var(--color-border);
-    border-radius: 20px;
-    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
-  }
-  .banner strong {
-    display: block;
-    margin-bottom: 4px;
-  }
-  .banner p {
-    margin: 0;
-    color: var(--color-muted);
-    font-size: 14px;
-  }
-
-  /* ───────── Lightbox ───────── */
   .lightbox {
     position: fixed;
     inset: 0;
@@ -878,63 +849,34 @@
     inset: 0;
     border: 0;
     background: rgba(0, 0, 0, 0.72);
-    cursor: pointer;
   }
   .lb-dialog {
     position: relative;
     max-width: min(92vw, 960px);
-    max-height: 88vh;
+    max-height: 90vh;
   }
   .lb-dialog img {
-    display: block;
     max-width: 100%;
-    max-height: 88vh;
-    border-radius: 16px;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    max-height: 90vh;
+    border-radius: 12px;
   }
   .lb-close {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: -12px;
+    right: -12px;
     width: 36px;
     height: 36px;
     border: 0;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.55);
-    color: white;
+    background: var(--color-bg);
+    color: var(--color-text);
     font-size: 16px;
     cursor: pointer;
   }
-
-  @media (max-width: 640px) {
-    .catalog-footer {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .card-actions {
-      justify-content: stretch;
-    }
-    .card-actions .btn {
-      flex: 1;
-      text-align: center;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .rise,
     .word-in,
-    .sk-block {
-      animation: none;
-    }
-    .rv {
-      opacity: 1;
-      transform: none;
-      filter: none;
-      transition: none;
-    }
     .catalog-card,
-    .chip,
-    .seg::before,
     .media-main img,
     .image-strip button,
     .arrow {
