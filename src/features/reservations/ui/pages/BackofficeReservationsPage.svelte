@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getReservationRepository } from '$features/reservations/di';
+  import { getReservationRepository, reservationWorkUseCases } from '$features/reservations/di';
   import type { Reservation, ReservationStatus } from '$features/reservations/domain/entities';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
   import ResizableSplit from '$infrastructure/ui/ResizableSplit.svelte';
   import { intentLabel, sourceLabel } from '$infrastructure/ui/lead-labels';
+  import ReservationMaterialsPanel from '$features/reservations/ui/components/ReservationMaterialsPanel.svelte';
+  import JobCloseoutPanel from '$features/reservations/ui/components/JobCloseoutPanel.svelte';
 
   const STATUSES: ReservationStatus[] = [
     'pending',
@@ -33,6 +35,10 @@
   let cancelling = $state(false);
   let loadRequestId = 0;
   let selected = $state<Reservation | null>(null);
+  let cancellationTarget = $state<Reservation | null>(null);
+  let cancellationReason = $state('');
+  let cancellationNotes = $state('');
+  let cancellationCharge = $state('0');
 
   const counts = $derived(
     STATUSES.reduce(
@@ -99,11 +105,36 @@
     selected = r;
   }
 
+  const ALLOWED_TRANSITIONS: Record<ReservationStatus, ReservationStatus[]> = {
+    pending: ['confirmed', 'cancelled'],
+    confirmed: ['in_progress', 'cancelled'],
+    in_progress: ['completed', 'cancelled'],
+    completed: [],
+    cancelled: []
+  };
+
   async function changeStatus(r: Reservation, status: ReservationStatus) {
-    if (r.status === status || updatingIds.includes(r.id) || cancelling) return;
-    if (status === 'cancelled' && !confirm(`¿Cancelar reserva ${r.trackingCode}?`)) return;
-    if (status === 'completed' && !confirm(`¿Marcar ${r.trackingCode} como completada?`)) return;
+    if (updatingIds.includes(r.id) || cancelling || loading || r.status === status) return;
     error = '';
+    if (!ALLOWED_TRANSITIONS[r.status].includes(status)) {
+      error = 'Transición de estado no permitida.';
+      return;
+    }
+    // Completar solo vía panel de cierre financiero (materiales + mano de obra + factura).
+    if (status === 'completed') {
+      error = 'Cierra el trabajo desde el panel Cierre financiero para registrar cargo y margen.';
+      return;
+    }
+    if (status === 'cancelled') {
+      if (r.status === 'in_progress') {
+        cancellationTarget = r;
+        cancellationReason = '';
+        cancellationNotes = '';
+        cancellationCharge = '0';
+        return;
+      }
+      if (!confirm(`¿Cancelar reserva ${r.trackingCode}? Esta acción no se puede revertir.`)) return;
+    }
     updatingIds = [...updatingIds, r.id];
     try {
       const updated = await getReservationRepository().updateStatus(r.id, status);
@@ -115,6 +146,35 @@
       error = e instanceof Error ? e.message : 'No se pudo actualizar el estado';
     } finally {
       updatingIds = updatingIds.filter((id) => id !== r.id);
+    }
+  }
+
+  async function confirmCancellation() {
+    const target = cancellationTarget;
+    const charge = Number(cancellationCharge);
+    if (cancelling || updatingIds.length > 0 || loading) return;
+    if (!target || !cancellationReason.trim() || !Number.isFinite(charge) || charge < 0) {
+      error = 'Indica motivo y un cargo válido mayor o igual a cero.';
+      return;
+    }
+    cancelling = true;
+    error = '';
+    try {
+      await reservationWorkUseCases.cancelJob.execute({
+        operationKey: crypto.randomUUID(),
+        reservationId: target.id,
+        customerCharge: charge,
+        reason: cancellationReason.trim(),
+        notes: cancellationNotes.trim()
+      });
+      cancellationTarget = null;
+      await load();
+      devLog('bo-reservas', 'job cancellation liquidated', { id: target.id });
+    } catch (e) {
+      devError('bo-reservas', 'cancel_reservation_job failed', e);
+      error = e instanceof Error ? e.message : 'No se pudo liquidar la cancelación';
+    } finally {
+      cancelling = false;
     }
   }
 
@@ -313,6 +373,72 @@
             <h3>Notas</h3>
             <p>{selected.notes}</p>
           </div>
+        {/if}
+
+        {#if selected.status === 'in_progress'}
+          <div class="work-panel-wrap">
+            <ReservationMaterialsPanel reservationId={selected.id} />
+          </div>
+        {/if}
+
+        {#if selected.status === 'in_progress' || selected.status === 'completed'}
+          <JobCloseoutPanel
+            reservationId={selected.id}
+            status={selected.status}
+            customerName={selected.customerName}
+            customerEmail={selected.customerEmail}
+            customerPhone={selected.customerPhone}
+            serviceCategory={selected.serviceCategory}
+            address={selected.address}
+            onClosed={load}
+          />
+        {/if}
+
+        {#if cancellationTarget?.id === selected.id}
+          <section class="cancellation-panel" aria-labelledby="cancel-title">
+            <h3 id="cancel-title">Liquidar y cancelar trabajo</h3>
+            <p>
+              Se registrarán costos incurridos y cargo aprobado en una operación financiera.
+              El cargo no implica pago recibido.
+            </p>
+            <label>
+              Motivo obligatorio
+              <textarea bind:value={cancellationReason} rows="2" required maxlength="1000"></textarea>
+            </label>
+            <label>
+              Cargo aprobado al cliente (USD)
+              <input type="number" min="0" step="0.01" bind:value={cancellationCharge} required />
+            </label>
+            <label>
+              Notas
+              <textarea bind:value={cancellationNotes} rows="2" maxlength="2000"></textarea>
+            </label>
+            <div class="cancellation-actions">
+              <button
+                type="button"
+                class="btn btn-ghost"
+                onclick={() => (cancellationTarget = null)}
+                disabled={cancelling || loading || updatingIds.length > 0}
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                onclick={confirmCancellation}
+                disabled={
+                  cancelling ||
+                  loading ||
+                  updatingIds.length > 0 ||
+                  !cancellationReason.trim() ||
+                  !Number.isFinite(Number(cancellationCharge)) ||
+                  Number(cancellationCharge) < 0
+                }
+              >
+                {cancelling ? 'Liquidando…' : 'Liquidar y cancelar'}
+              </button>
+            </div>
+          </section>
         {/if}
 
         <div class="quick-actions">
@@ -610,43 +736,45 @@
     align-items: flex-start;
     padding: 22px 28px 16px;
     border-bottom: 1px solid var(--color-border);
-    background: var(--color-surface);
   }
   .detail-title h2 {
     margin: 8px 0 0;
-    font-size: 20px;
+    font-size: 22px;
     letter-spacing: -0.03em;
   }
   .code-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
     align-items: center;
+    gap: 8px;
   }
   .code-row code {
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--color-primary);
   }
   .actions {
     display: flex;
+    flex-direction: column;
     gap: 8px;
-    flex-shrink: 0;
+    align-items: flex-end;
   }
   .field-inline {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: grid;
+    gap: 6px;
     font-size: 11px;
     font-weight: 700;
     color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
   .field-inline select {
+    min-width: 160px;
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     color: var(--color-text);
-    padding: 8px 10px;
     border-radius: 10px;
+    padding: 8px 12px;
     font-size: 13px;
   }
   .customer-card {
@@ -654,57 +782,56 @@
     grid-template-columns: auto 1fr auto;
     gap: 14px;
     align-items: center;
-    margin: 16px 28px 0;
-    padding: 14px 16px;
-    background: var(--color-surface);
+    margin: 18px 28px 0;
+    padding: 16px;
     border: 1px solid var(--color-border);
     border-radius: 16px;
+    background: var(--color-surface);
   }
   .avatar {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    background: linear-gradient(145deg, var(--color-primary), var(--color-primary-2));
-    color: white;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
     display: grid;
     place-items: center;
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    color: var(--color-primary);
     font-weight: 800;
   }
   .contact-line {
-    font-size: 12px;
-    color: var(--color-muted);
+    font-size: 13px;
+    margin-top: 2px;
   }
   .contact-line a {
-    color: var(--color-primary);
-    font-weight: 600;
+    color: var(--color-text);
   }
   .dates {
-    font-size: 11px;
-    color: var(--color-muted);
-    text-align: right;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    font-size: 11px;
+    color: var(--color-muted);
+    text-align: right;
   }
   .info-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin: 16px 28px 0;
   }
   .info-card {
     padding: 14px 16px;
-    background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 14px;
+    background: var(--color-surface);
   }
   .info-card .label {
     display: block;
-    font-size: 10px;
-    font-weight: 800;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--color-muted);
     margin-bottom: 6px;
   }
   .info-card strong {
@@ -736,6 +863,52 @@
     gap: 10px;
     padding: 16px 28px 28px;
   }
+  .work-panel-wrap {
+    margin: 0 28px 8px;
+  }
+  .cancellation-panel {
+    margin: 8px 28px 20px;
+    padding: 18px;
+    border: 1px solid color-mix(in srgb, #c0392b 35%, var(--color-border));
+    border-radius: 14px;
+    background: color-mix(in srgb, #c0392b 6%, var(--color-surface));
+    display: grid;
+    gap: 12px;
+  }
+  .cancellation-panel h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+  .cancellation-panel p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-muted);
+    line-height: 1.45;
+  }
+  .cancellation-panel label {
+    display: grid;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .cancellation-panel textarea,
+  .cancellation-panel input[type='number'] {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 13px;
+  }
+  .cancellation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+  }
   @media (max-width: 900px) {
     .customer-card {
       grid-template-columns: auto 1fr;
@@ -748,6 +921,11 @@
     }
     .info-grid {
       grid-template-columns: 1fr;
+    }
+    .work-panel-wrap,
+    .cancellation-panel {
+      margin-left: 16px;
+      margin-right: 16px;
     }
   }
 </style>
