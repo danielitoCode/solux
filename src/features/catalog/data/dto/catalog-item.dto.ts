@@ -12,6 +12,8 @@ export interface CatalogItemDto {
   image_url: string | null;
   image_urls?: string[] | null;
   features: string[] | null;
+  provider?: string | null;
+  scope?: string | null;
   is_active: boolean;
   is_featured: boolean;
   sort_order: number;
