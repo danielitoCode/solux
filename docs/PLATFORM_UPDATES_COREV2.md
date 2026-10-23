@@ -24,7 +24,7 @@ Rama: `platform-updates-coreV2`
 | # | Tarea | Estado |
 |---|--------|--------|
 | B1 | Backoffice: chips / filtros por `source` e `intent` (reservas, tickets, contacto) | **Hecho** |
-| B2 | Catálogo: consultar equipo + instalar con kit | Pendiente |
+| B2 | Catálogo: consultar equipo + instalar con kit | **Hecho** |
 | B3 | Campos proveedor / alcance en ofertas | Pendiente |
 
 ## Iteración C — pendiente
