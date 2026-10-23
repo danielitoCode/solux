@@ -25,7 +25,7 @@ Rama: `platform-updates-coreV2`
 |---|--------|--------|
 | B1 | Backoffice: chips / filtros por `source` e `intent` (reservas, tickets, contacto) | **Hecho** |
 | B2 | Catálogo: consultar equipo + instalar con kit | **Hecho** |
-| B3 | Campos proveedor / alcance en ofertas | Pendiente |
+| B3 | Campos proveedor / alcance en ofertas | **Hecho** — migración `022`, BO + catálogo público |
 
 ## Iteración C — pendiente
 
@@ -41,5 +41,6 @@ Rama: `platform-updates-coreV2`
 ## Deploy (checklist)
 
 1. [x] Ejecutar `021_lead_intent_source.sql` en Supabase
-2. [ ] Deploy front `platform-updates-coreV2` (o merge → master)
-3. [ ] Probar home → cada ruta → verificar `source` / `intent` en BD
+2. [ ] Ejecutar `022_catalog_provider_scope.sql` en Supabase
+3. [ ] Deploy front `platform-updates-coreV2` (o merge → master)
+4. [ ] Probar home → cada ruta → verificar `source` / `intent` en BD
