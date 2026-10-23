@@ -16,7 +16,9 @@ export const SOURCE_LABELS: Record<string, string> = {
   facebook: 'Facebook',
   reservas: 'Reservas',
   soporte: 'Soporte',
-  contacto: 'Contacto'
+  contacto: 'Contacto',
+  services: 'Servicios',
+  faq: 'FAQ'
 };
 
 export function intentLabel(value: string | undefined | null): string {
