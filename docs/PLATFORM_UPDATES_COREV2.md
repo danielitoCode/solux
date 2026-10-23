@@ -35,16 +35,20 @@ Rama: `platform-updates-coreV2`
 | C2 | Proyectos con evidencia | **Hecho** — seed 3 proyectos publicados (`023`) |
 | C3 | Datos comerciales (provider/scope en catálogo) | **Hecho** — updates en `023` |
 
-## Iteración D — pendiente
+## Iteración D
 
-- Proveedores + comisión backoffice
-- Landing Facebook + `source=facebook`
+| # | Tarea | Estado |
+|---|--------|--------|
+| D1 | Proveedores + comisión backoffice | **Hecho** — BO inventario rediseñado (modelo, proveedor, % comisión, ops) |
+| D2 | Landing Facebook + `source=facebook` | **Hecho** — ruta `/facebook` + CTAs con source |
 
 ## Deploy (checklist)
 
 1. [x] Ejecutar `021_lead_intent_source.sql` en Supabase
 2. [x] Ejecutar `022_catalog_provider_scope.sql` en Supabase
-3. [ ] Ejecutar `023_iter_c_commercial_projects.sql` en Supabase
+3. [x] Ejecutar `023_iter_c_commercial_projects.sql` en Supabase
 4. [ ] Deploy front `platform-updates-coreV2` (o merge → master)
 5. [ ] Probar home → cada ruta → verificar `source` / `intent` en BD
-6. [ ] Probar FAQ + proyectos publicados + chips proveedor/alcance
+6. [ ] Probar FAQ + proyectos + chips proveedor/alcance
+7. [ ] Probar `/facebook` → formularios con `source=facebook`
+8. [ ] Probar BO inventario: venta gestionada + comisión
