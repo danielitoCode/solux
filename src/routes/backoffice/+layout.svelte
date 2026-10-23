@@ -20,7 +20,7 @@
     { href: '/backoffice/mensajes', label: 'Mensajes', roles: ['admin', 'support', 'sales'] },
     { href: '/backoffice/catalogo', label: 'Catálogo', roles: ['admin', 'sales'] },
     { href: '/backoffice/consumibles', label: 'Consumibles', roles: ['admin', 'sales'] },
-    { href: '/backoffice/inventario', label: 'Inventario y ventas', roles: ['admin', 'sales'] },
+    { href: '/backoffice/inventario', label: 'Proveedores e inventario', roles: ['admin', 'sales'] },
     { href: '/backoffice/finanzas', label: 'Finanzas y personal', roles: ['admin'] },
     { href: '/backoffice/presentacion', label: 'Presentación', roles: ['admin'] },
     { href: '/backoffice/proyectos', label: 'Proyectos web', roles: ['admin'] },
