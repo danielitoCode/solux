@@ -12,14 +12,14 @@
   });
 
   const links = [
-    { href: '/', label: 'Inicio', icon: '⌂', route: '/' },
-    { href: '/servicios', label: 'Servicios', icon: '⚡', route: '/servicios' },
-    { href: '/catalogo', label: 'Catálogo', icon: '📦', route: '/catalogo' },
-    { href: '/proyectos', label: 'Proyectos', icon: '📷', route: '/proyectos' },
-    { href: '/nosotros', label: 'Nosotros', icon: '◎', route: '/nosotros' },
-    { href: '/seguimiento', label: 'Seguimiento', icon: '⌕', route: '/seguimiento' },
-    { href: '/soporte', label: 'Soporte', icon: '🛠️', route: '/soporte' },
-    { href: '/contacto', label: 'Contacto', icon: '✉', route: '/contacto' }
+    { href: '/', label: 'Inicio', icon: 'house', route: '/' },
+    { href: '/servicios', label: 'Servicios', icon: 'zap', route: '/servicios' },
+    { href: '/catalogo', label: 'Catálogo', icon: 'package', route: '/catalogo' },
+    { href: '/proyectos', label: 'Proyectos', icon: 'image', route: '/proyectos' },
+    { href: '/nosotros', label: 'Nosotros', icon: 'users', route: '/nosotros' },
+    { href: '/seguimiento', label: 'Seguimiento', icon: 'search', route: '/seguimiento' },
+    { href: '/soporte', label: 'Soporte', icon: 'wrench', route: '/soporte' },
+    { href: '/contacto', label: 'Contacto', icon: 'mail', route: '/contacto' }
   ];
 
   let menuOpen = $state(false);
@@ -49,7 +49,9 @@
   <nav id="primary-navigation" class="desktop-nav" class:open={menuOpen} aria-label="Navegación principal">
     {#each links as link}
       <a href={link.href} class:active={isActive(link.href)} aria-current={isActive(link.href) ? 'page' : undefined} onclick={closeMenu}>
-        <span class="nav-icon" aria-hidden="true">{link.icon}</span>
+        <span class="nav-icon" aria-hidden="true">
+          <animate-icons name={link.icon} size="16" color="currentColor"></animate-icons>
+        </span>
         <span>{link.label}</span>
       </a>
     {/each}
@@ -57,7 +59,7 @@
 
   <div class="header-actions">
     <button class="theme-toggle" type="button" onclick={toggleTheme} aria-label="Cambiar tema">
-      <span aria-hidden="true">☼</span>
+      <span aria-hidden="true"><animate-icons name="sun" size="18" color="currentColor"></animate-icons></span>
     </button>
     <a class="btn btn-small btn-primary reserve" href="/reservas" onclick={closeMenu}>Reservar</a>
     <button
@@ -68,7 +70,7 @@
       aria-expanded={menuOpen}
       aria-controls="primary-navigation"
     >
-      <span aria-hidden="true">☰</span>
+      <span aria-hidden="true"><animate-icons name="menu" size="18" color="currentColor"></animate-icons></span>
     </button>
   </div>
 </header>
@@ -154,9 +156,17 @@
     color: var(--color-muted);
   }
   .desktop-nav .nav-icon {
-    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
     line-height: 1;
     opacity: 0.85;
+    flex-shrink: 0;
+  }
+  .desktop-nav .nav-icon :global(svg) {
+    display: block;
   }
   .desktop-nav a.active .nav-icon,
   .desktop-nav a:hover .nav-icon {
