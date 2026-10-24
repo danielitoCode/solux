@@ -55,7 +55,7 @@
         aria-current={isActive(link.href) ? 'page' : undefined}
         onclick={closeMenu}
       >
-        <span class="nav-icon" aria-hidden="true" data-size="16" use:navIcon={link.icon}></span>
+        <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={link.icon}></span>
         <span>{link.label}</span>
       </a>
     {/each}
@@ -165,13 +165,16 @@
     justify-content: center;
     width: 18px;
     height: 18px;
-    line-height: 1;
-    opacity: 0.85;
+    line-height: 0;
+    opacity: 0.9;
     flex-shrink: 0;
+    overflow: visible;
+    color: inherit;
   }
-  .desktop-nav .nav-icon :global(svg),
-  .desktop-nav .nav-icon :global(span) {
+  .desktop-nav .nav-icon :global(svg) {
     display: block;
+    width: 100%;
+    height: 100%;
   }
   .desktop-nav a.active .nav-icon,
   .desktop-nav a:hover .nav-icon {
