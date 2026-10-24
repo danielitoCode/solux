@@ -7,6 +7,7 @@
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { devLog } from '$infrastructure/ui/dev-logger';
+  import { registerAnimateIcons } from '$infrastructure/ui/animate-icons-registry';
 
   let { children } = $props();
 
@@ -14,6 +15,7 @@
   const isHome = $derived($page.url.pathname === '/');
 
   onMount(() => {
+    registerAnimateIcons();
     const saved = localStorage.getItem('solux-theme') || 'light';
     document.documentElement.dataset.theme = saved;
     devLog('app', 'mount', { path: location.pathname });
