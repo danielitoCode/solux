@@ -198,10 +198,14 @@
     align-items: center;
     justify-content: center;
     opacity: 0.9;
+    overflow: visible;
+    color: inherit;
+    line-height: 0;
   }
-  .nav-icon :global(svg),
-  .nav-icon :global(span) {
+  .nav-icon :global(svg) {
     display: block;
+    width: 100%;
+    height: 100%;
   }
   .nav-label {
     min-width: 0;
