@@ -5,7 +5,7 @@
   import type { User, UserRole } from '$features/auth/domain/entities';
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
-  import { registerAnimateIcons } from '$infrastructure/ui/animate-icons-registry';
+  import { iconHover, registerAnimateIcons } from '$infrastructure/ui/animate-icons-registry';
 
   let companyName = $state('SOLUX');
   let logoUrl = $state('');
@@ -71,9 +71,9 @@
 
       <nav class="bo-nav">
         {#each visibleSections as s}
-          <a href={s.href} class:active={isActive(s.href)}>
+          <a href={s.href} class:active={isActive(s.href)} use:iconHover>
             <span class="nav-icon" aria-hidden="true">
-              <animate-icons name={s.icon} size="18" color="currentColor"></animate-icons>
+              <animate-icons name={s.icon} size="18" color="currentColor" is-animated="false"></animate-icons>
             </span>
             <span class="nav-label">{s.label}</span>
           </a>
