@@ -5,7 +5,7 @@
   import type { User, UserRole } from '$features/auth/domain/entities';
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
-  import { iconHover, registerAnimateIcons } from '$infrastructure/ui/animate-icons-registry';
+  import { navIcon } from '$infrastructure/ui/animate-icons-registry';
 
   let companyName = $state('SOLUX');
   let logoUrl = $state('');
@@ -35,7 +35,6 @@
   );
 
   onMount(async () => {
-    registerAnimateIcons();
     initAuth();
     const { data } = await supabase.from('company_profile').select('name, logo_url').limit(1).maybeSingle();
     if (data) {
@@ -71,10 +70,8 @@
 
       <nav class="bo-nav">
         {#each visibleSections as s}
-          <a href={s.href} class:active={isActive(s.href)} use:iconHover>
-            <span class="nav-icon" aria-hidden="true">
-              <animate-icons name={s.icon} size="18" color="currentColor" is-animated="false"></animate-icons>
-            </span>
+          <a href={s.href} class:active={isActive(s.href)}>
+            <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={s.icon}></span>
             <span class="nav-label">{s.label}</span>
           </a>
         {/each}
@@ -202,7 +199,8 @@
     justify-content: center;
     opacity: 0.9;
   }
-  .nav-icon :global(svg) {
+  .nav-icon :global(svg),
+  .nav-icon :global(span) {
     display: block;
   }
   .nav-label {

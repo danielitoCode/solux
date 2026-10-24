@@ -2,13 +2,12 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { publicContactUseCases } from '$features/contact/di/public-contact';
-  import { iconHover, registerAnimateIcons } from '$infrastructure/ui/animate-icons-registry';
+  import { navIcon } from '$infrastructure/ui/animate-icons-registry';
 
   let companyName = $state('SOLUX');
   let logoUrl = $state('');
 
   onMount(async () => {
-    registerAnimateIcons();
     const data = await publicContactUseCases.getCompanyProfile.execute();
     if (data) { companyName = data.name || 'SOLUX'; logoUrl = data.logo_url || ''; }
   });
@@ -55,19 +54,16 @@
         class:active={isActive(link.href)}
         aria-current={isActive(link.href) ? 'page' : undefined}
         onclick={closeMenu}
-        use:iconHover
       >
-        <span class="nav-icon" aria-hidden="true">
-          <animate-icons name={link.icon} size="16" color="currentColor" is-animated="false"></animate-icons>
-        </span>
+        <span class="nav-icon" aria-hidden="true" data-size="16" use:navIcon={link.icon}></span>
         <span>{link.label}</span>
       </a>
     {/each}
   </nav>
 
   <div class="header-actions">
-    <button class="theme-toggle" type="button" onclick={toggleTheme} aria-label="Cambiar tema" use:iconHover>
-      <span aria-hidden="true"><animate-icons name="sun" size="18" color="currentColor" is-animated="false"></animate-icons></span>
+    <button class="theme-toggle" type="button" onclick={toggleTheme} aria-label="Cambiar tema">
+      <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={'sun'}></span>
     </button>
     <a class="btn btn-small btn-primary reserve" href="/reservas" onclick={closeMenu}>Reservar</a>
     <button
@@ -77,9 +73,8 @@
       aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
       aria-expanded={menuOpen}
       aria-controls="primary-navigation"
-      use:iconHover
     >
-      <span aria-hidden="true"><animate-icons name="menu" size="18" color="currentColor" is-animated="false"></animate-icons></span>
+      <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={'menu'}></span>
     </button>
   </div>
 </header>
@@ -168,13 +163,14 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     line-height: 1;
     opacity: 0.85;
     flex-shrink: 0;
   }
-  .desktop-nav .nav-icon :global(svg) {
+  .desktop-nav .nav-icon :global(svg),
+  .desktop-nav .nav-icon :global(span) {
     display: block;
   }
   .desktop-nav a.active .nav-icon,
@@ -200,6 +196,8 @@
     width: 38px;
     height: 38px;
     border-radius: 10px;
+    display: inline-grid;
+    place-items: center;
   }
   .theme-toggle:hover,
   .menu-toggle:hover {
