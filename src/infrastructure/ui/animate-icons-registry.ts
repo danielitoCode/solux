@@ -1,12 +1,9 @@
 /**
- * AnimateIcons (@animateicons/vanilla) via createIcon.
- *
- * Docs: createIcon devuelve un <span> con startAnimation/stopAnimation.
- * isAnimated:true anima solo el span; en nav el hover está en el <a>,
- * así que montamos con isAnimated:false y reenviamos mouseenter/leave del padre.
+ * AnimateIcons — montaje con mountIcon (API vanilla).
+ * mountIcon dibuja el SVG dentro del nodo y expone start/stopAnimation.
  */
 import { browser } from '$app/environment';
-import { createIcon, type IconData } from '@animateicons/vanilla';
+import { mountIcon, type IconData } from '@animateicons/vanilla';
 import {
 	House,
 	Zap,
@@ -28,7 +25,7 @@ import {
 	Headset
 } from '@animateicons/vanilla/lucide';
 
-export const NAV_ICONS: Record<string, IconData> = {
+const NAV_ICONS: Record<string, IconData> = {
 	house: House,
 	zap: Zap,
 	package: Package,
@@ -49,48 +46,32 @@ export const NAV_ICONS: Record<string, IconData> = {
 	headset: Headset
 };
 
-type IconHost = HTMLElement & {
+type Controls = {
 	startAnimation: () => void;
 	stopAnimation: () => void;
 	destroy: () => void;
 };
 
 /**
- * Svelte action: monta un icono animado en el nodo y anima al hover del
- * enlace/botón contenedor (o del propio nodo).
+ * Svelte action:
+ *   <span class="nav-icon" data-size="18" use:navIcon={'house'}></span>
  *
- *   <span class="nav-icon" use:navIcon={'house'}></span>
+ * Dibuja el SVG en el span y anima al hover del <a>/<button> padre.
  */
 export function navIcon(node: HTMLElement, name: string) {
-	if (!browser) return;
-
-	let host: IconHost | null = null;
-	let parent: HTMLElement | null = null;
-
-	const start = () => host?.startAnimation();
-	const stop = () => host?.stopAnimation();
-
-	function mount(iconName: string) {
-		teardown();
-		const data = NAV_ICONS[iconName];
-		if (!data) return;
-
-		const size = Number(node.dataset.size) || 18;
-		host = createIcon(data, {
-			size,
-			color: 'currentColor',
-			isAnimated: false,
-			duration: 1
-		}) as IconHost;
-
-		node.replaceChildren(host);
-
-		parent = (node.closest('a, button') as HTMLElement | null) ?? node;
-		parent.addEventListener('mouseenter', start);
-		parent.addEventListener('mouseleave', stop);
-		parent.addEventListener('focus', start);
-		parent.addEventListener('blur', stop);
+	if (!browser) {
+		return {
+			update() {},
+			destroy() {}
+		};
 	}
+
+	let controls: Controls | null = null;
+	let parent: HTMLElement | null = null;
+	let current = '';
+
+	const start = () => controls?.startAnimation();
+	const stop = () => controls?.stopAnimation();
 
 	function teardown() {
 		if (parent) {
@@ -100,30 +81,59 @@ export function navIcon(node: HTMLElement, name: string) {
 			parent.removeEventListener('blur', stop);
 			parent = null;
 		}
-		host?.destroy();
-		host = null;
+		try {
+			controls?.destroy();
+		} catch {
+			/* ignore */
+		}
+		controls = null;
 		node.replaceChildren();
+	}
+
+	function mount(iconName: string) {
+		teardown();
+		current = iconName;
+		const data = NAV_ICONS[iconName];
+		if (!data) {
+			console.warn('[navIcon] icon not found:', iconName);
+			return;
+		}
+
+		const size = Number(node.dataset.size) || 18;
+
+		try {
+			// mountIcon = dibuja SVG dentro de `node` + player
+			controls = mountIcon(node, data, {
+				size,
+				color: 'currentColor',
+				// true: anima al hover del propio icono
+				// además reenviamos hover del padre (enlace)
+				isAnimated: true,
+				duration: 1
+			}) as Controls;
+		} catch (err) {
+			console.error('[navIcon] mountIcon failed', iconName, err);
+			return;
+		}
+
+		parent = (node.closest('a, button') as HTMLElement | null) ?? node;
+		parent.addEventListener('mouseenter', start);
+		parent.addEventListener('mouseleave', stop);
+		parent.addEventListener('focus', start);
+		parent.addEventListener('blur', stop);
 	}
 
 	mount(name);
 
 	return {
 		update(newName: string) {
-			if (newName !== name) {
-				name = newName;
-				mount(newName);
-			}
+			if (newName !== current) mount(newName);
 		},
 		destroy: teardown
 	};
 }
 
-/** @deprecated use navIcon — se mantiene por compat */
-export function registerAnimateIcons(): void {
-	/* no-op: createIcon no requiere defineIcons */
-}
-
-/** @deprecated use navIcon */
+export function registerAnimateIcons(): void {}
 export function iconHover(_node: HTMLElement) {
 	return { destroy() {} };
 }
