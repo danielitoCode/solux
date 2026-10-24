@@ -1,9 +1,5 @@
 import type { HandleClientError } from '@sveltejs/kit';
 import { devError, devLog } from '$infrastructure/ui/dev-logger';
-import { registerAnimateIcons } from '$infrastructure/ui/animate-icons-registry';
-
-// Registrar custom element cuanto antes en el cliente
-registerAnimateIcons();
 
 export const handleError: HandleClientError = ({ error, event, status, message }) => {
   const err = error instanceof Error ? error : new Error(message ?? 'Client error');
