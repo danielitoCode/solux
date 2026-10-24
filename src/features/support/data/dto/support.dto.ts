@@ -13,6 +13,8 @@ export interface SupportTicketDto {
   priority: TicketPriority;
   related_reservation_id: string | null;
   assigned_to: string | null;
+  source?: string | null;
+  intent?: string | null;
   created_at: string;
   updated_at: string;
   resolved_at: string | null;

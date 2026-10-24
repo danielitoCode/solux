@@ -21,6 +21,8 @@ export function mapCatalogItemDto(dto: CatalogItemDto): CatalogItem {
     imageUrl: urls[0],
     imageUrls: urls,
     features: dto.features ?? [],
+    provider: dto.provider?.trim() || undefined,
+    scope: dto.scope?.trim() || undefined,
     isActive: dto.is_active,
     isFeatured: dto.is_featured,
     sortOrder: dto.sort_order,
@@ -41,6 +43,8 @@ export function toCatalogInsert(item: Omit<CatalogItem, 'id' | 'createdAt' | 'up
     image_url: item.imageUrls[0] ?? item.imageUrl ?? null,
     image_urls: item.imageUrls,
     features: item.features,
+    provider: item.provider?.trim() || null,
+    scope: item.scope?.trim() || null,
     is_active: item.isActive,
     is_featured: item.isFeatured,
     sort_order: item.sortOrder
@@ -61,6 +65,8 @@ export function toCatalogUpdate(patch: Partial<CatalogItem>) {
     row.image_url = patch.imageUrls[0] ?? null;
   }
   if (patch.features !== undefined) row.features = patch.features;
+  if (patch.provider !== undefined) row.provider = patch.provider?.trim() || null;
+  if (patch.scope !== undefined) row.scope = patch.scope?.trim() || null;
   if (patch.isActive !== undefined) row.is_active = patch.isActive;
   if (patch.isFeatured !== undefined) row.is_featured = patch.isFeatured;
   if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder;

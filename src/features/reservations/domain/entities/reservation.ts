@@ -18,6 +18,10 @@ export interface Reservation {
   notes?: string;
   status: ReservationStatus;
   assignedTo?: string;
+  /** Canal de origen del lead (home, direct, catalog, …) */
+  source: string;
+  /** Intención comercial (buy | install | maintain | …) */
+  intent: string;
   createdAt: string;
   updatedAt: string;
 }

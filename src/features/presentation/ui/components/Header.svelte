@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { publicContactUseCases } from '$features/contact/di/public-contact';
+  import { navIcon } from '$infrastructure/ui/animate-icons-registry';
 
   let companyName = $state('SOLUX');
   let logoUrl = $state('');
@@ -12,14 +13,14 @@
   });
 
   const links = [
-    { href: '/', label: 'Inicio', route: '/' },
-    { href: '/servicios', label: 'Servicios', route: '/servicios' },
-    { href: '/catalogo', label: 'Catálogo', route: '/catalogo' },
-    { href: '/proyectos', label: 'Proyectos', route: '/proyectos' },
-    { href: '/nosotros', label: 'Nosotros', route: '/nosotros' },
-    { href: '/seguimiento', label: 'Seguimiento', route: '/seguimiento' },
-    { href: '/soporte', label: 'Soporte', route: '/soporte' },
-    { href: '/contacto', label: 'Contacto', route: '/contacto' }
+    { href: '/', label: 'Inicio', icon: 'house', route: '/' },
+    { href: '/servicios', label: 'Servicios', icon: 'zap', route: '/servicios' },
+    { href: '/catalogo', label: 'Catálogo', icon: 'package', route: '/catalogo' },
+    { href: '/proyectos', label: 'Proyectos', icon: 'image', route: '/proyectos' },
+    { href: '/nosotros', label: 'Nosotros', icon: 'users', route: '/nosotros' },
+    { href: '/seguimiento', label: 'Seguimiento', icon: 'search', route: '/seguimiento' },
+    { href: '/soporte', label: 'Soporte', icon: 'wrench', route: '/soporte' },
+    { href: '/contacto', label: 'Contacto', icon: 'mail', route: '/contacto' }
   ];
 
   let menuOpen = $state(false);
@@ -48,13 +49,21 @@
 
   <nav id="primary-navigation" class="desktop-nav" class:open={menuOpen} aria-label="Navegación principal">
     {#each links as link}
-      <a href={link.href} class:active={isActive(link.href)} aria-current={isActive(link.href) ? 'page' : undefined} onclick={closeMenu}>{link.label}</a>
+      <a
+        href={link.href}
+        class:active={isActive(link.href)}
+        aria-current={isActive(link.href) ? 'page' : undefined}
+        onclick={closeMenu}
+      >
+        <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={link.icon}></span>
+        <span>{link.label}</span>
+      </a>
     {/each}
   </nav>
 
   <div class="header-actions">
     <button class="theme-toggle" type="button" onclick={toggleTheme} aria-label="Cambiar tema">
-      <span aria-hidden="true">☼</span>
+      <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={'sun'}></span>
     </button>
     <a class="btn btn-small btn-primary reserve" href="/reservas" onclick={closeMenu}>Reservar</a>
     <button
@@ -65,7 +74,7 @@
       aria-expanded={menuOpen}
       aria-controls="primary-navigation"
     >
-      <span aria-hidden="true">☰</span>
+      <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={'menu'}></span>
     </button>
   </div>
 </header>
@@ -141,11 +150,35 @@
     justify-content: center;
   }
   .desktop-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 8px 12px;
     border-radius: 10px;
     font-size: 13px;
     font-weight: 600;
     color: var(--color-muted);
+  }
+  .desktop-nav .nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    line-height: 0;
+    opacity: 0.9;
+    flex-shrink: 0;
+    overflow: visible;
+    color: inherit;
+  }
+  .desktop-nav .nav-icon :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .desktop-nav a.active .nav-icon,
+  .desktop-nav a:hover .nav-icon {
+    opacity: 1;
   }
   .desktop-nav a:hover,
   .desktop-nav a.active {
@@ -166,6 +199,8 @@
     width: 38px;
     height: 38px;
     border-radius: 10px;
+    display: inline-grid;
+    place-items: center;
   }
   .theme-toggle:hover,
   .menu-toggle:hover {

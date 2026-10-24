@@ -37,6 +37,43 @@
   };
   const iconFor = (category: string) => categoryIcon[category] ?? '⌁';
 
+  const scopeLabel: Record<string, string> = {
+    equipment_only: 'Solo equipo',
+    kit_install: 'Equipo + instalación',
+    install_only: 'Solo instalación',
+    maintenance: 'Mantenimiento',
+    advisory: 'Asesoría',
+    custom: 'A medida'
+  };
+  const labelScope = (scope: string | undefined) =>
+    scope ? (scopeLabel[scope] ?? scope) : '';
+
+  /** Links comerciales desde el catálogo (source=catalog + intent + ítem). */
+  function catalogQuery(item: CatalogItem, intent: string) {
+    const p = new URLSearchParams({
+      intent,
+      source: 'catalog',
+      item: item.id,
+      name: item.name
+    });
+    return p.toString();
+  }
+  function consultUrl(item: CatalogItem) {
+    return `/contacto?${catalogQuery(item, 'buy')}`;
+  }
+  function installUrl(item: CatalogItem) {
+    return `/reservas?${catalogQuery(item, 'install')}`;
+  }
+  function serviceUrl(item: CatalogItem) {
+    const intent =
+      item.category === 'maintenance'
+        ? 'maintain'
+        : item.category === 'advisory'
+          ? 'advisory'
+          : 'install';
+    return `/reservas?${catalogQuery(item, intent)}`;
+  }
+
   async function load() {
     loading = true;
     error = '';
@@ -68,7 +105,6 @@
   let type = $state<TypeFilter>('all');
   let category = $state('all');
 
-  // Normaliza para buscar sin distinguir mayúsculas ni tildes
   const norm = (text: string) =>
           text
                   .normalize('NFD')
@@ -77,14 +113,13 @@
 
   const typeIndex = $derived(typeOptions.findIndex((o) => o.value === type));
 
-  // Resultado por tipo y búsqueda (las categorías se cuentan sobre este conjunto)
   const base = $derived.by(() => {
     const q = norm(query.trim());
     return items.filter((item) => {
       if (type !== 'all' && item.type !== type) return false;
       if (!q) return true;
       const haystack = norm(
-              `${item.name} ${item.shortDescription ?? ''} ${categoryLabel[item.category] ?? item.category}`
+              `${item.name} ${item.shortDescription ?? ''} ${categoryLabel[item.category] ?? item.category} ${item.provider ?? ''}`
       );
       return haystack.includes(q);
     });
@@ -99,7 +134,6 @@
   const filtered = $derived(category === 'all' ? base : base.filter((i) => i.category === category));
   const hasFilters = $derived(query.trim() !== '' || type !== 'all' || category !== 'all');
 
-  // Si la categoría elegida deja de existir tras otro filtro, vuelve a "Todas"
   $effect(() => {
     if (category !== 'all' && !categories.some(([c]) => c === category)) category = 'all';
   });
@@ -112,7 +146,6 @@
 
   const formatPrice = (value: number) => new Intl.NumberFormat('es').format(value);
 
-  /* ─────────── Lightbox ─────────── */
   let lightbox = $state<{ src: string; alt: string } | null>(null);
   const openLightbox = (src: string, alt: string) => (lightbox = { src, alt });
   const closeLightbox = () => (lightbox = null);
@@ -121,7 +154,6 @@
     node.focus();
   }
 
-  /* ─────────── Encabezado ─────────── */
   const title = 'Productos y servicios.';
   const words = title.split(/\s+/);
 </script>
@@ -131,7 +163,6 @@
 <section class="page" use:scrollDepth>
   <Ambient />
 
-  <!-- ───────── Encabezado ───────── -->
   <div class="section-head intro">
     <div>
       <div class="eyebrow rise" style="--i: 0">Catálogo</div>
@@ -149,7 +180,6 @@
     </p>
   </div>
 
-  <!-- ───────── Filtros ───────── -->
   {#if !loading && !error && items.length}
     <div class="toolbar rise" style="--i: 4">
       <div class="toolbar-row">
@@ -207,7 +237,6 @@
     </div>
   {/if}
 
-  <!-- ───────── Contenido ───────── -->
   {#if loading}
     <div class="cards" aria-busy="true" aria-label="Cargando catálogo">
       {#each [1, 2, 3, 4, 5, 6] as n (n)}
@@ -290,6 +319,12 @@
 
           <p class="cat-label">{categoryLabel[item.category] ?? item.category}</p>
           <h3>{item.name}</h3>
+          {#if item.provider || item.scope}
+            <p class="offer-meta">
+              {#if item.provider}<span class="meta-chip">{item.provider}</span>{/if}
+              {#if item.scope}<span class="meta-chip muted">{labelScope(item.scope)}</span>{/if}
+            </p>
+          {/if}
           <p class="desc">{item.shortDescription}</p>
 
           {#if item.features?.length}
@@ -311,28 +346,37 @@
                 <strong class="price">A consultar</strong>
               {/if}
             </div>
-            <a class="btn btn-small btn-primary" href="/reservas">
-              Solicitar <span class="arrow" aria-hidden="true">→</span>
-            </a>
+            <div class="card-actions">
+              {#if item.type === 'product'}
+                <a class="btn btn-small btn-ghost" href={consultUrl(item)}>
+                  Consultar equipo
+                </a>
+                <a class="btn btn-small btn-primary" href={installUrl(item)}>
+                  Instalar con kit <span class="arrow" aria-hidden="true">→</span>
+                </a>
+              {:else}
+                <a class="btn btn-small btn-primary" href={serviceUrl(item)}>
+                  Solicitar servicio <span class="arrow" aria-hidden="true">→</span>
+                </a>
+              {/if}
+            </div>
           </div>
         </article>
       {/each}
     </div>
   {/if}
 
-  <!-- ───────── CTA final ───────── -->
   <div class="banner rv" use:reveal>
     <div>
       <strong>¿No encuentras lo que buscas?</strong>
       <p>Diseñamos soluciones a medida. Solicita una visita técnica.</p>
     </div>
-    <a class="btn btn-accent" href="/reservas">
+    <a class="btn btn-accent" href="/reservas?intent=install&source=catalog">
       Reservar visita <span class="arrow" aria-hidden="true">→</span>
     </a>
   </div>
 </section>
 
-<!-- ───────── Lightbox ───────── -->
 {#if lightbox}
   <div class="lightbox" transition:fade={{ duration: ms(200) }}>
     <button type="button" class="lb-backdrop" aria-label="Cerrar" onclick={closeLightbox}></button>
@@ -354,8 +398,6 @@
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
     isolation: isolate;
   }
-
-  /* ───────── Entrada del encabezado ───────── */
   .rise {
     animation: rise 0.8s var(--ease) both;
     animation-delay: calc(var(--i, 0) * 90ms);
@@ -390,8 +432,6 @@
       transform: translateY(115%) rotate(4deg);
     }
   }
-
-  /* ───────── Revelado al hacer scroll ───────── */
   .rv {
     opacity: 0;
     transform: translateY(28px) scale(0.98);
@@ -407,7 +447,6 @@
     transform: none;
     filter: none;
   }
-
   .arrow {
     display: inline-block;
     transition: transform 0.25s var(--ease);
@@ -416,8 +455,6 @@
   a:focus-visible > .arrow {
     transform: translateX(4px);
   }
-
-  /* ───────── Barra de filtros ───────── */
   .toolbar {
     display: grid;
     gap: 16px;
@@ -429,8 +466,6 @@
     align-items: center;
     gap: 14px;
   }
-
-  /* Selector de tipo con indicador deslizante */
   .seg {
     position: relative;
     display: grid;
@@ -474,7 +509,6 @@
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
-
   .search {
     position: relative;
     flex: 1 1 240px;
@@ -509,8 +543,6 @@
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
-
-  /* Categorías */
   .chips {
     display: flex;
     gap: 8px;
@@ -557,8 +589,6 @@
     color: var(--color-muted);
     font-size: 12px;
   }
-
-  /* ───────── Tarjetas ───────── */
   .cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
@@ -578,26 +608,6 @@
     box-shadow: var(--color-shadow);
     border-color: var(--color-primary);
   }
-  .catalog-card:not(.sk)::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    z-index: 1;
-    background: radial-gradient(
-            280px circle at var(--sx, 50%) var(--sy, 50%),
-            rgba(255, 191, 25, 0.14),
-            transparent 65%
-    );
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .catalog-card:not(.sk):hover::before {
-    opacity: 1;
-  }
-
-  /* Media: foto principal con fundido entre imágenes */
   .media {
     position: relative;
     margin: -6px -6px 14px;
@@ -610,9 +620,8 @@
     position: absolute;
     inset: 0;
     display: block;
-    width: 100%;
-    padding: 0;
     border: 0;
+    padding: 0;
     background: transparent;
     cursor: zoom-in;
   }
@@ -623,118 +632,115 @@
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    transform: scale(1.001);
-    transition:
-            opacity 0.5s var(--ease),
-            transform 0.8s var(--ease);
+    transition: opacity 0.35s var(--ease);
   }
   .media-main img.on {
     opacity: 1;
-  }
-  .catalog-card:hover .media-main img.on {
-    transform: scale(1.06);
-  }
-  .media-main:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: -2px;
   }
   .media-fallback {
     position: absolute;
     inset: 0;
     display: grid;
     place-items: center;
-    background:
-            radial-gradient(circle at 70% 25%, color-mix(in srgb, var(--color-accent) 22%, transparent), transparent 55%),
-            linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 26%, transparent), transparent);
-  }
-  .media-fallback span {
-    font-size: 54px;
-    color: var(--color-primary);
-    transition: transform 0.5s var(--ease);
-  }
-  .catalog-card:hover .media-fallback span {
-    transform: scale(1.12) rotate(-6deg);
+    font-size: 42px;
+    color: var(--color-muted);
   }
   .badge {
     position: absolute;
     top: 12px;
     left: 12px;
     z-index: 2;
-    padding: 4px 11px;
+    padding: 5px 10px;
     border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    backdrop-filter: blur(8px);
     font-size: 11px;
     font-weight: 800;
-    color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
-    backdrop-filter: blur(10px);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
-
   .image-strip {
     display: flex;
     gap: 6px;
-    margin: 0 0 14px;
+    margin: -6px 0 12px;
     overflow-x: auto;
-    padding: 2px;
   }
   .image-strip button {
-    flex: 0 0 48px;
+    flex: none;
     width: 48px;
-    height: 38px;
-    padding: 0;
-    border: 2px solid transparent;
+    height: 36px;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
+    padding: 0;
     overflow: hidden;
     background: transparent;
     cursor: pointer;
-    opacity: 0.6;
-    transition:
-            opacity 0.25s var(--ease),
-            border-color 0.25s var(--ease),
-            transform 0.25s var(--ease);
-  }
-  .image-strip button:hover {
-    opacity: 1;
-    transform: translateY(-2px);
+    opacity: 0.55;
   }
   .image-strip button.active {
-    border-color: var(--color-primary);
     opacity: 1;
+    border-color: var(--color-primary);
   }
   .image-strip img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
   }
-
   .cat-label {
-    margin: 0 0 6px;
+    margin: 0 0 4px;
+    color: var(--color-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .offer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 8px;
+  }
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
     color: var(--color-primary);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
   }
+  .meta-chip.muted {
+    border-color: var(--color-border);
+    background: var(--color-surface-2, transparent);
+    color: var(--color-muted);
+  }
   .catalog-card h3 {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
+    font-size: 17px;
   }
   .desc {
-    margin: 0;
+    margin: 0 0 12px;
+    color: var(--color-muted);
+    font-size: 13px;
+    line-height: 1.45;
+    flex: 1;
   }
   .feat-list {
-    flex: 1;
     list-style: none;
+    margin: 0 0 12px;
     padding: 0;
-    margin: 14px 0 0;
+    min-height: 54px;
+    font-size: 12px;
   }
   .feat-list li {
-    margin: 6px 0;
-    color: var(--color-muted);
-    font-size: 12px;
+    padding: 3px 0;
   }
   .feat-list li::before {
     content: '✓';
     margin-right: 8px;
-    color: var(--color-primary-2);
+    color: var(--color-primary-2, var(--color-primary));
     font-weight: 800;
   }
   .catalog-footer {
@@ -742,7 +748,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-top: 20px;
+    margin-top: auto;
     padding-top: 16px;
     border-top: 1px solid var(--color-border);
   }
@@ -758,18 +764,48 @@
     font-size: 16px;
     font-variant-numeric: tabular-nums;
   }
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
   .catalog-footer .btn {
     position: relative;
     z-index: 2;
-    transition: transform 0.25s var(--ease);
   }
-  .catalog-footer .btn:hover {
-    transform: translateY(-2px);
+  .banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 36px;
+    padding: 22px 24px;
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
   }
-
-  /* ───────── Carga (esqueleto con la forma de la tarjeta) ───────── */
-  .sk {
-    min-height: 360px;
+  .banner strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+  .banner p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 13px;
+  }
+  .banner-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--color-muted);
   }
   .sk-block {
     border-radius: 10px;
@@ -784,15 +820,14 @@
   }
   .sk-media {
     aspect-ratio: 16 / 10;
-    margin: -6px -6px 18px;
-    border-radius: 18px;
+    margin-bottom: 14px;
   }
   .sk-line {
     height: 12px;
-    margin: 12px 0;
+    margin-bottom: 10px;
   }
   .sk-line.short {
-    width: 35%;
+    width: 40%;
   }
   .sk-line.mid {
     width: 70%;
@@ -802,171 +837,47 @@
       background-position: -200% 0;
     }
   }
-
-  /* ───────── Error y vacío ───────── */
-  .banner-error {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .empty {
-    display: grid;
-    justify-items: center;
-    gap: 14px;
-    padding: 54px 20px;
-    text-align: center;
-  }
-  .empty p {
-    margin: 0;
-  }
-
-  /* ───────── Lightbox ───────── */
   .lightbox {
     position: fixed;
     inset: 0;
-    z-index: 100;
+    z-index: 80;
     display: grid;
     place-items: center;
-    padding: 24px;
   }
   .lb-backdrop {
     position: absolute;
     inset: 0;
     border: 0;
-    background: rgba(0, 0, 0, 0.82);
-    backdrop-filter: blur(8px);
-    cursor: zoom-out;
+    background: rgba(0, 0, 0, 0.72);
   }
   .lb-dialog {
     position: relative;
-    max-width: min(1100px, 100%);
-    max-height: 100%;
+    max-width: min(92vw, 960px);
+    max-height: 90vh;
   }
   .lb-dialog img {
-    display: block;
     max-width: 100%;
-    max-height: calc(100vh - 48px);
-    border-radius: 18px;
-    box-shadow: var(--color-shadow);
+    max-height: 90vh;
+    border-radius: 12px;
   }
   .lb-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 38px;
-    height: 38px;
+    top: -12px;
+    right: -12px;
+    width: 36px;
+    height: 36px;
     border: 0;
-    border-radius: 50%;
-    color: white;
-    font-size: 15px;
+    border-radius: 999px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 16px;
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(8px);
-    transition: transform 0.25s var(--ease);
   }
-  .lb-close:hover {
-    transform: scale(1.1) rotate(90deg);
-  }
-  .lb-close:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
-  /* ───────── Banner final ───────── */
-  .banner {
-    position: relative;
-    overflow: hidden;
-    margin-top: 45px;
-    border-radius: 26px;
-    padding: 30px;
-    background: linear-gradient(115deg, var(--color-primary), #07572f, var(--color-primary));
-    background-size: 200% 100%;
-    color: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    animation: banner-shift 10s ease-in-out infinite alternate;
-  }
-  .banner > * {
-    position: relative;
-    z-index: 1;
-  }
-  .banner::after {
-    content: '';
-    position: absolute;
-    right: -40px;
-    top: -60px;
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    filter: blur(40px);
-    opacity: 0.2;
-    animation: glow 5s ease-in-out infinite;
-  }
-  .banner p {
-    margin: 6px 0 0;
-    opacity: 0.8;
-  }
-  .banner .btn {
-    transition: transform 0.25s var(--ease);
-  }
-  .banner .btn:hover {
-    transform: translateY(-3px);
-  }
-  @keyframes banner-shift {
-    to {
-      background-position: 100% 0;
-    }
-  }
-  @keyframes glow {
-    50% {
-      transform: scale(1.12);
-      opacity: 0.32;
-    }
-  }
-
-  /* ───────── Responsive ───────── */
-  @media (max-width: 600px) {
-    .toolbar-row {
-      align-items: stretch;
-    }
-    .seg,
-    .search {
-      flex: 1 1 100%;
-      max-width: none;
-    }
-    .banner {
-      display: block;
-    }
-    .banner .btn {
-      margin-top: 18px;
-    }
-  }
-
-  /* ───────── Accesibilidad: reduce el movimiento ───────── */
   @media (prefers-reduced-motion: reduce) {
     .rise,
     .word-in,
-    .sk-block,
-    .banner,
-    .banner::after {
-      animation: none;
-    }
-    .rv {
-      opacity: 1;
-      transform: none;
-      filter: none;
-      transition: none;
-    }
-    .seg::before,
     .catalog-card,
     .media-main img,
-    .media-fallback span,
-    .chip,
     .image-strip button,
     .arrow {
       transition: none;

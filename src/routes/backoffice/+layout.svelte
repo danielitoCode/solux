@@ -5,6 +5,7 @@
   import type { User, UserRole } from '$features/auth/domain/entities';
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
+  import { navIcon } from '$infrastructure/ui/animate-icons-registry';
 
   let companyName = $state('SOLUX');
   let logoUrl = $state('');
@@ -13,18 +14,18 @@
 
   const isLogin = $derived($page.url.pathname === '/backoffice/login');
 
-  const sections: { href: string; label: string; roles: UserRole[] }[] = [
-    { href: '/backoffice', label: 'Dashboard', roles: ['admin', 'support', 'sales'] },
-    { href: '/backoffice/reservas', label: 'Reservaciones', roles: ['admin', 'sales'] },
-    { href: '/backoffice/soporte', label: 'Soporte', roles: ['admin', 'support'] },
-    { href: '/backoffice/mensajes', label: 'Mensajes', roles: ['admin', 'support', 'sales'] },
-    { href: '/backoffice/catalogo', label: 'Catálogo', roles: ['admin', 'sales'] },
-    { href: '/backoffice/consumibles', label: 'Consumibles', roles: ['admin', 'sales'] },
-    { href: '/backoffice/inventario', label: 'Inventario y ventas', roles: ['admin', 'sales'] },
-    { href: '/backoffice/finanzas', label: 'Finanzas y personal', roles: ['admin'] },
-    { href: '/backoffice/presentacion', label: 'Presentación', roles: ['admin'] },
-    { href: '/backoffice/proyectos', label: 'Proyectos web', roles: ['admin'] },
-    { href: '/backoffice/usuarios', label: 'Usuarios', roles: ['admin'] }
+  const sections: { href: string; label: string; icon: string; roles: UserRole[] }[] = [
+    { href: '/backoffice', label: 'Dashboard', icon: 'layout-dashboard', roles: ['admin', 'support', 'sales'] },
+    { href: '/backoffice/reservas', label: 'Reservaciones', icon: 'calendar', roles: ['admin', 'sales'] },
+    { href: '/backoffice/soporte', label: 'Soporte', icon: 'headset', roles: ['admin', 'support'] },
+    { href: '/backoffice/mensajes', label: 'Mensajes', icon: 'message-square', roles: ['admin', 'support', 'sales'] },
+    { href: '/backoffice/catalogo', label: 'Catálogo', icon: 'package', roles: ['admin', 'sales'] },
+    { href: '/backoffice/consumibles', label: 'Consumibles', icon: 'wrench', roles: ['admin', 'sales'] },
+    { href: '/backoffice/inventario', label: 'Proveedores e inventario', icon: 'building-2', roles: ['admin', 'sales'] },
+    { href: '/backoffice/finanzas', label: 'Finanzas y personal', icon: 'wallet', roles: ['admin'] },
+    { href: '/backoffice/presentacion', label: 'Presentación', icon: 'presentation', roles: ['admin'] },
+    { href: '/backoffice/proyectos', label: 'Proyectos web', icon: 'image', roles: ['admin'] },
+    { href: '/backoffice/usuarios', label: 'Usuarios', icon: 'user', roles: ['admin'] }
   ];
 
   const user = $derived((data.user as User | null) ?? getAuthUser());
@@ -69,7 +70,10 @@
 
       <nav class="bo-nav">
         {#each visibleSections as s}
-          <a href={s.href} class:active={isActive(s.href)}>{s.label}</a>
+          <a href={s.href} class:active={isActive(s.href)}>
+            <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={s.icon}></span>
+            <span class="nav-label">{s.label}</span>
+          </a>
         {/each}
       </nav>
 
@@ -168,6 +172,9 @@
     flex: 1;
   }
   .bo-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 10px 12px;
     border-radius: 10px;
     font-size: 13px;
@@ -183,6 +190,32 @@
     background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     color: var(--color-primary);
   }
+  .nav-icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.9;
+    overflow: visible;
+    color: inherit;
+    line-height: 0;
+  }
+  .nav-icon :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .nav-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bo-nav a.active .nav-icon {
+    opacity: 1;
+  }
   .bo-user {
     border-top: 1px solid var(--color-border);
     padding-top: 16px;
@@ -194,7 +227,6 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 0 8px;
   }
   .bo-user-info strong {
     font-size: 13px;

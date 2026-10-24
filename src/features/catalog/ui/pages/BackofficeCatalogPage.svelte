@@ -27,6 +27,19 @@
     'advisory'
   ];
 
+  const SCOPE_OPTIONS: { value: string; label: string }[] = [
+    { value: '', label: 'Sin especificar' },
+    { value: 'equipment_only', label: 'Solo equipo' },
+    { value: 'kit_install', label: 'Equipo + instalación' },
+    { value: 'install_only', label: 'Solo instalación' },
+    { value: 'maintenance', label: 'Mantenimiento' },
+    { value: 'advisory', label: 'Asesoría' },
+    { value: 'custom', label: 'A medida' }
+  ];
+
+  const scopeLabel = (scope: string | undefined) =>
+    SCOPE_OPTIONS.find((o) => o.value === scope)?.label ?? scope ?? '—';
+
   const typeLabel: Record<CatalogItemType, string> = {
     product: 'Producto',
     service: 'Servicio'
@@ -71,6 +84,8 @@
   let formFeatured = $state(false);
   let formSort = $state(0);
   let formImages = $state<string[]>([]);
+  let formProvider = $state('');
+  let formScope = $state('');
 
   const cloudReady = isCloudinaryConfigured();
 
@@ -122,6 +137,8 @@
     formFeatured = item.isFeatured;
     formSort = item.sortOrder;
     formImages = [...item.imageUrls];
+    formProvider = item.provider ?? '';
+    formScope = item.scope ?? '';
   }
 
   function openItem(item: CatalogItem) {
@@ -145,6 +162,8 @@
     formFeatured = false;
     formSort = items.length;
     formImages = [];
+    formProvider = '';
+    formScope = '';
   }
 
   function startEdit() {
@@ -179,6 +198,8 @@
         currency: formCurrency.trim() || 'USD',
         imageUrls: formImages,
         features: parseFeatures(formFeatures),
+        provider: formProvider.trim() || undefined,
+        scope: formScope.trim() || undefined,
         isActive: formActive,
         isFeatured: formFeatured,
         sortOrder: Number(formSort) || 0
@@ -333,7 +354,7 @@
                     {#if item.isFeatured}<span class="badge feat">Destacado</span>{/if}
                   </div>
                   <strong class="subject">{item.name}</strong>
-                  <div class="who">{categoryLabel[item.category]}</div>
+                  <div class="who">{categoryLabel[item.category]}{#if item.provider} · {item.provider}{/if}</div>
                   {#if item.price != null}
                     <div class="price">{item.price} {item.currency}</div>
                   {/if}
@@ -389,6 +410,14 @@
           <div class="info-card">
             <h3>Precio</h3>
             <p>{selected.price != null ? `${selected.price} ${selected.currency}` : 'A consultar'}</p>
+          </div>
+          <div class="info-card">
+            <h3>Proveedor</h3>
+            <p>{selected.provider || '—'}</p>
+          </div>
+          <div class="info-card">
+            <h3>Alcance</h3>
+            <p>{scopeLabel(selected.scope)}</p>
           </div>
           <div class="info-card">
             <h3>Orden</h3>
@@ -474,6 +503,18 @@
               <input bind:value={formCurrency} />
             </label>
             <label class="field">
+              <span>Proveedor / marca</span>
+              <input bind:value={formProvider} placeholder="Ej. Jinko, Growatt…" />
+            </label>
+            <label class="field">
+              <span>Alcance de la oferta</span>
+              <select bind:value={formScope}>
+                {#each SCOPE_OPTIONS as opt}
+                  <option value={opt.value}>{opt.label}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="field">
               <span>Orden</span>
               <input type="number" bind:value={formSort} />
             </label>
@@ -555,12 +596,16 @@
     justify-content: space-between;
     padding: 22px 20px 12px;
     flex-shrink: 0;
-    gap: 12px;
   }
   .pane-header h1 {
     margin: 4px 0 0;
     font-size: 22px;
     letter-spacing: -0.04em;
+  }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
   }
   .eyebrow {
     margin: 0;
@@ -570,11 +615,6 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
-  .header-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
   .icon-btn {
     width: 36px;
     height: 36px;
@@ -583,10 +623,7 @@
     background: var(--color-bg);
     color: var(--color-text);
     font-size: 16px;
-  }
-  .btn-small {
-    padding: 8px 12px;
-    font-size: 12px;
+    flex-shrink: 0;
   }
   .search-row {
     padding: 0 16px 12px;
@@ -601,19 +638,16 @@
     padding: 11px 14px;
     border-radius: 12px;
     font-size: 13px;
+    outline: none;
   }
   .chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     padding: 0 16px 14px;
-    width: 100%;
-    box-sizing: border-box;
-    min-width: 0;
     flex-shrink: 0;
   }
   .chip {
-    flex: 0 1 auto;
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     color: var(--color-muted);
@@ -622,8 +656,8 @@
     font-size: 11px;
     font-weight: 700;
     display: inline-flex;
-    gap: 6px;
     align-items: center;
+    gap: 6px;
   }
   .chip span {
     background: var(--color-surface-2);
@@ -649,7 +683,7 @@
     border-radius: 10px;
     font-size: 12px;
   }
-  .form-err {
+  .banner-error.form-err {
     margin: 12px 28px 0;
   }
   .item-list {
@@ -659,7 +693,6 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    min-width: 0;
   }
   .item-card {
     text-align: left;
@@ -680,15 +713,15 @@
   .thumb-row {
     display: flex;
     gap: 12px;
-    align-items: flex-start;
+    align-items: center;
   }
   .thumb {
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
     object-fit: cover;
-    background: var(--color-surface-2);
     flex-shrink: 0;
+    background: var(--color-surface-2);
   }
   .thumb.placeholder {
     display: grid;
@@ -696,10 +729,23 @@
     color: var(--color-muted);
     font-size: 12px;
   }
+  .thumb-meta {
+    min-width: 0;
+    flex: 1;
+  }
+  .item-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
   .subject {
     display: block;
     font-size: 13.5px;
-    margin: 4px 0;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .who {
     font-size: 11px;
@@ -722,30 +768,22 @@
     color: var(--color-muted);
   }
   .badge.type {
-    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
     color: var(--color-primary);
   }
   .badge.feat {
-    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
-    color: #b8860b;
+    background: color-mix(in srgb, #f39c12 18%, transparent);
+    color: #b9770e;
   }
   .badge.off {
-    background: color-mix(in srgb, #c0392b 14%, transparent);
-    color: #a93226;
-  }
-  .item-top {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    background: color-mix(in srgb, #7f8c8d 16%, transparent);
+    color: #566573;
   }
   .empty-state,
   .empty-detail {
     text-align: center;
     padding: 48px 24px;
     color: var(--color-muted);
-  }
-  .empty-detail {
-    margin: auto;
   }
   .empty-icon {
     width: 48px;
@@ -755,6 +793,7 @@
     background: var(--color-surface-2);
     display: grid;
     place-items: center;
+    font-size: 20px;
     color: var(--color-primary);
   }
   .empty-icon.big {
@@ -763,16 +802,21 @@
     font-size: 28px;
     border-radius: 18px;
   }
+  .empty-detail {
+    margin: auto;
+  }
   .empty-detail h2 {
     margin: 12px 0 8px;
     color: var(--color-text);
+    font-size: 20px;
   }
   .skeleton-stack {
     display: grid;
     gap: 8px;
+    padding: 4px;
   }
   .skeleton-card {
-    height: 80px;
+    height: 72px;
     border-radius: 12px;
     background: linear-gradient(
       90deg,
@@ -805,24 +849,26 @@
   .detail-header {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
+    gap: 20px;
+    align-items: flex-start;
     padding: 22px 28px 16px;
     border-bottom: 1px solid var(--color-border);
-    background: var(--color-surface);
   }
   .detail-title h2 {
     margin: 8px 0 0;
     font-size: 22px;
+    letter-spacing: -0.03em;
   }
   .code-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    align-items: center;
+    gap: 8px;
   }
   .actions {
     display: flex;
     gap: 8px;
-    flex-shrink: 0;
+    flex-wrap: wrap;
   }
   .gallery {
     display: flex;
@@ -837,15 +883,15 @@
   }
   .info-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin: 16px 28px 28px;
   }
   .info-card {
     padding: 14px 16px;
-    background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 14px;
+    background: var(--color-surface);
   }
   .info-card.wide {
     grid-column: 1 / -1;
@@ -854,16 +900,12 @@
     margin: 0 0 8px;
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--color-muted);
   }
-  .info-card p {
+  .info-card p,
+  .info-card .body {
     margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-  }
-  .info-card p.body {
-    font-weight: 500;
     font-size: 14px;
     line-height: 1.5;
     white-space: pre-wrap;
@@ -878,33 +920,31 @@
   }
   .form-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
   .field {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
   }
   .field.wide {
     grid-column: 1 / -1;
   }
-  .field span {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-muted);
-  }
   .field input,
   .field select,
   .field textarea {
+    width: 100%;
+    box-sizing: border-box;
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     color: var(--color-text);
-    padding: 10px 12px;
     border-radius: 10px;
-    font-size: 14px;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 400;
   }
   .checks {
     display: flex;
@@ -914,8 +954,8 @@
   }
   .check {
     display: flex;
-    gap: 8px;
     align-items: center;
+    gap: 8px;
     font-size: 13px;
     font-weight: 600;
   }
@@ -926,15 +966,15 @@
   }
   .photos h3 {
     margin: 0 0 10px;
-    font-size: 13px;
+    font-size: 14px;
   }
-  .hint.warn {
+  .hint {
     font-size: 12px;
-    color: #b9770e;
+    color: var(--color-muted);
     margin: 0 0 12px;
   }
-  .hint code {
-    font-size: 11px;
+  .hint.warn {
+    color: #b9770e;
   }
   .photo-grid {
     display: flex;
@@ -964,16 +1004,16 @@
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.55);
     color: white;
-    font-size: 14px;
+    cursor: pointer;
   }
   .photo.add {
     display: grid;
     place-items: center;
+    cursor: pointer;
     background: var(--color-surface-2);
     color: var(--color-muted);
     font-size: 12px;
     font-weight: 700;
-    cursor: pointer;
   }
   .url-row {
     display: flex;
@@ -985,8 +1025,10 @@
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     color: var(--color-text);
-    padding: 10px 12px;
     border-radius: 10px;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 13px;
   }
   @media (max-width: 900px) {
     .form-grid,

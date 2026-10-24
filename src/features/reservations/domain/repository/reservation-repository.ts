@@ -9,6 +9,8 @@ export interface CreateReservationInput {
   preferredTimeSlot: string;
   address: string;
   notes?: string;
+  source?: string;
+  intent?: string;
 }
 
 export interface ReservationRepository {

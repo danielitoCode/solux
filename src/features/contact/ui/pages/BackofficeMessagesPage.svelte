@@ -4,6 +4,7 @@
   import type { ContactMessage, ContactSubject } from '$features/contact/domain/entities';
   import { devLog, devError } from '$infrastructure/ui/dev-logger';
   import ResizableSplit from '$infrastructure/ui/ResizableSplit.svelte';
+  import { intentLabel, sourceLabel } from '$infrastructure/ui/lead-labels';
 
   type Filter = 'all' | 'unread' | 'read' | ContactSubject;
 
@@ -18,6 +19,8 @@
   let loading = $state(true);
   let error = $state('');
   let filter = $state<Filter>('all');
+  let intentFilter = $state<'all' | string>('all');
+  let sourceFilter = $state<'all' | string>('all');
   let search = $state('');
   let updatingIds = $state<string[]>([]);
   let loadRequestId = 0;
@@ -26,6 +29,19 @@
   const unreadCount = $derived(items.filter((m) => !m.isRead).length);
   const readCount = $derived(items.filter((m) => m.isRead).length);
 
+  const intentCounts = $derived.by(() => {
+    const acc: Record<string, number> = {};
+    for (const m of items) acc[m.intent] = (acc[m.intent] ?? 0) + 1;
+    return acc;
+  });
+  const sourceCounts = $derived.by(() => {
+    const acc: Record<string, number> = {};
+    for (const m of items) acc[m.source] = (acc[m.source] ?? 0) + 1;
+    return acc;
+  });
+  const intentKeys = $derived(Object.keys(intentCounts).sort());
+  const sourceKeys = $derived(Object.keys(sourceCounts).sort());
+
   const filtered = $derived.by(() => {
     let list = items;
     if (filter === 'unread') list = list.filter((m) => !m.isRead);
@@ -33,6 +49,8 @@
     else if (filter === 'quote' || filter === 'general' || filter === 'partnership' || filter === 'other') {
       list = list.filter((m) => m.subject === filter);
     }
+    if (intentFilter !== 'all') list = list.filter((m) => m.intent === intentFilter);
+    if (sourceFilter !== 'all') list = list.filter((m) => m.source === sourceFilter);
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -153,6 +171,28 @@
         {/each}
       </div>
 
+      <div class="chips chips-secondary" role="tablist" aria-label="Intención">
+        <button type="button" class="chip" class:active={intentFilter === 'all'} onclick={() => (intentFilter = 'all')}>
+          Intent <span>todas</span>
+        </button>
+        {#each intentKeys as k}
+          <button type="button" class="chip" class:active={intentFilter === k} onclick={() => (intentFilter = k)}>
+            {intentLabel(k)} <span>{intentCounts[k]}</span>
+          </button>
+        {/each}
+      </div>
+
+      <div class="chips chips-secondary" role="tablist" aria-label="Origen">
+        <button type="button" class="chip" class:active={sourceFilter === 'all'} onclick={() => (sourceFilter = 'all')}>
+          Origen <span>todos</span>
+        </button>
+        {#each sourceKeys as k}
+          <button type="button" class="chip" class:active={sourceFilter === k} onclick={() => (sourceFilter = k)}>
+            {sourceLabel(k)} <span>{sourceCounts[k]}</span>
+          </button>
+        {/each}
+      </div>
+
       {#if error}
         <div class="banner-error" role="alert">{error}</div>
       {/if}
@@ -179,6 +219,8 @@
             >
               <div class="item-top">
                 <span class="badge subject">{subjectLabel[m.subject]}</span>
+                <span class="badge lead" title="Intención">{intentLabel(m.intent)}</span>
+                <span class="badge lead muted" title="Origen">{sourceLabel(m.source)}</span>
                 <span class="time">{relativeHint(m.createdAt)}</span>
               </div>
               <strong class="subject">{m.name}</strong>
@@ -209,6 +251,8 @@
           <div class="detail-title">
             <div class="code-row">
               <span class="badge subject">{subjectLabel[selected.subject]}</span>
+              <span class="badge lead">{intentLabel(selected.intent)}</span>
+              <span class="badge lead muted">{sourceLabel(selected.source)}</span>
               {#if selected.isRead}
                 <span class="badge status read">Leído</span>
               {:else}
@@ -345,6 +389,9 @@
     min-width: 0;
     flex-shrink: 0;
   }
+  .chips-secondary {
+    margin-top: -4px;
+  }
   .chip {
     flex: 0 1 auto;
     max-width: 100%;
@@ -423,6 +470,7 @@
     justify-content: space-between;
     gap: 8px;
     margin-bottom: 4px;
+    flex-wrap: wrap;
   }
   .time {
     font-size: 10px;
@@ -474,6 +522,16 @@
   .badge.subject {
     background: color-mix(in srgb, var(--color-primary) 14%, transparent);
     color: var(--color-primary);
+  }
+  .badge.lead {
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+    color: var(--color-primary);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+  }
+  .badge.lead.muted {
+    background: var(--color-surface-2);
+    color: var(--color-muted);
+    border-color: var(--color-border);
   }
   .badge.status.read {
     background: color-mix(in srgb, #27ae60 16%, transparent);
@@ -532,12 +590,8 @@
     animation: shimmer 1.2s infinite;
   }
   @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
   .detail-pane {
     display: flex;

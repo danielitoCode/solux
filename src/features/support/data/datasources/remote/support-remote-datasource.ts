@@ -8,14 +8,15 @@ import type { TicketStatus } from '../../../domain/entities';
 export class SupportRemoteDataSource {
   async createTicket(input: CreateTicketInput): Promise<SupportTicketDto> {
     assertSupabaseConfigured();
-    // RPC security definer: evita 42501 (insert+select sin policy SELECT para anon)
     const { data, error } = await supabase.rpc('create_support_ticket', {
       p_customer_name: input.customerName,
       p_customer_email: input.customerEmail,
       p_customer_phone: input.customerPhone ?? null,
       p_subject: input.subject,
       p_description: input.description,
-      p_related_reservation_id: input.relatedReservationId ?? null
+      p_related_reservation_id: input.relatedReservationId ?? null,
+      p_source: input.source ?? 'direct',
+      p_intent: input.intent ?? 'maintain'
     });
     if (error) {
       devError('support-remote', 'createTicket failed', error);
