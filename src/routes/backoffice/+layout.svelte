@@ -5,6 +5,7 @@
   import type { User, UserRole } from '$features/auth/domain/entities';
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
+  import { registerAnimateIcons } from '$infrastructure/ui/animate-icons-registry';
 
   let companyName = $state('SOLUX');
   let logoUrl = $state('');
@@ -14,17 +15,17 @@
   const isLogin = $derived($page.url.pathname === '/backoffice/login');
 
   const sections: { href: string; label: string; icon: string; roles: UserRole[] }[] = [
-    { href: '/backoffice', label: 'Dashboard', icon: '◈', roles: ['admin', 'support', 'sales'] },
-    { href: '/backoffice/reservas', label: 'Reservaciones', icon: '📅', roles: ['admin', 'sales'] },
-    { href: '/backoffice/soporte', label: 'Soporte', icon: '🛠️', roles: ['admin', 'support'] },
-    { href: '/backoffice/mensajes', label: 'Mensajes', icon: '✉', roles: ['admin', 'support', 'sales'] },
-    { href: '/backoffice/catalogo', label: 'Catálogo', icon: '📦', roles: ['admin', 'sales'] },
-    { href: '/backoffice/consumibles', label: 'Consumibles', icon: '🔧', roles: ['admin', 'sales'] },
-    { href: '/backoffice/inventario', label: 'Proveedores e inventario', icon: '🏭', roles: ['admin', 'sales'] },
-    { href: '/backoffice/finanzas', label: 'Finanzas y personal', icon: '💰', roles: ['admin'] },
-    { href: '/backoffice/presentacion', label: 'Presentación', icon: '✦', roles: ['admin'] },
-    { href: '/backoffice/proyectos', label: 'Proyectos web', icon: '📷', roles: ['admin'] },
-    { href: '/backoffice/usuarios', label: 'Usuarios', icon: '👤', roles: ['admin'] }
+    { href: '/backoffice', label: 'Dashboard', icon: 'layout-dashboard', roles: ['admin', 'support', 'sales'] },
+    { href: '/backoffice/reservas', label: 'Reservaciones', icon: 'calendar', roles: ['admin', 'sales'] },
+    { href: '/backoffice/soporte', label: 'Soporte', icon: 'headset', roles: ['admin', 'support'] },
+    { href: '/backoffice/mensajes', label: 'Mensajes', icon: 'message-square', roles: ['admin', 'support', 'sales'] },
+    { href: '/backoffice/catalogo', label: 'Catálogo', icon: 'package', roles: ['admin', 'sales'] },
+    { href: '/backoffice/consumibles', label: 'Consumibles', icon: 'wrench', roles: ['admin', 'sales'] },
+    { href: '/backoffice/inventario', label: 'Proveedores e inventario', icon: 'building-2', roles: ['admin', 'sales'] },
+    { href: '/backoffice/finanzas', label: 'Finanzas y personal', icon: 'wallet', roles: ['admin'] },
+    { href: '/backoffice/presentacion', label: 'Presentación', icon: 'presentation', roles: ['admin'] },
+    { href: '/backoffice/proyectos', label: 'Proyectos web', icon: 'image', roles: ['admin'] },
+    { href: '/backoffice/usuarios', label: 'Usuarios', icon: 'user', roles: ['admin'] }
   ];
 
   const user = $derived((data.user as User | null) ?? getAuthUser());
@@ -34,6 +35,7 @@
   );
 
   onMount(async () => {
+    registerAnimateIcons();
     initAuth();
     const { data } = await supabase.from('company_profile').select('name, logo_url').limit(1).maybeSingle();
     if (data) {
@@ -70,7 +72,9 @@
       <nav class="bo-nav">
         {#each visibleSections as s}
           <a href={s.href} class:active={isActive(s.href)}>
-            <span class="nav-icon" aria-hidden="true">{s.icon}</span>
+            <span class="nav-icon" aria-hidden="true">
+              <animate-icons name={s.icon} size="18" color="currentColor"></animate-icons>
+            </span>
             <span class="nav-label">{s.label}</span>
           </a>
         {/each}
@@ -190,12 +194,16 @@
     color: var(--color-primary);
   }
   .nav-icon {
-    width: 1.25em;
+    width: 20px;
+    height: 20px;
     flex: 0 0 auto;
-    text-align: center;
-    font-size: 14px;
-    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0.9;
+  }
+  .nav-icon :global(svg) {
+    display: block;
   }
   .nav-label {
     min-width: 0;
@@ -217,7 +225,6 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 0 8px;
   }
   .bo-user-info strong {
     font-size: 13px;
