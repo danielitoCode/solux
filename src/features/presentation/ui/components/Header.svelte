@@ -2,11 +2,13 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { publicContactUseCases } from '$features/contact/di/public-contact';
+  import { iconHover, registerAnimateIcons } from '$infrastructure/ui/animate-icons-registry';
 
   let companyName = $state('SOLUX');
   let logoUrl = $state('');
 
   onMount(async () => {
+    registerAnimateIcons();
     const data = await publicContactUseCases.getCompanyProfile.execute();
     if (data) { companyName = data.name || 'SOLUX'; logoUrl = data.logo_url || ''; }
   });
@@ -48,9 +50,15 @@
 
   <nav id="primary-navigation" class="desktop-nav" class:open={menuOpen} aria-label="Navegación principal">
     {#each links as link}
-      <a href={link.href} class:active={isActive(link.href)} aria-current={isActive(link.href) ? 'page' : undefined} onclick={closeMenu}>
+      <a
+        href={link.href}
+        class:active={isActive(link.href)}
+        aria-current={isActive(link.href) ? 'page' : undefined}
+        onclick={closeMenu}
+        use:iconHover
+      >
         <span class="nav-icon" aria-hidden="true">
-          <animate-icons name={link.icon} size="16" color="currentColor"></animate-icons>
+          <animate-icons name={link.icon} size="16" color="currentColor" is-animated="false"></animate-icons>
         </span>
         <span>{link.label}</span>
       </a>
@@ -58,8 +66,8 @@
   </nav>
 
   <div class="header-actions">
-    <button class="theme-toggle" type="button" onclick={toggleTheme} aria-label="Cambiar tema">
-      <span aria-hidden="true"><animate-icons name="sun" size="18" color="currentColor"></animate-icons></span>
+    <button class="theme-toggle" type="button" onclick={toggleTheme} aria-label="Cambiar tema" use:iconHover>
+      <span aria-hidden="true"><animate-icons name="sun" size="18" color="currentColor" is-animated="false"></animate-icons></span>
     </button>
     <a class="btn btn-small btn-primary reserve" href="/reservas" onclick={closeMenu}>Reservar</a>
     <button
@@ -69,8 +77,9 @@
       aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
       aria-expanded={menuOpen}
       aria-controls="primary-navigation"
+      use:iconHover
     >
-      <span aria-hidden="true"><animate-icons name="menu" size="18" color="currentColor"></animate-icons></span>
+      <span aria-hidden="true"><animate-icons name="menu" size="18" color="currentColor" is-animated="false"></animate-icons></span>
     </button>
   </div>
 </header>
