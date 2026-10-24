@@ -12,14 +12,14 @@
   });
 
   const links = [
-    { href: '/', label: 'Inicio', route: '/' },
-    { href: '/servicios', label: 'Servicios', route: '/servicios' },
-    { href: '/catalogo', label: 'Catálogo', route: '/catalogo' },
-    { href: '/proyectos', label: 'Proyectos', route: '/proyectos' },
-    { href: '/nosotros', label: 'Nosotros', route: '/nosotros' },
-    { href: '/seguimiento', label: 'Seguimiento', route: '/seguimiento' },
-    { href: '/soporte', label: 'Soporte', route: '/soporte' },
-    { href: '/contacto', label: 'Contacto', route: '/contacto' }
+    { href: '/', label: 'Inicio', icon: '⌂', route: '/' },
+    { href: '/servicios', label: 'Servicios', icon: '⚡', route: '/servicios' },
+    { href: '/catalogo', label: 'Catálogo', icon: '📦', route: '/catalogo' },
+    { href: '/proyectos', label: 'Proyectos', icon: '📷', route: '/proyectos' },
+    { href: '/nosotros', label: 'Nosotros', icon: '◎', route: '/nosotros' },
+    { href: '/seguimiento', label: 'Seguimiento', icon: '⌕', route: '/seguimiento' },
+    { href: '/soporte', label: 'Soporte', icon: '🛠️', route: '/soporte' },
+    { href: '/contacto', label: 'Contacto', icon: '✉', route: '/contacto' }
   ];
 
   let menuOpen = $state(false);
@@ -48,7 +48,10 @@
 
   <nav id="primary-navigation" class="desktop-nav" class:open={menuOpen} aria-label="Navegación principal">
     {#each links as link}
-      <a href={link.href} class:active={isActive(link.href)} aria-current={isActive(link.href) ? 'page' : undefined} onclick={closeMenu}>{link.label}</a>
+      <a href={link.href} class:active={isActive(link.href)} aria-current={isActive(link.href) ? 'page' : undefined} onclick={closeMenu}>
+        <span class="nav-icon" aria-hidden="true">{link.icon}</span>
+        <span>{link.label}</span>
+      </a>
     {/each}
   </nav>
 
@@ -141,11 +144,23 @@
     justify-content: center;
   }
   .desktop-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 8px 12px;
     border-radius: 10px;
     font-size: 13px;
     font-weight: 600;
     color: var(--color-muted);
+  }
+  .desktop-nav .nav-icon {
+    font-size: 13px;
+    line-height: 1;
+    opacity: 0.85;
+  }
+  .desktop-nav a.active .nav-icon,
+  .desktop-nav a:hover .nav-icon {
+    opacity: 1;
   }
   .desktop-nav a:hover,
   .desktop-nav a.active {

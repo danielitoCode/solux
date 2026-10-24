@@ -13,18 +13,18 @@
 
   const isLogin = $derived($page.url.pathname === '/backoffice/login');
 
-  const sections: { href: string; label: string; roles: UserRole[] }[] = [
-    { href: '/backoffice', label: 'Dashboard', roles: ['admin', 'support', 'sales'] },
-    { href: '/backoffice/reservas', label: 'Reservaciones', roles: ['admin', 'sales'] },
-    { href: '/backoffice/soporte', label: 'Soporte', roles: ['admin', 'support'] },
-    { href: '/backoffice/mensajes', label: 'Mensajes', roles: ['admin', 'support', 'sales'] },
-    { href: '/backoffice/catalogo', label: 'Catálogo', roles: ['admin', 'sales'] },
-    { href: '/backoffice/consumibles', label: 'Consumibles', roles: ['admin', 'sales'] },
-    { href: '/backoffice/inventario', label: 'Proveedores e inventario', roles: ['admin', 'sales'] },
-    { href: '/backoffice/finanzas', label: 'Finanzas y personal', roles: ['admin'] },
-    { href: '/backoffice/presentacion', label: 'Presentación', roles: ['admin'] },
-    { href: '/backoffice/proyectos', label: 'Proyectos web', roles: ['admin'] },
-    { href: '/backoffice/usuarios', label: 'Usuarios', roles: ['admin'] }
+  const sections: { href: string; label: string; icon: string; roles: UserRole[] }[] = [
+    { href: '/backoffice', label: 'Dashboard', icon: '◈', roles: ['admin', 'support', 'sales'] },
+    { href: '/backoffice/reservas', label: 'Reservaciones', icon: '📅', roles: ['admin', 'sales'] },
+    { href: '/backoffice/soporte', label: 'Soporte', icon: '🛠️', roles: ['admin', 'support'] },
+    { href: '/backoffice/mensajes', label: 'Mensajes', icon: '✉', roles: ['admin', 'support', 'sales'] },
+    { href: '/backoffice/catalogo', label: 'Catálogo', icon: '📦', roles: ['admin', 'sales'] },
+    { href: '/backoffice/consumibles', label: 'Consumibles', icon: '🔧', roles: ['admin', 'sales'] },
+    { href: '/backoffice/inventario', label: 'Proveedores e inventario', icon: '🏭', roles: ['admin', 'sales'] },
+    { href: '/backoffice/finanzas', label: 'Finanzas y personal', icon: '💰', roles: ['admin'] },
+    { href: '/backoffice/presentacion', label: 'Presentación', icon: '✦', roles: ['admin'] },
+    { href: '/backoffice/proyectos', label: 'Proyectos web', icon: '📷', roles: ['admin'] },
+    { href: '/backoffice/usuarios', label: 'Usuarios', icon: '👤', roles: ['admin'] }
   ];
 
   const user = $derived((data.user as User | null) ?? getAuthUser());
@@ -69,7 +69,10 @@
 
       <nav class="bo-nav">
         {#each visibleSections as s}
-          <a href={s.href} class:active={isActive(s.href)}>{s.label}</a>
+          <a href={s.href} class:active={isActive(s.href)}>
+            <span class="nav-icon" aria-hidden="true">{s.icon}</span>
+            <span class="nav-label">{s.label}</span>
+          </a>
         {/each}
       </nav>
 
@@ -168,6 +171,9 @@
     flex: 1;
   }
   .bo-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 10px 12px;
     border-radius: 10px;
     font-size: 13px;
@@ -182,6 +188,23 @@
   .bo-nav a.active {
     background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     color: var(--color-primary);
+  }
+  .nav-icon {
+    width: 1.25em;
+    flex: 0 0 auto;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0.9;
+  }
+  .nav-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bo-nav a.active .nav-icon {
+    opacity: 1;
   }
   .bo-user {
     border-top: 1px solid var(--color-border);
