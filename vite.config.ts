@@ -17,12 +17,8 @@ export default defineConfig({
     ],
     // threads evita el crash de forks+undici en Windows
     pool: 'threads',
-    // node por defecto; UI usa happy-dom (jsdom dispara undici.bind en Windows)
+    // node por defecto; UI: // @vitest-environment happy-dom en el archivo
     environment: 'node',
-    environmentMatchGlobs: [
-      ['test/**/ui/components/**', 'happy-dom'],
-      ['test/**/components/**', 'happy-dom']
-    ],
     globals: true,
     setupFiles: ['test/setup.ts'],
     alias: {
