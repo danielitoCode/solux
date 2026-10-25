@@ -5,7 +5,7 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [sveltekit()],
   resolve: {
-    // Forzar builds client de Svelte en tests UI
+    // Builds cliente de Svelte en tests UI
     conditions: ['browser', 'import', 'module', 'default']
   },
   test: {
@@ -16,7 +16,14 @@ export default defineConfig({
       'node_modules/**',
       '.svelte-kit/**'
     ],
-    environment: 'jsdom',
+    // forks + undici rompe en Windows (bind undefined). threads es estable.
+    pool: 'threads',
+    // Dominio/mappers: node. UI y lead-context: // @vitest-environment jsdom
+    environment: 'node',
+    environmentMatchGlobs: [
+      ['test/**/ui/**', 'jsdom'],
+      ['test/**/components/**', 'jsdom']
+    ],
     globals: true,
     setupFiles: ['test/setup.ts'],
     alias: {
@@ -32,7 +39,11 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/features/**/domain/**', 'src/infrastructure/**'],
+      include: [
+        'src/features/**/domain/**',
+        'src/features/**/data/mappers/**',
+        'src/infrastructure/**'
+      ],
       exclude: ['**/*.svelte', '**/index.ts', '**/database.types.ts']
     }
   }
