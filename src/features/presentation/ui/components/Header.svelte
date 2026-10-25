@@ -55,7 +55,7 @@
         aria-current={isActive(link.href) ? 'page' : undefined}
         onclick={closeMenu}
       >
-        <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={link.icon}></span>
+        <span class="nav-icon" aria-hidden="true" data-size="16" use:navIcon={link.icon}></span>
         <span>{link.label}</span>
       </a>
     {/each}
@@ -84,18 +84,21 @@
     position: relative;
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 18px 28px;
+    padding: 14px 24px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     z-index: 30;
+    flex-wrap: nowrap;
   }
+
   .brand {
     display: inline-flex;
     align-items: center;
     gap: 10px;
     min-width: 0;
+    flex: 0 0 auto;
+    max-width: 140px;
     font-weight: 800;
     letter-spacing: -0.03em;
     color: var(--color-text);
@@ -143,28 +146,36 @@
     position: relative;
     z-index: 1;
   }
+
+  /* Una sola fila centrada entre logo y acciones */
   .desktop-nav {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
     justify-content: center;
+    gap: 2px;
+    flex-wrap: nowrap;
+    overflow: hidden;
   }
   .desktop-nav a {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
+    gap: 5px;
+    padding: 7px 9px;
     border-radius: 10px;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--color-muted);
+    white-space: nowrap;
+    flex: 0 0 auto;
   }
   .desktop-nav .nav-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     line-height: 0;
     opacity: 0.9;
     flex-shrink: 0;
@@ -185,6 +196,7 @@
     color: var(--color-primary);
     background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   }
+
   .header-actions {
     display: flex;
     align-items: center;
@@ -201,6 +213,7 @@
     border-radius: 10px;
     display: inline-grid;
     place-items: center;
+    flex: 0 0 auto;
   }
   .theme-toggle:hover,
   .menu-toggle:hover {
@@ -210,15 +223,24 @@
   .menu-toggle {
     display: none;
   }
-  @media (max-width: 1100px) {
+
+  /* Compactar un poco antes del menú móvil */
+  @media (max-width: 1200px) {
     .desktop-nav a {
-      padding-inline: 9px;
+      padding: 6px 7px;
+      font-size: 12px;
+      gap: 4px;
     }
     .site-header {
-      gap: 10px;
+      padding-inline: 18px;
+      gap: 8px;
+    }
+    .brand {
+      max-width: 120px;
     }
   }
-  @media (max-width: 900px) {
+
+  @media (max-width: 980px) {
     .site-header {
       padding: 14px 18px;
     }
@@ -234,6 +256,9 @@
       padding: 8px;
       flex-direction: column;
       align-items: stretch;
+      justify-content: flex-start;
+      flex-wrap: nowrap;
+      overflow: visible;
       box-shadow: var(--color-shadow);
       z-index: 40;
     }
@@ -242,6 +267,7 @@
     }
     .desktop-nav a {
       padding: 11px 12px;
+      font-size: 13px;
     }
     .menu-toggle {
       display: inline-grid;
@@ -252,12 +278,14 @@
       padding-inline: 13px;
     }
   }
+
   @media (max-width: 520px) {
     .site-header {
       padding-inline: 14px;
     }
     .brand {
       gap: 8px;
+      max-width: 110px;
     }
     .brand-mark,
     .company-logo {
