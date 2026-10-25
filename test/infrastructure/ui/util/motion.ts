@@ -18,7 +18,6 @@ describe('motion utils', () => {
         removeEventListener: vi.fn()
       }))
     );
-
     const { ms } = await import('$infrastructure/ui/util/motion');
     expect(ms(300)).toBe(300);
   });
@@ -32,8 +31,25 @@ describe('motion utils', () => {
         removeEventListener: vi.fn()
       }))
     );
-
     const { ms } = await import('$infrastructure/ui/util/motion');
     expect(ms(300)).toBe(0);
+  });
+
+  it('reveal añade clase in si no hay IntersectionObserver', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation(() => ({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn()
+      }))
+    );
+    // @ts-expect-error intentional
+    globalThis.IntersectionObserver = undefined;
+
+    const { reveal } = await import('$infrastructure/ui/util/motion');
+    const node = { classList: { add: vi.fn() }, style: { setProperty: vi.fn() } } as unknown as HTMLElement;
+    reveal(node, 100);
+    expect(node.classList.add).toHaveBeenCalledWith('in');
   });
 });
