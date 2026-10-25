@@ -1,4 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
+// @vitest-environment jsdom
+import { describe, it, expect } from 'vitest';
 import {
   parseLeadIntent,
   parseLeadSource,
@@ -6,15 +7,6 @@ import {
 } from '$infrastructure/ui/lead-context';
 
 describe('lead-context', () => {
-  const originalLocation = window.location;
-
-  afterEach(() => {
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: originalLocation
-    });
-  });
-
   it('parseLeadIntent acepta valores válidos y fallback', () => {
     expect(parseLeadIntent('buy')).toBe('buy');
     expect(parseLeadIntent('INSTALL')).toBe('install');
@@ -35,7 +27,6 @@ describe('lead-context', () => {
       configurable: true,
       value: new URL('http://localhost/reservas?intent=install&source=catalog')
     });
-
     const lead = readLeadFromLocation();
     expect(lead.intent).toBe('install');
     expect(lead.source).toBe('catalog');
@@ -46,7 +37,6 @@ describe('lead-context', () => {
       configurable: true,
       value: new URL('http://localhost/')
     });
-
     const lead = readLeadFromLocation({ intent: 'buy', source: 'home' });
     expect(lead.intent).toBe('buy');
     expect(lead.source).toBe('home');
