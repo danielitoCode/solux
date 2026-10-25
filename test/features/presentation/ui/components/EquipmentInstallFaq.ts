@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment happy-dom
 /**
  * Prueba de UI (component) — espejo de
  * src/features/presentation/ui/components/EquipmentInstallFaq.svelte

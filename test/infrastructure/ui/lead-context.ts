@@ -1,5 +1,4 @@
-// @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   parseLeadIntent,
   parseLeadSource,
@@ -7,6 +6,10 @@ import {
 } from '$infrastructure/ui/lead-context';
 
 describe('lead-context', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('parseLeadIntent acepta valores válidos y fallback', () => {
     expect(parseLeadIntent('buy')).toBe('buy');
     expect(parseLeadIntent('INSTALL')).toBe('install');
@@ -22,23 +25,20 @@ describe('lead-context', () => {
     expect(parseLeadSource(undefined, 'home')).toBe('home');
   });
 
-  it('readLeadFromLocation lee query params', () => {
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: new URL('http://localhost/reservas?intent=install&source=catalog')
-    });
-    const lead = readLeadFromLocation();
-    expect(lead.intent).toBe('install');
-    expect(lead.source).toBe('catalog');
-  });
-
-  it('readLeadFromLocation usa defaults si faltan params', () => {
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: new URL('http://localhost/')
-    });
+  it('readLeadFromLocation sin location usa defaults', () => {
+    // En Node no hay location → defaults
     const lead = readLeadFromLocation({ intent: 'buy', source: 'home' });
     expect(lead.intent).toBe('buy');
     expect(lead.source).toBe('home');
+  });
+
+  it('readLeadFromLocation lee query params si hay location', () => {
+    vi.stubGlobal('location', {
+      search: '?intent=install&source=catalog'
+    });
+
+    const lead = readLeadFromLocation();
+    expect(lead.intent).toBe('install');
+    expect(lead.source).toBe('catalog');
   });
 });

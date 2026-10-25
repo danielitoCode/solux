@@ -5,7 +5,6 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [sveltekit()],
   resolve: {
-    // Builds cliente de Svelte en tests UI
     conditions: ['browser', 'import', 'module', 'default']
   },
   test: {
@@ -16,13 +15,13 @@ export default defineConfig({
       'node_modules/**',
       '.svelte-kit/**'
     ],
-    // forks + undici rompe en Windows (bind undefined). threads es estable.
+    // threads evita el crash de forks+undici en Windows
     pool: 'threads',
-    // Dominio/mappers: node. UI y lead-context: // @vitest-environment jsdom
+    // node por defecto; UI usa happy-dom (jsdom dispara undici.bind en Windows)
     environment: 'node',
     environmentMatchGlobs: [
-      ['test/**/ui/**', 'jsdom'],
-      ['test/**/components/**', 'jsdom']
+      ['test/**/ui/components/**', 'happy-dom'],
+      ['test/**/components/**', 'happy-dom']
     ],
     globals: true,
     setupFiles: ['test/setup.ts'],
