@@ -1,6 +1,45 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
+import path from 'node:path';
 
 export default defineConfig({
-  plugins: [sveltekit()]
+  plugins: [sveltekit()],
+  resolve: {
+    conditions: ['browser', 'import', 'module', 'default']
+  },
+  test: {
+    include: ['test/**/*.ts'],
+    exclude: [
+      'test/setup.ts',
+      'test/mocks/**',
+      'node_modules/**',
+      '.svelte-kit/**'
+    ],
+    // threads evita el crash de forks+undici en Windows
+    pool: 'threads',
+    // node por defecto; UI: // @vitest-environment happy-dom en el archivo
+    environment: 'node',
+    globals: true,
+    setupFiles: ['test/setup.ts'],
+    alias: {
+      $features: path.resolve('./src/features'),
+      $infrastructure: path.resolve('./src/infrastructure'),
+      $app: path.resolve('./test/mocks/app')
+    },
+    server: {
+      deps: {
+        inline: [/@testing-library\/svelte/, /svelte/]
+      }
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: [
+        'src/features/**/domain/**',
+        'src/features/**/data/mappers/**',
+        'src/infrastructure/**'
+      ],
+      exclude: ['**/*.svelte', '**/index.ts', '**/database.types.ts']
+    }
+  }
 });
