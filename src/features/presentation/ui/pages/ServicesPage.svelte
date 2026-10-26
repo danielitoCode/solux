@@ -43,6 +43,7 @@
     { icon: '✦', title: 'Asesoría', text: 'Evaluación y presupuesto según tus necesidades reales.', stage: 'Planifica', cta: 'Reservar visita técnica', size: 'full' }
   ];
 
+  // Recorrido de la energía: ordena los servicios como una cadena real
   const chain = [
     { icon: '☀', label: 'Produce', text: 'Paneles solares' },
     { icon: '◈', label: 'Convierte', text: 'Inversores' },
@@ -60,3 +61,100 @@
     'Soporte y mantenimiento'
   ];
 </script>
+
+<section class="page" use:scrollDepth>
+  <Ambient />
+
+  <!-- ───────── Encabezado ───────── -->
+  <div class="section-head intro">
+    <div>
+      <div class="eyebrow rise" style="--i: 0">{eyebrow}</div>
+      {#key title}
+        <h2 class="headline" aria-label={title}>
+          {#each words as word, i}
+            <span class="word" aria-hidden="true"
+            ><span class="word-in" style="--w: {i}">{word}</span></span
+            >{' '}
+          {/each}
+        </h2>
+      {/key}
+    </div>
+    {#key description}
+      <p class="rise" style="--i: 3" in:fade={{ duration: ms(300) }}>{description}</p>
+    {/key}
+  </div>
+
+  <!-- ───────── Recorrido de la energía ───────── -->
+  <ol class="chain rv" use:reveal aria-label="Recorrido de la energía">
+    {#each chain as step, i (step.label)}
+      <li class="link" style="--i: {i}">
+        <span class="node" aria-hidden="true">{step.icon}</span>
+        <strong>{step.label}</strong>
+        <small>{step.text}</small>
+      </li>
+    {/each}
+  </ol>
+
+  <!-- ───────── Servicios (bento) ───────── -->
+  <div class="bento">
+    {#each services as s, i (s.title)}
+      <article class="card service {s.size} rv" use:reveal={i * 80} use:spotlight>
+        <div class="top">
+          <div class="icon" aria-hidden="true">{s.icon}</div>
+          <span class="stage">{s.stage}</span>
+        </div>
+        <div class="body">
+          <h3>{s.title}</h3>
+          <p>{s.text}</p>
+        </div>
+        <a class={s.size === 'full' ? 'btn btn-accent' : 'card-link'} href="/reservas">
+          {s.cta} <span class="arrow" aria-hidden="true">→</span>
+        </a>
+      </article>
+    {/each}
+  </div>
+
+  <!-- ───────── Ingeniería a medida ───────── -->
+  <div class="feature">
+    <div class="panel rv" use:reveal>
+      <img class="panel-img" src={image} alt="" loading="lazy" decoding="async" />
+      <div class="panel-body">
+        <div class="eyebrow" style="color: var(--color-accent)">Ingeniería SOLUX</div>
+        {#key secondaryTitle}
+          <h2 in:fade={{ duration: ms(300) }}>{secondaryTitle}</h2>
+        {/key}
+        {#key secondaryText}
+          <p class="lead" in:fade={{ duration: ms(300) }}>{secondaryText}</p>
+        {/key}
+        <ul class="criteria" aria-label="Qué evaluamos">
+          {#each criteria as item, i (item)}
+            <li style="--i: {i}">{item}</li>
+          {/each}
+        </ul>
+      </div>
+    </div>
+
+    <div class="card why rv" use:reveal={140} use:spotlight>
+      <h3>¿Por qué SOLUX?</h3>
+      <ul class="check-list">
+        {#each reasons as reason, i (reason)}
+          <li style="--i: {i}">{reason}</li>
+        {/each}
+      </ul>
+      <a class="btn btn-accent" href="/reservas">
+        Solicitar evaluación <span class="arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ───────── CTA final ───────── -->
+  <div class="banner rv" use:reveal>
+    <div>
+      <strong>Empecemos con una evaluación técnica.</strong>
+      <p>Medimos tu consumo y te entregamos un presupuesto claro, sin compromiso de compra.</p>
+    </div>
+    <a class="btn btn-accent" href="/reservas">
+      Reservar visita técnica <span class="arrow" aria-hidden="true">→</span>
+    </a>
+  </div>
+</section>
