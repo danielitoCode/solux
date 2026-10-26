@@ -8,6 +8,7 @@
     import Ambient from "$infrastructure/ui/component/Ambient.svelte";
     import './projects-page.css';
 
+    /* ─────────── Tipos ─────────── */
     type Layout = 'hero-left' | 'editorial' | 'gallery-grid' | 'technical-report';
     type Spec = { label: string; value: string };
     type Project = {
@@ -45,7 +46,7 @@
             if (ca == null && cb == null) return 0;
             if (ca == null) return 1;
             if (cb == null) return -1;
-            return cb - ca;
+            return cb - ca; // mayor potencia primero
         });
     }
 
@@ -69,6 +70,7 @@
         );
     }
 
+    /** Datos desde /proyectos/+page.ts load (prerender). */
     let {
         header = DEFAULT_HEADER,
         projects: projectsIn = [],
@@ -83,6 +85,7 @@
     const loading = false;
     const words = $derived(header.title.split(/\s+/).filter(Boolean));
 
+    /* ─────────── Filtro por categoría ─────────── */
     let category = $state('all');
 
     const categories = $derived.by(() => {
@@ -96,6 +99,7 @@
         if (category !== 'all' && !categories.some(([c]) => c === category)) category = 'all';
     });
 
+    /* ─────────── Métricas reales con conteo animado ─────────── */
     const totalKw = $derived(projects.reduce((sum, p) => sum + (p.capacity_kw ?? 0), 0));
     const countTween = new Tween(0, { duration: ms(1200), easing: cubicOut });
     const kwTween = new Tween(0, { duration: ms(1400), easing: cubicOut });
@@ -108,11 +112,13 @@
 
     const formatKw = (value: number) => new Intl.NumberFormat('es', { maximumFractionDigits: 1 }).format(value);
 
+    /* ─────────── Descripciones largas: recortadas con "Leer más" ─────────── */
     let expanded = $state<Record<string, boolean>>({});
 
     const isLong = (text: string) =>
         (text?.length ?? 0) > 300 || (text?.match(/\n/g)?.length ?? 0) >= 5;
 
+    /** Guarda la altura completa del texto (--full) para animar el despliegue. */
     function measure(node: HTMLElement) {
         const set = () => node.style.setProperty('--full', `${node.scrollHeight}px`);
         set();
@@ -121,77 +127,100 @@
         return { destroy: () => ro.disconnect() };
     }
 
+    /* Límite de fotos visibles por tarjeta: el resto se resume en "+N" */
     const MOSAIC_MAX = 6;
-    function mosaicClass(n: number) {
-        if (n <= 2) return 'cols-2';
-        if (n === 3) return 'cols-3';
-        if (n === 4) return 'cols-4';
-        return 'cols-many';
-    }
+    const TECH_MAX = 8;
+    const mosaicClass = (n: number) => `m${Math.min(n, 6)}`;
 
+    /* ─────────── Lightbox con galería ─────────── */
     let lightbox = $state<{ images: string[]; index: number; title: string } | null>(null);
+
     const openLightbox = (p: Project, index: number) =>
         (lightbox = { images: p.gallery, index, title: p.title });
     const closeLightbox = () => (lightbox = null);
-    const stepLightbox = (direction: number) => {
+
+    function step(direction: 1 | -1) {
         if (!lightbox) return;
         const n = lightbox.images.length;
         lightbox = { ...lightbox, index: (lightbox.index + direction + n) % n };
-    };
+    }
+
+    function onKeydown(e: KeyboardEvent) {
+        if (!lightbox) return;
+        if (e.key === 'Escape') closeLightbox();
+        else if (e.key === 'ArrowRight') step(1);
+        else if (e.key === 'ArrowLeft') step(-1);
+    }
+
     function focusOnMount(node: HTMLElement) {
         node.focus();
     }
-    function onLightboxKey(e: KeyboardEvent) {
-        if (!lightbox) return;
-        if (e.key === 'Escape') closeLightbox();
-        if (e.key === 'ArrowRight') stepLightbox(1);
-        if (e.key === 'ArrowLeft') stepLightbox(-1);
-    }
 </script>
 
-<svelte:window onkeydown={onLightboxKey} />
+<svelte:window onkeydown={onKeydown} />
 
 <section class="page projects-page" use:scrollDepth>
     <Ambient />
 
-    <div class="intro">
-        <div class="eyebrow rise" style="--i: 0">{header.eyebrow}</div>
-        {#key header.title}
-            <h1 class="headline" aria-label={header.title}>
-                {#each words as word, i (i)}
-                    <span class="word" aria-hidden="true"
-                        ><span class="word-in" style="--w: {i}">{word}</span></span
+    <!-- ───────── Encabezado ───────── -->
+    <header class="section-head intro">
+        <div>
+            <div class="eyebrow rise" style="--i: 0">{header.eyebrow}</div>
+            {#key header.title}
+                <h1 class="headline" aria-label={header.title}>
+                    {#each words as word, i (i)}
+            <span class="word" aria-hidden="true"
+            ><span class="word-in" style="--w: {i}">{word}</span></span
                     >{' '}
-                {/each}
-            </h1>
-        {/key}
-        <p class="lead rise" style="--i: 4">{header.description}</p>
+                    {/each}
+                </h1>
+            {/key}
+            {#key header.description}
+            <p class="rise" style="--i: 4" in:fade={{ duration: ms(300) }}>{header.description}</p>
+            {/key}
+        </div>
+    </header>
 
-        {#if !loading && !loadError && projects.length}
-            <div class="metrics rise" style="--i: 5">
+    <!-- ───────── Resumen + filtro ───────── -->
+    {#if !loading && !loadError && projects.length}
+        <div class="summary rise" style="--i: 5">
+            <div class="metric">
+                <strong>{Math.round(countTween.current)}</strong>
+                <span>proyectos publicados</span>
+            </div>
+            {#if totalKw > 0}
                 <div class="metric">
-                    <strong>{Math.round(countTween.current)}</strong>
-                    <span>proyectos</span>
-                </div>
-                <div class="metric">
-                    <strong>{formatKw(kwTween.current)} kW</strong>
+                    <strong>{formatKw(kwTween.current)} <small>kW</small></strong>
                     <span>capacidad instalada</span>
                 </div>
-            </div>
+            {/if}
+        </div>
 
             <div class="chips rise" style="--i: 6" role="group" aria-label="Filtrar por categoría">
-                <button type="button" class="chip" class:active={category === 'all'} aria-pressed={category === 'all'} onclick={() => (category = 'all')}>
+                <button
+                        type="button"
+                        class="chip"
+                        class:active={category === 'all'}
+                        aria-pressed={category === 'all'}
+                        onclick={() => (category = 'all')}
+                >
                     Todos <span class="chip-count">{projects.length}</span>
                 </button>
                 {#each categories as [key, count] (key)}
-                    <button type="button" class="chip" class:active={category === key} aria-pressed={category === key} onclick={() => (category = key)}>
+                    <button
+                            type="button"
+                            class="chip"
+                            class:active={category === key}
+                            aria-pressed={category === key}
+                            onclick={() => (category = key)}
+                    >
                         {key} <span class="chip-count">{count}</span>
                     </button>
                 {/each}
             </div>
-        {/if}
-    </div>
+    {/if}
 
+    <!-- ───────── Contenido ───────── -->
     {#if loading}
         <div class="projects-list" aria-busy="true" aria-label="Cargando proyectos">
             {#each [1, 2] as n (n)}
@@ -220,12 +249,12 @@
         <div class="projects-list">
             {#each visible as p (p.id)}
                 <article
-                    class="project-card rv"
-                    class:editorial={p.layout === 'editorial'}
-                    class:mosaic={p.layout === 'gallery-grid'}
-                    class:technical={p.layout === 'technical-report'}
-                    use:reveal
-                    animate:flip={{ duration: ms(380) }}
+                        class="project-card rv"
+                        class:editorial={p.layout === 'editorial'}
+                        class:mosaic={p.layout === 'gallery-grid'}
+                        class:technical={p.layout === 'technical-report'}
+                        use:reveal
+                        animate:flip={{ duration: ms(380) }}
                 >
                     {#if p.layout === 'hero-left'}
                         <div class="split" class:no-media={!p.gallery.length}>
@@ -251,46 +280,73 @@
                                 {/each}
                             </div>
                         {/if}
-                        {@render specs(p.specifications)}
-                    {:else}
-                        <div class="technical-body">
-                            <div class="tech-head">
-                                <div class="eyebrow">{p.category}{#if p.location} · {p.location}{/if}</div>
-                                <h2>{p.title}</h2>
-                                {@render desc(p)}
-                            </div>
+                        <div class="mosaic-specs">
+                            <p class="system">{p.system_name}{#if p.capacity_kw} · {p.capacity_kw} kW{/if}</p>
                             {@render specs(p.specifications)}
-                            {#if p.gallery.length}
-                                {@const shown = Math.min(p.gallery.length, MOSAIC_MAX)}
-                                <div class="mosaic-gallery {mosaicClass(shown)}">
-                                    {#each p.gallery.slice(0, shown) as _, i}
-                                        {@render photo(p, i, '', i === shown - 1 ? p.gallery.length - shown : 0)}
-                                    {/each}
-                                </div>
-                            {/if}
                         </div>
+                    {:else}
+                        <div class="technical-head">
+                            <div>
+                                <div class="eyebrow">Ficha de instalación · {p.category}</div>
+                                <h2>{p.title}</h2>
+                                {#if p.location}<p class="system">{p.location}</p>{/if}
+                            </div>
+                            <div class="capacity">{p.capacity_kw ?? '—'}<small>kW instalados</small></div>
+                        </div>
+                        <div class="technical-data">
+                            {#if p.system_name}<div><small>Sistema</small><strong>{p.system_name}</strong></div>{/if}
+                            {#if p.inverter}<div><small>Inversor</small><strong>{p.inverter}</strong></div>{/if}
+                            {#if p.panels}<div><small>Paneles</small><strong>{p.panels}</strong></div>{/if}
+                            {#if p.battery}<div><small>Batería</small><strong>{p.battery}</strong></div>{/if}
+                            {#if p.location}<div><small>Ubicación</small><strong>{p.location}</strong></div>{/if}
+                        </div>
+                        {#if p.gallery.length}
+                            {@const shown = Math.min(p.gallery.length, TECH_MAX)}
+                            <div class="technical-gallery">
+                                {#each p.gallery.slice(0, shown) as _, i}
+                                    {@render photo(p, i, '', i === shown - 1 ? p.gallery.length - shown : 0)}
+                                {/each}
+                            </div>
+                        {/if}
+                        {#if p.description}
+                            <div class="info" style="padding-top: 8px">{@render desc(p)}</div>
+                        {/if}
                     {/if}
                 </article>
             {/each}
         </div>
     {/if}
+
+    <div class="banner rv" use:reveal>
+        <div>
+            <strong>¿Quieres un proyecto como estos?</strong>
+            <p>Evaluamos tu consumo y te proponemos el sistema adecuado, con presupuesto claro.</p>
+        </div>
+        <a class="btn btn-accent" href="/reservas">
+            Solicitar presupuesto <span class="arrow" aria-hidden="true">→</span>
+        </a>
+    </div>
 </section>
 
 {#snippet photo(p: Project, i: number, cls = '', more = 0)}
-    <button type="button" class="photo {cls}" onclick={() => openLightbox(p, i)}>
+    <button
+            type="button"
+            class="ph {cls}"
+            aria-label={`Ver foto ${i + 1} de ${p.title}`}
+            onclick={() => openLightbox(p, i)}
+    >
         <img src={p.gallery[i]} alt="" loading="lazy" decoding="async" />
-        {#if more > 0}
-            <span class="more">+{more}</span>
-        {/if}
+        {#if more > 0}<span class="more">+{more}</span>{/if}
     </button>
 {/snippet}
 
 {#snippet media(p: Project)}
-    {@const rest = p.gallery.slice(1, 4)}
+    {@const rest = p.gallery.slice(1, 5)}
     {@const hidden = Math.max(0, p.gallery.length - 1 - rest.length)}
-    <div class="media">
+    <div class="media-col">
         <div class="main-wrap">
             {@render photo(p, 0, 'main')}
+            <span class="photo-label">Instalación SOLUX</span>
         </div>
         {#if rest.length}
             <div class="thumbs">
@@ -307,53 +363,65 @@
         <div class="eyebrow">{p.category}{#if p.location} · {p.location}{/if}</div>
         <h2>{p.title}</h2>
         {#if p.system_name}<p class="system">{p.system_name}</p>{/if}
-        {#if p.capacity_kw != null}<p class="capacity">{formatKw(p.capacity_kw)} kW</p>{/if}
         {@render desc(p)}
         {@render chips(p)}
         {@render specs(p.specifications)}
     </div>
 {/snippet}
 
+<!-- Descripción: si es larga se recorta y se despliega con animación -->
 {#snippet desc(p: Project)}
     {#if p.description}
-        {#if isLong(p.description)}
-            <div class="desc" class:open={expanded[p.id]} use:measure>
-                <p>{p.description}</p>
-            </div>
-            <button type="button" class="more-btn" onclick={() => (expanded[p.id] = !expanded[p.id])}>
-                {expanded[p.id] ? 'Leer menos' : 'Leer más'}
+        {@const long = isLong(p.description)}
+        <div class="desc-wrap" class:long class:open={expanded[p.id]}>
+            <p class="project-description" use:measure>{p.description}</p>
+        </div>
+        {#if long}
+            <button
+                    type="button"
+                    class="more-btn"
+                    aria-expanded={!!expanded[p.id]}
+                    onclick={() => (expanded[p.id] = !expanded[p.id])}
+            >
+                {expanded[p.id] ? 'Ver menos' : 'Leer más'} <span class="chev" aria-hidden="true">⌄</span>
             </button>
-        {:else}
-            <p class="desc">{p.description}</p>
         {/if}
     {/if}
 {/snippet}
 
 {#snippet chips(p: Project)}
-    <div class="meta-chips">
-        {#if p.inverter}<span class="meta">{p.inverter}</span>{/if}
-        {#if p.panels}<span class="meta">{p.panels}</span>{/if}
-        {#if p.battery}<span class="meta">{p.battery}</span>{/if}
+    <div class="chips-row">
+        {#if p.capacity_kw}<span>{p.capacity_kw} kW</span>{/if}
+        {#if p.inverter}<span>{p.inverter}</span>{/if}
+        {#if p.panels}<span>{p.panels}</span>{/if}
     </div>
 {/snippet}
 
 {#snippet specs(list: Spec[])}
     {#if list?.length}
-        <dl class="specs">
-            {#each list as s (s.label)}
-                <div><dt>{s.label}</dt><dd>{s.value}</dd></div>
+        <div class="specs">
+            {#each list as s, i}
+                <div style="--i: {i}"><span>{s.label}</span><strong>{s.value}</strong></div>
             {/each}
-        </dl>
+        </div>
     {/if}
 {/snippet}
 
+<!-- ───────── Lightbox ───────── -->
 {#if lightbox}
-    <div class="lightbox" role="dialog" aria-modal="true" aria-label={lightbox.title} onclick={closeLightbox}>
-        <div class="lb-inner" onclick={(e) => e.stopPropagation()}>
-            <img src={lightbox.images[lightbox.index]} alt="" />
+    <div class="lightbox" transition:fade={{ duration: ms(200) }}>
+        <button type="button" class="lb-backdrop" aria-label="Cerrar" onclick={closeLightbox}></button>
+        <div class="lb-dialog" role="dialog" aria-modal="true" aria-label={lightbox.title}>
+            {#key lightbox.index}
+                <img
+                        src={lightbox.images[lightbox.index]}
+                        alt={`${lightbox.title} — foto ${lightbox.index + 1}`}
+                        in:fade={{ duration: ms(250) }}
+                />
+            {/key}
             {#if lightbox.images.length > 1}
-                <button type="button" class="lb-nav prev" aria-label="Anterior" onclick={() => stepLightbox(-1)}>‹</button>
-                <button type="button" class="lb-nav next" aria-label="Siguiente" onclick={() => stepLightbox(1)}>›</button>
+                <button type="button" class="lb-nav prev" aria-label="Foto anterior" onclick={() => step(-1)}>‹</button>
+                <button type="button" class="lb-nav next" aria-label="Foto siguiente" onclick={() => step(1)}>›</button>
                 <span class="lb-count">{lightbox.index + 1} / {lightbox.images.length}</span>
             {/if}
             <button type="button" class="lb-close" aria-label="Cerrar" onclick={closeLightbox} use:focusOnMount>✕</button>
