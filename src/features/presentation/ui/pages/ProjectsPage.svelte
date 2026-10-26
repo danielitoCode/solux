@@ -8,7 +8,6 @@
     import Ambient from "$infrastructure/ui/component/Ambient.svelte";
     import './projects-page.css';
 
-    /* ─────────── Tipos ─────────── */
     type Layout = 'hero-left' | 'editorial' | 'gallery-grid' | 'technical-report';
     type Spec = { label: string; value: string };
     type Project = {
@@ -70,7 +69,6 @@
         );
     }
 
-    /** Datos desde /proyectos/+page.ts load (prerender). */
     let {
         header = DEFAULT_HEADER,
         projects: projectsIn = [],
@@ -85,7 +83,6 @@
     const loading = false;
     const words = $derived(header.title.split(/\s+/).filter(Boolean));
 
-    /* ─────────── Filtro por categoría ─────────── */
     let category = $state('all');
 
     const categories = $derived.by(() => {
@@ -99,7 +96,6 @@
         if (category !== 'all' && !categories.some(([c]) => c === category)) category = 'all';
     });
 
-    /* ─────────── Métricas reales con conteo animado ─────────── */
     const totalKw = $derived(projects.reduce((sum, p) => sum + (p.capacity_kw ?? 0), 0));
     const countTween = new Tween(0, { duration: ms(1200), easing: cubicOut });
     const kwTween = new Tween(0, { duration: ms(1400), easing: cubicOut });
@@ -112,13 +108,11 @@
 
     const formatKw = (value: number) => new Intl.NumberFormat('es', { maximumFractionDigits: 1 }).format(value);
 
-    /* ─────────── Descripciones largas: recortadas con "Leer más" ─────────── */
     let expanded = $state<Record<string, boolean>>({});
 
     const isLong = (text: string) =>
         (text?.length ?? 0) > 300 || (text?.match(/\n/g)?.length ?? 0) >= 5;
 
-    /** Guarda la altura completa del texto (--full) para animar el despliegue. */
     function measure(node: HTMLElement) {
         const set = () => node.style.setProperty('--full', `${node.scrollHeight}px`);
         set();
@@ -135,18 +129,27 @@
         return 'cols-many';
     }
 
-    /* ─────────── Lightbox ─────────── */
-    let lightbox = $state<{ images: string[]; index: number } | null>(null);
-    function openLightbox(images: string[], index: number) {
-        lightbox = { images, index };
-    }
-    function closeLightbox() {
-        lightbox = null;
-    }
+    let lightbox = $state<{ images: string[]; index: number; title: string } | null>(null);
+    const openLightbox = (p: Project, index: number) =>
+        (lightbox = { images: p.gallery, index, title: p.title });
+    const closeLightbox = () => (lightbox = null);
+    const stepLightbox = (direction: number) => {
+        if (!lightbox) return;
+        const n = lightbox.images.length;
+        lightbox = { ...lightbox, index: (lightbox.index + direction + n) % n };
+    };
     function focusOnMount(node: HTMLElement) {
         node.focus();
     }
+    function onLightboxKey(e: KeyboardEvent) {
+        if (!lightbox) return;
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowRight') stepLightbox(1);
+        if (e.key === 'ArrowLeft') stepLightbox(-1);
+    }
 </script>
+
+<svelte:window onkeydown={onLightboxKey} />
 
 <section class="page projects-page" use:scrollDepth>
     <Ambient />
@@ -177,23 +180,11 @@
             </div>
 
             <div class="chips rise" style="--i: 6" role="group" aria-label="Filtrar por categoría">
-                <button
-                        type="button"
-                        class="chip"
-                        class:active={category === 'all'}
-                        aria-pressed={category === 'all'}
-                        onclick={() => (category = 'all')}
-                >
+                <button type="button" class="chip" class:active={category === 'all'} aria-pressed={category === 'all'} onclick={() => (category = 'all')}>
                     Todos <span class="chip-count">{projects.length}</span>
                 </button>
                 {#each categories as [key, count] (key)}
-                    <button
-                            type="button"
-                            class="chip"
-                            class:active={category === key}
-                            aria-pressed={category === key}
-                            onclick={() => (category = key)}
-                    >
+                    <button type="button" class="chip" class:active={category === key} aria-pressed={category === key} onclick={() => (category = key)}>
                         {key} <span class="chip-count">{count}</span>
                     </button>
                 {/each}
@@ -201,7 +192,6 @@
         {/if}
     </div>
 
-    <!-- ───────── Contenido ───────── -->
     {#if loading}
         <div class="projects-list" aria-busy="true" aria-label="Cargando proyectos">
             {#each [1, 2] as n (n)}
@@ -230,33 +220,54 @@
         <div class="projects-list">
             {#each visible as p (p.id)}
                 <article
-                        class="project-card rv"
-                        class:editorial={p.layout === 'editorial'}
-                        class:mosaic={p.layout === 'gallery-grid'}
-                        class:technical={p.layout === 'technical-report'}
-                        use:reveal
-                        animate:flip={{ duration: ms(380) }}
+                    class="project-card rv"
+                    class:editorial={p.layout === 'editorial'}
+                    class:mosaic={p.layout === 'gallery-grid'}
+                    class:technical={p.layout === 'technical-report'}
+                    use:reveal
+                    animate:flip={{ duration: ms(380) }}
                 >
                     {#if p.layout === 'hero-left'}
                         <div class="split" class:no-media={!p.gallery.length}>
-                            {#if p.gallery.length}
-                                <div class="media">
-                                    <img src={p.gallery[0]} alt="" loading="lazy" decoding="async" onclick={() => openLightbox(p.gallery, 0)} />
-                                </div>
-                            {/if}
-                            <div class="info">
-                                <div class="eyebrow">{p.category}{#if p.location} · {p.location}{/if}</div>
-                                <h2>{p.title}</h2>
-                                {#if p.system_name}<p class="system">{p.system_name}</p>{/if}
-                                {#if p.capacity_kw != null}<p class="capacity">{formatKw(p.capacity_kw)} kW</p>{/if}
-                                <p class="desc">{p.description}</p>
-                            </div>
+                            {#if p.gallery.length}{@render media(p)}{/if}
+                            {@render info(p)}
                         </div>
-                    {:else}
-                        <div class="info">
+                    {:else if p.layout === 'editorial'}
+                        <div class="split editorial" class:no-media={!p.gallery.length}>
+                            {@render info(p)}
+                            {#if p.gallery.length}{@render media(p)}{/if}
+                        </div>
+                    {:else if p.layout === 'gallery-grid'}
+                        <div class="mosaic-head">
                             <div class="eyebrow">{p.category}{#if p.location} · {p.location}{/if}</div>
                             <h2>{p.title}</h2>
-                            <p class="desc">{p.description}</p>
+                            {@render desc(p)}
+                        </div>
+                        {#if p.gallery.length}
+                            {@const shown = Math.min(p.gallery.length, MOSAIC_MAX)}
+                            <div class="mosaic-gallery {mosaicClass(shown)}">
+                                {#each p.gallery.slice(0, shown) as _, i}
+                                    {@render photo(p, i, '', i === shown - 1 ? p.gallery.length - shown : 0)}
+                                {/each}
+                            </div>
+                        {/if}
+                        {@render specs(p.specifications)}
+                    {:else}
+                        <div class="technical-body">
+                            <div class="tech-head">
+                                <div class="eyebrow">{p.category}{#if p.location} · {p.location}{/if}</div>
+                                <h2>{p.title}</h2>
+                                {@render desc(p)}
+                            </div>
+                            {@render specs(p.specifications)}
+                            {#if p.gallery.length}
+                                {@const shown = Math.min(p.gallery.length, MOSAIC_MAX)}
+                                <div class="mosaic-gallery {mosaicClass(shown)}">
+                                    {#each p.gallery.slice(0, shown) as _, i}
+                                        {@render photo(p, i, '', i === shown - 1 ? p.gallery.length - shown : 0)}
+                                    {/each}
+                                </div>
+                            {/if}
                         </div>
                     {/if}
                 </article>
@@ -265,10 +276,86 @@
     {/if}
 </section>
 
+{#snippet photo(p: Project, i: number, cls = '', more = 0)}
+    <button type="button" class="photo {cls}" onclick={() => openLightbox(p, i)}>
+        <img src={p.gallery[i]} alt="" loading="lazy" decoding="async" />
+        {#if more > 0}
+            <span class="more">+{more}</span>
+        {/if}
+    </button>
+{/snippet}
+
+{#snippet media(p: Project)}
+    {@const rest = p.gallery.slice(1, 4)}
+    {@const hidden = Math.max(0, p.gallery.length - 1 - rest.length)}
+    <div class="media">
+        <div class="main-wrap">
+            {@render photo(p, 0, 'main')}
+        </div>
+        {#if rest.length}
+            <div class="thumbs">
+                {#each rest as _, i}
+                    {@render photo(p, i + 1, '', i === rest.length - 1 && hidden > 0 ? hidden : 0)}
+                {/each}
+            </div>
+        {/if}
+    </div>
+{/snippet}
+
+{#snippet info(p: Project)}
+    <div class="info">
+        <div class="eyebrow">{p.category}{#if p.location} · {p.location}{/if}</div>
+        <h2>{p.title}</h2>
+        {#if p.system_name}<p class="system">{p.system_name}</p>{/if}
+        {#if p.capacity_kw != null}<p class="capacity">{formatKw(p.capacity_kw)} kW</p>{/if}
+        {@render desc(p)}
+        {@render chips(p)}
+        {@render specs(p.specifications)}
+    </div>
+{/snippet}
+
+{#snippet desc(p: Project)}
+    {#if p.description}
+        {#if isLong(p.description)}
+            <div class="desc" class:open={expanded[p.id]} use:measure>
+                <p>{p.description}</p>
+            </div>
+            <button type="button" class="more-btn" onclick={() => (expanded[p.id] = !expanded[p.id])}>
+                {expanded[p.id] ? 'Leer menos' : 'Leer más'}
+            </button>
+        {:else}
+            <p class="desc">{p.description}</p>
+        {/if}
+    {/if}
+{/snippet}
+
+{#snippet chips(p: Project)}
+    <div class="meta-chips">
+        {#if p.inverter}<span class="meta">{p.inverter}</span>{/if}
+        {#if p.panels}<span class="meta">{p.panels}</span>{/if}
+        {#if p.battery}<span class="meta">{p.battery}</span>{/if}
+    </div>
+{/snippet}
+
+{#snippet specs(list: Spec[])}
+    {#if list?.length}
+        <dl class="specs">
+            {#each list as s (s.label)}
+                <div><dt>{s.label}</dt><dd>{s.value}</dd></div>
+            {/each}
+        </dl>
+    {/if}
+{/snippet}
+
 {#if lightbox}
-    <div class="lightbox" role="dialog" aria-modal="true" onclick={closeLightbox}>
+    <div class="lightbox" role="dialog" aria-modal="true" aria-label={lightbox.title} onclick={closeLightbox}>
         <div class="lb-inner" onclick={(e) => e.stopPropagation()}>
             <img src={lightbox.images[lightbox.index]} alt="" />
+            {#if lightbox.images.length > 1}
+                <button type="button" class="lb-nav prev" aria-label="Anterior" onclick={() => stepLightbox(-1)}>‹</button>
+                <button type="button" class="lb-nav next" aria-label="Siguiente" onclick={() => stepLightbox(1)}>›</button>
+                <span class="lb-count">{lightbox.index + 1} / {lightbox.images.length}</span>
+            {/if}
             <button type="button" class="lb-close" aria-label="Cerrar" onclick={closeLightbox} use:focusOnMount>✕</button>
         </div>
     </div>
