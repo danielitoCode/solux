@@ -3,6 +3,7 @@
   import type { SitePageContent } from '$infrastructure/data/site-content';
   import { ms, reveal, scrollDepth, spotlight, tilt } from '$infrastructure/ui/util/motion';
   import Ambient from "$infrastructure/ui/component/Ambient.svelte";
+  import './AboutPage.css';
 
   /* ─────────── Contenido por defecto ─────────── */
   const DEFAULTS = {
