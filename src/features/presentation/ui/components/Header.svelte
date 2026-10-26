@@ -1,16 +1,15 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { publicContactUseCases } from '$features/contact/di/public-contact';
   import { navIcon } from '$infrastructure/ui/animate-icons-registry';
 
-  let companyName = $state('SOLUX');
-  let logoUrl = $state('');
-
-  onMount(async () => {
-    const data = await publicContactUseCases.getCompanyProfile.execute();
-    if (data) { companyName = data.name || 'SOLUX'; logoUrl = data.logo_url || ''; }
-  });
+  /** Brand inyectado desde +layout.ts load (sin fetch en cliente). */
+  let {
+    companyName = 'SOLUX',
+    logoUrl = ''
+  }: {
+    companyName?: string;
+    logoUrl?: string;
+  } = $props();
 
   const links = [
     { href: '/', label: 'Inicio', icon: 'house', route: '/' },
@@ -23,277 +22,226 @@
     { href: '/contacto', label: 'Contacto', icon: 'mail', route: '/contacto' }
   ];
 
-  let menuOpen = $state(false);
+  let open = $state(false);
 
-  function toggleTheme() {
-    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem('solux-theme', next);
+  const currentPath = $derived($page.url.pathname);
+
+  function isActive(route: string) {
+    if (route === '/') return currentPath === '/';
+    return currentPath === route || currentPath.startsWith(route + '/');
   }
 
-  function closeMenu() {
-    menuOpen = false;
-  }
-
-  function isActive(href: string) {
-    const path = $page.url.pathname;
-    return href === '/' ? path === '/' : path.startsWith(href);
+  function close() {
+    open = false;
   }
 </script>
 
 <header class="site-header">
-  <a class="brand" href="/" aria-label="SOLUX inicio" onclick={closeMenu}>
+  <a class="brand" href="/" aria-label={`${companyName} inicio`} onclick={close}>
     {#if logoUrl}<img class="company-logo" src={logoUrl} alt={`Logo de ${companyName}`} />{:else}<span class="brand-mark"><span></span></span>{/if}
     <span>{companyName}</span>
   </a>
 
-  <nav id="primary-navigation" class="desktop-nav" class:open={menuOpen} aria-label="Navegación principal">
+  <nav class="desktop-nav" aria-label="Principal">
     {#each links as link}
       <a
+        class="nav-link"
+        class:active={isActive(link.route)}
         href={link.href}
-        class:active={isActive(link.href)}
-        aria-current={isActive(link.href) ? 'page' : undefined}
-        onclick={closeMenu}
+        aria-current={isActive(link.route) ? 'page' : undefined}
       >
-        <span class="nav-icon" aria-hidden="true" data-size="16" use:navIcon={link.icon}></span>
+        <span class="nav-icon" use:navIcon={link.icon}></span>
         <span>{link.label}</span>
       </a>
     {/each}
   </nav>
 
-  <div class="header-actions">
-    <button class="theme-toggle" type="button" onclick={toggleTheme} aria-label="Cambiar tema">
-      <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={'sun'}></span>
-    </button>
-    <a class="btn btn-small btn-primary reserve" href="/reservas" onclick={closeMenu}>Reservar</a>
-    <button
-      class="menu-toggle"
-      type="button"
-      onclick={() => (menuOpen = !menuOpen)}
-      aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
-      aria-expanded={menuOpen}
-      aria-controls="primary-navigation"
-    >
-      <span class="nav-icon" aria-hidden="true" data-size="18" use:navIcon={'menu'}></span>
-    </button>
-  </div>
+  <a class="cta" href="/reservas">Reservar visita</a>
+
+  <button
+    type="button"
+    class="menu-btn"
+    aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+    aria-expanded={open}
+    aria-controls="mobile-nav"
+    onclick={() => (open = !open)}
+  >
+    <span class="nav-icon" use:navIcon={'menu'}></span>
+  </button>
 </header>
+
+{#if open}
+  <div class="mobile-backdrop" onclick={close} role="presentation"></div>
+  <nav id="mobile-nav" class="mobile-nav" aria-label="Móvil">
+    {#each links as link}
+      <a
+        class="nav-link"
+        class:active={isActive(link.route)}
+        href={link.href}
+        aria-current={isActive(link.route) ? 'page' : undefined}
+        onclick={close}
+      >
+        <span class="nav-icon" use:navIcon={link.icon}></span>
+        <span>{link.label}</span>
+      </a>
+    {/each}
+    <a class="cta mobile-cta" href="/reservas" onclick={close}>Reservar visita</a>
+  </nav>
+{/if}
 
 <style>
   .site-header {
-    position: relative;
-    max-width: var(--max-width);
-    margin: 0 auto;
-    padding: 14px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
     display: flex;
     align-items: center;
     gap: 12px;
-    z-index: 30;
-    flex-wrap: nowrap;
+    padding: 12px 20px;
+    background: color-mix(in oklab, var(--color-bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
   }
 
   .brand {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    min-width: 0;
-    flex: 0 0 auto;
-    max-width: 140px;
     font-weight: 800;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
     color: var(--color-text);
+    text-decoration: none;
+    margin-right: auto;
   }
-  .brand > span:last-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .company-logo {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-    border-radius: 8px;
-    flex: 0 0 auto;
-  }
+
   .brand-mark {
     width: 28px;
     height: 28px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--color-primary), color-mix(in oklab, var(--color-primary) 40%, #0f172a));
     display: grid;
     place-items: center;
-    border-radius: 9px;
-    background: linear-gradient(145deg, var(--color-primary), var(--color-primary-2));
-    position: relative;
-    overflow: hidden;
-    transform: rotate(-5deg);
-    flex: 0 0 auto;
-  }
-  .brand-mark::before {
-    content: '';
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    position: absolute;
-    top: 2px;
-    right: 2px;
-  }
-  .brand-mark span {
-    width: 14px;
-    height: 7px;
-    border: 2.5px solid white;
-    border-top: 0;
-    border-radius: 0 0 9px 9px;
-    position: relative;
-    z-index: 1;
   }
 
-  /* Una sola fila centrada entre logo y acciones */
-  .desktop-nav {
-    display: flex;
-    flex: 1 1 auto;
-    min-width: 0;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    flex-wrap: nowrap;
-    overflow: hidden;
+  .brand-mark span {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #fff;
+    opacity: 0.9;
   }
-  .desktop-nav a {
+
+  .company-logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+
+  .desktop-nav {
+    display: none;
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+
+  .nav-link {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 7px 9px;
+    gap: 6px;
+    padding: 8px 10px;
     border-radius: 10px;
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--color-muted);
+    color: var(--color-text-muted);
+    text-decoration: none;
     white-space: nowrap;
-    flex: 0 0 auto;
-  }
-  .desktop-nav .nav-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    line-height: 0;
-    opacity: 0.9;
-    flex-shrink: 0;
-    overflow: visible;
-    color: inherit;
-  }
-  .desktop-nav .nav-icon :global(svg) {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-  .desktop-nav a.active .nav-icon,
-  .desktop-nav a:hover .nav-icon {
-    opacity: 1;
-  }
-  .desktop-nav a:hover,
-  .desktop-nav a.active {
-    color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   }
 
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 0 0 auto;
-  }
-  .theme-toggle,
-  .menu-toggle {
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
+  .nav-link:hover,
+  .nav-link.active {
     color: var(--color-text);
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+    background: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  }
+
+  .nav-icon {
+    width: 18px;
+    height: 18px;
     display: inline-grid;
     place-items: center;
-    flex: 0 0 auto;
+    flex-shrink: 0;
   }
-  .theme-toggle:hover,
-  .menu-toggle:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-  .menu-toggle {
+
+  .cta {
     display: none;
+    padding: 9px 14px;
+    border-radius: 12px;
+    background: var(--color-primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+    white-space: nowrap;
   }
 
-  /* Compactar un poco antes del menú móvil */
-  @media (max-width: 1200px) {
-    .desktop-nav a {
-      padding: 6px 7px;
-      font-size: 12px;
-      gap: 4px;
-    }
-    .site-header {
-      padding-inline: 18px;
-      gap: 8px;
-    }
-    .brand {
-      max-width: 120px;
-    }
+  .menu-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
   }
 
-  @media (max-width: 980px) {
-    .site-header {
-      padding: 14px 18px;
-    }
+  .mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  .mobile-nav {
+    position: fixed;
+    top: 64px;
+    right: 12px;
+    left: 12px;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
+  }
+
+  .mobile-cta {
+    display: block;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  @media (min-width: 960px) {
     .desktop-nav {
-      display: none;
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 18px;
-      right: 18px;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: 14px;
-      padding: 8px;
-      flex-direction: column;
-      align-items: stretch;
-      justify-content: flex-start;
-      flex-wrap: nowrap;
-      overflow: visible;
-      box-shadow: var(--color-shadow);
-      z-index: 40;
-    }
-    .desktop-nav.open {
       display: flex;
     }
-    .desktop-nav a {
-      padding: 11px 12px;
-      font-size: 13px;
+    .cta {
+      display: inline-flex;
     }
-    .menu-toggle {
-      display: inline-grid;
-      place-items: center;
-    }
-    .reserve {
-      min-height: 38px;
-      padding-inline: 13px;
+    .menu-btn {
+      display: none;
     }
   }
 
-  @media (max-width: 520px) {
+  @media (max-width: 959px) {
     .site-header {
-      padding-inline: 14px;
-    }
-    .brand {
-      gap: 8px;
-      max-width: 110px;
-    }
-    .brand-mark,
-    .company-logo {
-      width: 30px;
-      height: 30px;
-    }
-    .reserve {
-      display: none;
+      padding: 10px 14px;
     }
   }
 </style>
