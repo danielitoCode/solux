@@ -8,10 +8,13 @@
   import { onMount } from 'svelte';
   import { devLog } from '$infrastructure/ui/dev-logger';
 
-  let { children } = $props();
+  let { children, data } = $props();
 
   const isBackoffice = $derived($page.url.pathname.startsWith('/backoffice'));
   const isHome = $derived($page.url.pathname === '/');
+
+  const brandName = $derived(data.publicBrand?.name ?? 'SOLUX');
+  const brandLogo = $derived(data.publicBrand?.logoUrl ?? '');
 
   onMount(() => {
     const saved = localStorage.getItem('solux-theme') || 'light';
@@ -28,7 +31,7 @@
 {#if !isBackoffice}
   <div class="ambient ambient-a"></div>
   <div class="ambient ambient-b"></div>
-  <Header />
+  <Header companyName={brandName} logoUrl={brandLogo} />
 {/if}
 
 <main class:bo-full={isBackoffice}>
@@ -36,7 +39,7 @@
 </main>
 
 {#if !isBackoffice}
-  <Footer />
+  <Footer companyName={brandName} logoUrl={brandLogo} />
 {/if}
 
 <DevDebugPanel />

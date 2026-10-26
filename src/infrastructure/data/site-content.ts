@@ -1,4 +1,4 @@
-import { supabase } from '$infrastructure/data/supabase-client';
+import { supabase, supabaseConfigured } from '$infrastructure/data/supabase-client';
 
 export type SitePageContent = {
   eyebrow?: string;
@@ -16,6 +16,8 @@ export async function loadSiteContent<T extends SitePageContent>(
   pageSlug: string,
   defaults: T
 ): Promise<T> {
+  if (!supabaseConfigured) return defaults;
+
   const { data, error } = await supabase
     .from('site_content')
     .select('content')

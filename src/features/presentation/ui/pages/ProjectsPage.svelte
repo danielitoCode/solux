@@ -1,12 +1,9 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { invalidateAll } from '$app/navigation';
     import { flip } from 'svelte/animate';
     import { Tween } from 'svelte/motion';
     import { fade } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
-    import { getPresentationUseCases } from '$features/presentation/di';
-
-    const presentation = getPresentationUseCases();
     import { ms, reveal, scrollDepth } from '$infrastructure/ui/util/motion';
     import Ambient from "$infrastructure/ui/component/Ambient.svelte";
     import './projects-page.css';
@@ -30,17 +27,17 @@
         layout: Layout;
     };
 
-    /* ─────────── Estado ─────────── */
-    let projects = $state<Project[]>([]);
-    let loading = $state(true);
-    let loadError = $state(false);
-    let header = $state({
+    type Header = {
+        eyebrow: string;
+        title: string;
+        description: string;
+    };
+
+    const DEFAULT_HEADER: Header = {
         eyebrow: 'Proyectos',
         title: 'Instalaciones reales. Soluciones diseñadas para cada necesidad.',
         description: 'Equipos, características y resultados de instalaciones solares ejecutadas por SOLUX.'
-    });
-
-    const words = $derived(header.title.split(/\s+/).filter(Boolean));
+    };
 
     function sortByCapacity(list: Project[]): Project[] {
         return [...list].sort((a, b) => {
@@ -53,34 +50,40 @@
         });
     }
 
-    async function load() {
-        loading = true;
-        loadError = false;
-        try {
-            const [content, publishedProjects] = await Promise.all([
-                presentation.getPageContent.execute('proyectos'),
-                presentation.getPublishedProjects.execute()
-            ]);
-
-            header = {
-                eyebrow: content.eyebrow || header.eyebrow,
-                title: content.title || header.title,
-                description: content.description || header.description
-            };
-            projects = sortByCapacity(publishedProjects.map((p) => ({
-                ...p,
+    function normalizeProjects(list: any[]): Project[] {
+        return sortByCapacity(
+            list.map((p) => ({
+                id: p.id,
+                title: p.title,
+                location: p.location ?? '',
+                category: p.category ?? '',
+                system_name: p.system_name ?? '',
+                capacity_kw: p.capacity_kw ?? null,
+                inverter: p.inverter ?? '',
+                panels: p.panels ?? '',
+                battery: p.battery ?? '',
+                description: p.description ?? '',
                 gallery: p.gallery ?? [],
-                specifications: p.specifications ?? []
-            })));
-        } catch (err) {
-            console.error('No se pudieron cargar los proyectos', err);
-            loadError = true;
-        } finally {
-            loading = false;
-        }
+                specifications: p.specifications ?? [],
+                layout: (p.layout ?? 'hero-left') as Layout
+            }))
+        );
     }
 
-    onMount(load);
+    /** Datos desde /proyectos/+page.ts load (prerender). */
+    let {
+        header = DEFAULT_HEADER,
+        projects: projectsIn = [],
+        loadError = false
+    }: {
+        header?: Header;
+        projects?: any[];
+        loadError?: boolean;
+    } = $props();
+
+    const projects = $derived(normalizeProjects(projectsIn ?? []));
+    const loading = false;
+    const words = $derived(header.title.split(/\s+/).filter(Boolean));
 
     /* ─────────── Filtro por categoría ─────────── */
     let category = $state('all');
@@ -165,35 +168,34 @@
             <div class="eyebrow rise" style="--i: 0">{header.eyebrow}</div>
             {#key header.title}
                 <h1 class="headline" aria-label={header.title}>
-                    {#each words as word, i}
+                    {#each words as word, i (i)}
             <span class="word" aria-hidden="true"
             ><span class="word-in" style="--w: {i}">{word}</span></span
-            >{' '}
+                    >{' '}
                     {/each}
                 </h1>
             {/key}
-        </div>
-        {#key header.description}
+            {#key header.description}
             <p class="rise" style="--i: 4" in:fade={{ duration: ms(300) }}>{header.description}</p>
-        {/key}
+            {/key}
+        </div>
     </header>
 
-    <!-- ───────── Métricas y filtros ───────── -->
+    <!-- ───────── Resumen + filtro ───────── -->
     {#if !loading && !loadError && projects.length}
         <div class="summary rise" style="--i: 5">
             <div class="metric">
                 <strong>{Math.round(countTween.current)}</strong>
-                <span>{projects.length === 1 ? 'proyecto publicado' : 'proyectos publicados'}</span>
+                <span>proyectos publicados</span>
             </div>
             {#if totalKw > 0}
                 <div class="metric">
                     <strong>{formatKw(kwTween.current)} <small>kW</small></strong>
-                    <span>de capacidad instalada</span>
+                    <span>capacidad instalada</span>
                 </div>
             {/if}
         </div>
 
-        {#if categories.length > 1}
             <div class="chips rise" style="--i: 6" role="group" aria-label="Filtrar por categoría">
                 <button
                         type="button"
@@ -216,7 +218,6 @@
                     </button>
                 {/each}
             </div>
-        {/if}
     {/if}
 
     <!-- ───────── Contenido ───────── -->
@@ -237,7 +238,7 @@
     {:else if loadError}
         <div class="state-box" role="alert" in:fade={{ duration: ms(250) }}>
             <p>No se pudieron cargar los proyectos publicados.</p>
-            <button type="button" class="btn btn-ghost btn-small" onclick={load}>Reintentar</button>
+            <button type="button" class="btn btn-ghost btn-small" onclick={() => invalidateAll()}>Reintentar</button>
         </div>
     {:else if !projects.length}
         <div class="empty" in:fade={{ duration: ms(250) }}>
@@ -288,18 +289,17 @@
                             <div>
                                 <div class="eyebrow">Ficha de instalación · {p.category}</div>
                                 <h2>{p.title}</h2>
-                                {@render desc(p)}
+                                {#if p.location}<p class="system">{p.location}</p>{/if}
                             </div>
                             <div class="capacity">{p.capacity_kw ?? '—'}<small>kW instalados</small></div>
                         </div>
                         <div class="technical-data">
-                            <div><small>Sistema</small><strong>{p.system_name || '—'}</strong></div>
-                            <div><small>Inversor</small><strong>{p.inverter || '—'}</strong></div>
-                            <div><small>Paneles</small><strong>{p.panels || '—'}</strong></div>
-                            <div><small>Batería / respaldo</small><strong>{p.battery || '—'}</strong></div>
-                            <div><small>Ubicación</small><strong>{p.location || '—'}</strong></div>
+                            {#if p.system_name}<div><small>Sistema</small><strong>{p.system_name}</strong></div>{/if}
+                            {#if p.inverter}<div><small>Inversor</small><strong>{p.inverter}</strong></div>{/if}
+                            {#if p.panels}<div><small>Paneles</small><strong>{p.panels}</strong></div>{/if}
+                            {#if p.battery}<div><small>Batería</small><strong>{p.battery}</strong></div>{/if}
+                            {#if p.location}<div><small>Ubicación</small><strong>{p.location}</strong></div>{/if}
                         </div>
-                        {@render specs(p.specifications)}
                         {#if p.gallery.length}
                             {@const shown = Math.min(p.gallery.length, TECH_MAX)}
                             <div class="technical-gallery">
@@ -308,17 +308,19 @@
                                 {/each}
                             </div>
                         {/if}
+                        {#if p.description}
+                            <div class="info" style="padding-top: 8px">{@render desc(p)}</div>
+                        {/if}
                     {/if}
                 </article>
             {/each}
         </div>
     {/if}
 
-    <!-- ───────── CTA final ───────── -->
     <div class="banner rv" use:reveal>
         <div>
-            <strong>¿Quieres una instalación como estas?</strong>
-            <p>Evaluamos tu caso y diseñamos el sistema que realmente necesitas.</p>
+            <strong>¿Quieres un proyecto como estos?</strong>
+            <p>Evaluamos tu consumo y te proponemos el sistema adecuado, con presupuesto claro.</p>
         </div>
         <a class="btn btn-accent" href="/reservas">
             Solicitar presupuesto <span class="arrow" aria-hidden="true">→</span>
@@ -326,13 +328,11 @@
     </div>
 </section>
 
-<!-- ───────── Fragmentos reutilizables ───────── -->
 {#snippet photo(p: Project, i: number, cls = '', more = 0)}
     <button
             type="button"
             class="ph {cls}"
-            style="--i: {i}"
-            aria-label={`Ampliar foto ${i + 1} de ${p.title}`}
+            aria-label={`Ver foto ${i + 1} de ${p.title}`}
             onclick={() => openLightbox(p, i)}
     >
         <img src={p.gallery[i]} alt="" loading="lazy" decoding="async" />
@@ -340,10 +340,9 @@
     </button>
 {/snippet}
 
-<!-- Columna de fotos: una principal de tamaño acotado + miniaturas -->
 {#snippet media(p: Project)}
     {@const rest = p.gallery.slice(1, 5)}
-    {@const hidden = p.gallery.length - 5}
+    {@const hidden = Math.max(0, p.gallery.length - 1 - rest.length)}
     <div class="media-col">
         <div class="main-wrap">
             {@render photo(p, 0, 'main')}

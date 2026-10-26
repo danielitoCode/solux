@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { loadSiteContent, type SitePageContent } from '$infrastructure/data/site-content';
+  import type { SitePageContent } from '$infrastructure/data/site-content';
   import { ms, reveal, scrollDepth, spotlight, tilt } from '$infrastructure/ui/util/motion';
   import Ambient from "$infrastructure/ui/component/Ambient.svelte";
 
@@ -17,8 +16,12 @@
             'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1400&q=85'
   };
 
-  /* ─────────── Estado ─────────── */
-  let pageContent = $state<SitePageContent>({});
+  /** Datos desde /nosotros/+page.ts load (prerender). */
+  let {
+    pageContent = {} as SitePageContent
+  }: {
+    pageContent?: SitePageContent;
+  } = $props();
 
   const eyebrow = $derived(pageContent.eyebrow || DEFAULTS.eyebrow);
   const title = $derived(pageContent.title || DEFAULTS.title);
@@ -27,15 +30,6 @@
   const valuesEyebrow = $derived(pageContent.secondary_title || DEFAULTS.secondary_title);
   const valuesTitle = $derived(pageContent.secondary_description || DEFAULTS.secondary_description);
   const image = $derived(pageContent.image_1 || DEFAULTS.image_1);
-
-  onMount(async () => {
-    try {
-      pageContent = await loadSiteContent('nosotros', DEFAULTS);
-    } catch (err) {
-      // Sin datos remotos la vista sigue funcionando con el contenido por defecto
-      console.error('No se pudo cargar el contenido de nosotros', err);
-    }
-  });
 
   /* ─────────── Contenido estático ─────────── */
   const pillars = [
@@ -124,7 +118,6 @@
     isolation: isolate;
   }
 
-  /* ───────── Entrada orquestada ───────── */
   .rise {
     animation: rise 0.8s var(--ease) both;
     animation-delay: calc(var(--i, 0) * 90ms);
@@ -160,7 +153,6 @@
     }
   }
 
-  /* ───────── Revelado al hacer scroll ───────── */
   .rv {
     opacity: 0;
     transform: translateY(28px) scale(0.98);
@@ -186,7 +178,6 @@
     transform: translateX(5px);
   }
 
-  /* ───────── Presentación inmersiva ───────── */
   .hero {
     position: relative;
     display: flex;
@@ -228,7 +219,6 @@
             linear-gradient(180deg, transparent 40%, rgba(0, 30, 15, 0.55)),
             linear-gradient(110deg, rgba(0, 55, 30, 0.92), rgba(0, 55, 30, 0.25));
   }
-  /* Luz solar en la esquina, la misma que recorre el resto de la atmósfera */
   .hero-glow {
     position: absolute;
     z-index: 1;
@@ -258,7 +248,6 @@
     color: rgba(255, 255, 255, 0.8);
   }
 
-  /* Pilares en cristal sobre la imagen */
   .pillars {
     position: relative;
     z-index: 2;
@@ -295,7 +284,6 @@
     opacity: 0.8;
   }
 
-  /* ───────── Valores ───────── */
   .values {
     margin-top: 56px;
   }
@@ -327,7 +315,6 @@
     opacity: 0;
     transition: opacity 0.3s;
   }
-  /* Línea de acento que crece al pasar el cursor */
   .value::after {
     content: '';
     position: absolute;
@@ -359,7 +346,6 @@
     transform: scale(1.18) rotate(-6deg);
   }
 
-  /* ───────── Banner final ───────── */
   .banner {
     position: relative;
     overflow: hidden;
@@ -408,7 +394,6 @@
     }
   }
 
-  /* ───────── Responsive ───────── */
   @media (max-width: 900px) {
     .pillars {
       grid-template-columns: 1fr;
@@ -427,7 +412,6 @@
     }
   }
 
-  /* ───────── Accesibilidad: reduce el movimiento ───────── */
   @media (prefers-reduced-motion: reduce) {
     .rise,
     .word-in,

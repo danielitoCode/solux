@@ -3,12 +3,9 @@
   import { Tween } from 'svelte/motion';
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { getPresentationUseCases } from '$features/presentation/di';
   import type { PageContent } from '$features/presentation/domain/entities/page-content';
   import ConversionPaths from '$features/presentation/ui/components/ConversionPaths.svelte';
   import './HomePage.css';
-
-  const presentation = getPresentationUseCases();
 
   /* ─────────── Tipos y valores por defecto ─────────── */
   type Company = {
@@ -31,15 +28,22 @@
   const DEFAULT_IMAGE =
           'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=1100&q=85';
 
+  /** Datos desde +page.ts load (prerender); sin fetch en onMount. */
+  let {
+    company = FALLBACK_COMPANY,
+    pageContent = {} as Partial<PageContent>
+  }: {
+    company?: Company;
+    pageContent?: Partial<PageContent>;
+  } = $props();
+
   /* ─────────── Preferencias de movimiento ─────────── */
   const reduced =
           typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = typeof matchMedia !== 'undefined' && matchMedia('(pointer: fine)').matches;
   const ms = (value: number) => (reduced ? 0 : value);
 
-  /* ─────────── Estado ─────────── */
-  let company = $state<Company>({ ...FALLBACK_COMPANY });
-  let pageContent = $state<Partial<PageContent>>({});
+  /* ready solo dispara animaciones de stats; el HTML ya trae el contenido */
   let ready = $state(false);
 
   const eyebrow = $derived(pageContent.eyebrow || company.name);
@@ -69,35 +73,9 @@
     years.target = company.years_of_experience;
   });
 
-  /* ─────────── Carga de datos ─────────── */
-  onMount(async () => {
-    try {
-      const [profile, savedContent] = await Promise.all([
-        presentation.getCompanyProfile.execute(),
-        presentation.getPageContent.execute('inicio')
-      ]);
-      if (profile) {
-        company = {
-          name: profile.name,
-          tagline: profile.tagline,
-          about: profile.about,
-          years_of_experience: profile.yearsOfExperience,
-          completed_projects: profile.completedProjects
-        };
-      }
-      pageContent = {
-        eyebrow: savedContent.eyebrow,
-        title: savedContent.title,
-        description: savedContent.description,
-        secondaryTitle: savedContent.secondaryTitle,
-        secondaryDescription: savedContent.secondaryDescription,
-        image1: savedContent.image1
-      };
-    } catch (err) {
-      console.error('No se pudo cargar el contenido de inicio', err);
-    } finally {
-      ready = true;
-    }
+  /* Animaciones de stats tras hidratar (contenido ya en HTML) */
+  onMount(() => {
+    ready = true;
   });
 
   /* ─────────── Contenido estático ─────────── */

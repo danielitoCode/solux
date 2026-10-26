@@ -1,16 +1,15 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { publicContactUseCases } from '$features/contact/di/public-contact';
   import { navIcon } from '$infrastructure/ui/animate-icons-registry';
 
-  let companyName = $state('SOLUX');
-  let logoUrl = $state('');
-
-  onMount(async () => {
-    const data = await publicContactUseCases.getCompanyProfile.execute();
-    if (data) { companyName = data.name || 'SOLUX'; logoUrl = data.logo_url || ''; }
-  });
+  /** Brand inyectado desde +layout.ts load (sin fetch en cliente). */
+  let {
+    companyName = 'SOLUX',
+    logoUrl = ''
+  }: {
+    companyName?: string;
+    logoUrl?: string;
+  } = $props();
 
   const links = [
     { href: '/', label: 'Inicio', icon: 'house', route: '/' },
@@ -147,7 +146,6 @@
     z-index: 1;
   }
 
-  /* Una sola fila centrada entre logo y acciones */
   .desktop-nav {
     display: flex;
     flex: 1 1 auto;
@@ -224,7 +222,6 @@
     display: none;
   }
 
-  /* Compactar un poco antes del menú móvil */
   @media (max-width: 1200px) {
     .desktop-nav a {
       padding: 6px 7px;

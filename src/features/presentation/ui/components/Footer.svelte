@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { publicContactUseCases } from '$features/contact/di/public-contact';
-  let companyName = $state('SOLUX');
-  let logoUrl = $state('');
-  onMount(async () => {
-    const data = await publicContactUseCases.getCompanyProfile.execute();
-    if (data) { companyName = data.name || 'SOLUX'; logoUrl = data.logo_url || ''; }
-  });
+  /** Brand inyectado desde +layout.ts load (sin fetch en cliente). */
+  let {
+    companyName = 'SOLUX',
+    logoUrl = ''
+  }: {
+    companyName?: string;
+    logoUrl?: string;
+  } = $props();
 </script>
 
 <footer class="footer">
