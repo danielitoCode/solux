@@ -29,41 +29,30 @@ function mapRow(row: TeamMemberRow): TeamMember {
   };
 }
 
+// Tabla nueva; aún no está en database.types — acceso untyped.
+const table = () => (supabase as any).from('team_members');
+
 /** Público: solo activos, ordenados. */
 export async function loadActiveTeamMembers(): Promise<TeamMember[]> {
   if (!supabaseConfigured) return [];
 
-  const { data, error } = await supabase
-    .from('team_members' as 'site_content')
+  const { data, error } = await table()
     .select('id, full_name, role, photo_url, sort_order, is_active')
-    .eq('is_active' as 'page_slug', true as unknown as string)
-    .order('sort_order' as 'page_slug', { ascending: true })
-    .order('created_at' as 'page_slug', { ascending: true });
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
 
-  // Fallback sin tipado estricto de Database (tabla aún no en database.types)
   if (error) {
-    const res = await (supabase as any)
-      .from('team_members')
-      .select('id, full_name, role, photo_url, sort_order, is_active')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true });
-
-    if (res.error) {
-      console.error('No se pudo cargar el equipo:', res.error);
-      return [];
-    }
-    return ((res.data ?? []) as TeamMemberRow[]).map(mapRow);
+    console.error('No se pudo cargar el equipo:', error);
+    return [];
   }
-
-  return ((data ?? []) as unknown as TeamMemberRow[]).map(mapRow);
+  return ((data ?? []) as TeamMemberRow[]).map(mapRow);
 }
 
 /** Admin: todos los miembros. */
 export async function listTeamMembersAdmin(): Promise<TeamMember[]> {
   assertSupabaseConfigured();
-  const { data, error } = await (supabase as any)
-    .from('team_members')
+  const { data, error } = await table()
     .select('id, full_name, role, photo_url, sort_order, is_active')
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
@@ -80,8 +69,7 @@ export async function createTeamMember(input: {
   isActive?: boolean;
 }): Promise<TeamMember> {
   assertSupabaseConfigured();
-  const { data, error } = await (supabase as any)
-    .from('team_members')
+  const { data, error } = await table()
     .insert({
       full_name: input.fullName.trim(),
       role: input.role.trim(),
@@ -114,8 +102,7 @@ export async function updateTeamMember(
   if (input.sortOrder !== undefined) payload.sort_order = input.sortOrder;
   if (input.isActive !== undefined) payload.is_active = input.isActive;
 
-  const { data, error } = await (supabase as any)
-    .from('team_members')
+  const { data, error } = await table()
     .update(payload)
     .eq('id', id)
     .select('id, full_name, role, photo_url, sort_order, is_active')
@@ -127,6 +114,6 @@ export async function updateTeamMember(
 
 export async function deleteTeamMember(id: string): Promise<void> {
   assertSupabaseConfigured();
-  const { error } = await (supabase as any).from('team_members').delete().eq('id', id);
+  const { error } = await table().delete().eq('id', id);
   if (error) throw new Error(error.message ?? 'No se pudo eliminar el miembro.');
 }
