@@ -4,7 +4,7 @@ import type { UserRole } from '$infrastructure/data/database.types';
 import type { FeatureKey, UserPermissionGrant } from '$features/auth/domain/entities';
 import { isFeatureKey } from '$features/auth/domain/entities';
 import type { FeatureCatalogItem } from '../../domain/entities/feature-permission';
-import type { SaveUserPermissionInput } from '../../domain/repository/users-repository';
+import type { CreateUserInput, SaveUserPermissionInput } from '../../domain/repository/users-repository';
 
 type FeatureRow = {
   key: string;
@@ -58,6 +58,45 @@ export class UsersRemoteDataSource {
     return data as UserDto;
   }
 
+  async create(input: CreateUserInput): Promise<{ userId: string; email: string }> {
+    const { data, error } = await supabase.functions.invoke('admin-create-user', {
+      body: {
+        email: input.email,
+        password: input.password,
+        fullName: input.fullName,
+        phone: input.phone,
+        role: input.role,
+        isActive: input.isActive,
+        permissions: input.permissions.map((p) => ({
+          featureKey: p.featureKey,
+          canRead: p.canRead,
+          canWrite: p.canWrite,
+          expiresAt: p.expiresAt
+        }))
+      }
+    });
+
+    if (error) {
+      // functions.invoke a veces mete el body de error en context
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const payload = await ctx.json();
+          if (payload?.error) throw new Error(String(payload.error));
+        } catch (e) {
+          if (e instanceof Error && e.message !== error.message) throw e;
+        }
+      }
+      throw new Error(error.message || 'No se pudo crear el usuario');
+    }
+
+    const payload = data as { error?: string; userId?: string; email?: string; warning?: string };
+    if (payload?.error) throw new Error(payload.error);
+    if (!payload?.userId) throw new Error('Respuesta inválida al crear usuario');
+
+    return { userId: payload.userId, email: payload.email ?? input.email };
+  }
+
   async listFeatures(): Promise<FeatureCatalogItem[]> {
     const { data, error } = await (supabase as any)
       .from('features')
@@ -97,9 +136,6 @@ export class UsersRemoteDataSource {
       }));
   }
 
-  /**
-   * Sincroniza grants: activa los enviados y revoca los que ya no están.
-   */
   async saveUserPermissions(
     userId: string,
     grants: SaveUserPermissionInput[],
@@ -108,7 +144,6 @@ export class UsersRemoteDataSource {
     const table = () => (supabase as any).from('user_permissions');
     const nowIso = new Date().toISOString();
 
-    // Grants activos actuales
     const { data: current, error: currentError } = await table()
       .select('feature_key')
       .eq('user_id', userId)
@@ -118,7 +153,6 @@ export class UsersRemoteDataSource {
     const desiredKeys = new Set(grants.map((g) => g.featureKey));
     const currentKeys = ((current ?? []) as { feature_key: string }[]).map((r) => r.feature_key);
 
-    // Revocar los que ya no están
     const toRevoke = currentKeys.filter((key) => !desiredKeys.has(key as FeatureKey));
     if (toRevoke.length) {
       const { error } = await table()
@@ -129,7 +163,6 @@ export class UsersRemoteDataSource {
       if (error) throw error;
     }
 
-    // Upsert activos
     if (grants.length) {
       const rows = grants.map((g) => ({
         user_id: userId,
