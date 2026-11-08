@@ -57,6 +57,10 @@
       .map((p) => p[0]?.toUpperCase() ?? '')
       .join('');
   }
+
+  function memberTitle(member: TeamMember) {
+    return member.role ? `${member.fullName} · ${member.role}` : member.fullName;
+  }
 </script>
 
 <section class="page" use:scrollDepth>
@@ -111,12 +115,7 @@
     <div class="team-block rv" use:reveal={80}>
       <div class="avatar-stack" role="list" aria-label="Miembros del equipo">
         {#each members as member, i (member.id)}
-          <div
-            class="avatar"
-            role="listitem"
-            style="--i: {i}"
-            title="{member.fullName}{#if member.role} · {member.role}{/if}"
-          >
+          <div class="avatar" role="listitem" style="--i: {i}" title={memberTitle(member)}>
             {#if member.photoUrl}
               <img src={member.photoUrl} alt={member.fullName} loading="lazy" decoding="async" />
             {:else}
@@ -341,7 +340,6 @@
   }
   .pillar span {
     font-size: 12px;
-    opacity: 0.8;
   }
 
   /* ─── Team ─── */
