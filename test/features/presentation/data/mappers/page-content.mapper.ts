@@ -9,17 +9,17 @@ describe('page-content.mapper', () => {
     expect(c).toEqual(emptyPageContent());
   });
 
-  it('mapPageContentDto mergea content sobre defaults', () => {
+  it('mapPageContentDto convierte snake_case → camelCase', () => {
     const dto = {
-      page_slug: 'home',
+      page_slug: 'nosotros',
       content: {
         eyebrow: 'Eyebrow',
         title: 'Título',
         description: 'Desc',
-        secondary_title: '',
-        secondary_description: '',
-        image_1: '',
-        image_2: '',
+        secondary_title: 'Valores',
+        secondary_description: 'Hecho con criterio',
+        image_1: 'https://cdn/hero.jpg',
+        image_2: 'https://cdn/team.jpg',
         image_3: '',
         image_4: ''
       },
@@ -29,6 +29,10 @@ describe('page-content.mapper', () => {
     const c = mapPageContentDto(dto);
     expect(c.title).toBe('Título');
     expect(c.eyebrow).toBe('Eyebrow');
+    expect(c.secondaryTitle).toBe('Valores');
+    expect(c.secondaryDescription).toBe('Hecho con criterio');
+    expect(c.image1).toBe('https://cdn/hero.jpg');
+    expect(c.image2).toBe('https://cdn/team.jpg');
   });
 
   it('toPageContentDto serializa camelCase → snake_case', () => {
@@ -36,10 +40,12 @@ describe('page-content.mapper', () => {
       ...emptyPageContent(),
       title: 'Home',
       secondaryTitle: 'Sec',
-      image1: 'https://cdn/a.jpg'
+      image1: 'https://cdn/a.jpg',
+      image2: 'https://cdn/b.jpg'
     });
     expect(row.title).toBe('Home');
     expect(row.secondary_title).toBe('Sec');
     expect(row.image_1).toBe('https://cdn/a.jpg');
+    expect(row.image_2).toBe('https://cdn/b.jpg');
   });
 });
