@@ -1,5 +1,5 @@
 import type { AuthRepository } from '../../domain/repository/auth-repository';
-import type { User } from '../../domain/entities';
+import type { User, UserPermissionGrant } from '../../domain/entities';
 import { AuthRemoteDataSource } from '../datasources/remote/auth-remote-datasource';
 import { mapProfileToUser } from '../mappers/profile.mapper';
 
@@ -24,6 +24,10 @@ export class AuthRepositoryImpl implements AuthRepository {
     const profile = await this.remote.getProfile(session.user.id);
     if (!profile) return null;
     return mapProfileToUser(profile);
+  }
+
+  getUserPermissions(userId: string): Promise<UserPermissionGrant[]> {
+    return this.remote.getUserPermissions(userId);
   }
 
   onAuthStateChange(cb: (user: User | null) => void): () => void {
