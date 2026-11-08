@@ -1,8 +1,8 @@
 import { assertSupabaseConfigured, supabase } from '$infrastructure/data/supabase-client';
 import { devLog, devError } from '$infrastructure/ui/dev-logger';
 import type { ProfileDto } from '../../dto/profile.dto';
-import type { UserPermissionGrant } from '../../domain/entities';
-import { isFeatureKey } from '../../domain/entities';
+import type { UserPermissionGrant } from '../../../domain/entities';
+import { isFeatureKey } from '../../../domain/entities';
 
 type PermissionRow = {
   feature_key: string;
@@ -93,7 +93,6 @@ export class AuthRemoteDataSource {
       .is('revoked_at', null);
 
     if (error) {
-      // Tabla aún no migrada: no tumbar el login
       if (
         error.code === 'PGRST205' ||
         /user_permissions|schema cache|does not exist/i.test(error.message ?? '')
