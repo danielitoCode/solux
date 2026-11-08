@@ -9,6 +9,16 @@ export type SaveUserPermissionInput = {
   expiresAt: string | null;
 };
 
+export type CreateUserInput = {
+  email: string;
+  password: string;
+  fullName: string;
+  phone: string | null;
+  role: BackofficeUser['role'];
+  isActive: boolean;
+  permissions: SaveUserPermissionInput[];
+};
+
 export interface UsersRepository {
   list(): Promise<BackofficeUser[]>;
   update(
@@ -16,6 +26,7 @@ export interface UsersRepository {
     data: { fullName: string; phone: string | null; role: BackofficeUser['role']; isActive: boolean }
   ): Promise<BackofficeUser>;
   setActive(id: string, active: boolean): Promise<BackofficeUser>;
+  create(data: CreateUserInput): Promise<{ userId: string; email: string }>;
   listFeatures(): Promise<FeatureCatalogItem[]>;
   listUserPermissions(userId: string): Promise<UserPermissionGrant[]>;
   saveUserPermissions(
