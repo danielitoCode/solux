@@ -283,7 +283,8 @@
     box-shadow: 0 0 48px rgba(255, 191, 25, 0.65);
   }
 }
-.chip {
+/* Hero floating labels — scoped name to avoid colliding with filter .chip elsewhere */
+.hero-chip {
   position: absolute;
   z-index: 2;
   padding: 7px 11px;
@@ -295,15 +296,15 @@
   color: var(--color-text);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
-.chip-a {
+.hero-chip-a {
   top: 14px;
   left: 14px;
 }
-.chip-b {
+.hero-chip-b {
   bottom: 86px;
   right: 14px;
 }
-.chip .dot {
+.hero-chip .dot {
   display: inline-block;
   width: 6px;
   height: 6px;
@@ -594,10 +595,10 @@
 .banner strong {
   display: block;
   font-size: 1.2rem;
-  font-weight: 800;
   letter-spacing: -0.02em;
   margin-bottom: 6px;
   color: var(--color-text);
+  font-weight: 800;
 }
 .banner p {
   margin: 0;
@@ -664,7 +665,7 @@
   .glow-sun,
   .glow-deep,
   .sun,
-  .chip,
+  .hero-chip,
   .hero-badge,
   .service,
   .service .icon,
