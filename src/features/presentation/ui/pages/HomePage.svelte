@@ -271,10 +271,10 @@
           <img class="hero-img" src={heroImage} alt="" fetchpriority="high" decoding="async" />
           <div class="sun" aria-hidden="true"></div>
 
-          <div class="chip chip-a" aria-hidden="true">
+          <div class="hero-chip hero-chip-a" aria-hidden="true">
             <span class="dot"></span>Paneles solares
           </div>
-          <div class="chip chip-b" aria-hidden="true">Respaldo con baterías</div>
+          <div class="hero-chip hero-chip-b" aria-hidden="true">Respaldo con baterías</div>
 
           <div class="hero-badge">
             <strong>Tu independencia energética</strong>

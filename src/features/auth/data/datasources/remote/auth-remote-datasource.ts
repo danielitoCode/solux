@@ -1,6 +1,16 @@
 import { assertSupabaseConfigured, supabase } from '$infrastructure/data/supabase-client';
 import { devLog, devError } from '$infrastructure/ui/dev-logger';
 import type { ProfileDto } from '../../dto/profile.dto';
+import type { UserPermissionGrant } from '../../../domain/entities';
+import { isFeatureKey } from '../../../domain/entities';
+
+type PermissionRow = {
+  feature_key: string;
+  can_read: boolean;
+  can_write: boolean;
+  expires_at: string | null;
+  revoked_at: string | null;
+};
 
 export class AuthRemoteDataSource {
   async signIn(email: string, password: string) {
@@ -71,6 +81,43 @@ export class AuthRemoteDataSource {
       file: 'auth-remote-datasource.ts'
     });
     throw error;
+  }
+
+  /** Grants vigentes del usuario (no revocados; caducados se filtran en app). */
+  async getUserPermissions(userId: string): Promise<UserPermissionGrant[]> {
+    assertSupabaseConfigured();
+    const { data, error } = await (supabase as any)
+      .from('user_permissions')
+      .select('feature_key, can_read, can_write, expires_at, revoked_at')
+      .eq('user_id', userId)
+      .is('revoked_at', null);
+
+    if (error) {
+      if (
+        error.code === 'PGRST205' ||
+        /user_permissions|schema cache|does not exist/i.test(error.message ?? '')
+      ) {
+        devLog('auth-remote', 'user_permissions no disponible aún', error.message);
+        return [];
+      }
+      devError('auth-remote', 'getUserPermissions failed', error);
+      throw error;
+    }
+
+    const now = Date.now();
+    const rows = (data ?? []) as PermissionRow[];
+    return rows
+      .filter((row) => {
+        if (!isFeatureKey(row.feature_key)) return false;
+        if (row.expires_at && new Date(row.expires_at).getTime() <= now) return false;
+        return true;
+      })
+      .map((row) => ({
+        featureKey: row.feature_key as UserPermissionGrant['featureKey'],
+        canRead: Boolean(row.can_read),
+        canWrite: Boolean(row.can_write),
+        expiresAt: row.expires_at
+      }));
   }
 
   private fetchProfile(userId: string) {

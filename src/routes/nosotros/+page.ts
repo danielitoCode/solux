@@ -1,4 +1,5 @@
 import { loadSiteContent, type SitePageContent } from '$infrastructure/data/site-content';
+import { loadActiveTeamMembers } from '$infrastructure/data/team-members';
 import { supabaseConfigured } from '$infrastructure/data/supabase-client';
 
 export type AboutPageContent = SitePageContent & {
@@ -21,16 +22,19 @@ const DEFAULTS: AboutPageContent = {
     'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1400&q=85'
 };
 
-/** Contenido de Nosotros en load (prerender). */
+/** Contenido de Nosotros + equipo activo (prerender). */
 export const load = async () => {
   if (!supabaseConfigured) {
-    return { pageContent: DEFAULTS };
+    return { pageContent: DEFAULTS, team: [] };
   }
 
   try {
-    const pageContent = await loadSiteContent('nosotros', DEFAULTS);
-    return { pageContent };
+    const [pageContent, team] = await Promise.all([
+      loadSiteContent('nosotros', DEFAULTS),
+      loadActiveTeamMembers()
+    ]);
+    return { pageContent, team };
   } catch {
-    return { pageContent: DEFAULTS };
+    return { pageContent: DEFAULTS, team: [] };
   }
 };

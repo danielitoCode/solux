@@ -1,8 +1,14 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { logout, initAuth, getAuthUser } from '$features/auth/ui/stores/auth.store.svelte';
-  import type { User, UserRole } from '$features/auth/domain/entities';
+  import {
+    logout,
+    initAuth,
+    getAuthUser,
+    getAuthPermissions,
+    hasFeature
+  } from '$features/auth/ui/stores/auth.store.svelte';
+  import type { FeatureKey, User } from '$features/auth/domain/entities';
   import { onMount } from 'svelte';
   import { supabase } from '$infrastructure/data/supabase-client';
   import { navIcon } from '$infrastructure/ui/animate-icons-registry';
@@ -14,32 +20,54 @@
 
   const isLogin = $derived($page.url.pathname === '/backoffice/login');
 
-  const sections: { href: string; label: string; icon: string; roles: UserRole[] }[] = [
-    { href: '/backoffice', label: 'Dashboard', icon: 'layout-dashboard', roles: ['admin', 'support', 'sales'] },
-    { href: '/backoffice/reservas', label: 'Reservaciones', icon: 'calendar', roles: ['admin', 'sales'] },
-    { href: '/backoffice/soporte', label: 'Soporte', icon: 'headset', roles: ['admin', 'support'] },
-    { href: '/backoffice/mensajes', label: 'Mensajes', icon: 'message-square', roles: ['admin', 'support', 'sales'] },
-    { href: '/backoffice/catalogo', label: 'Catálogo', icon: 'package', roles: ['admin', 'sales'] },
-    { href: '/backoffice/consumibles', label: 'Consumibles', icon: 'wrench', roles: ['admin', 'sales'] },
-    { href: '/backoffice/inventario', label: 'Proveedores e inventario', icon: 'building-2', roles: ['admin', 'sales'] },
-    { href: '/backoffice/finanzas', label: 'Finanzas y personal', icon: 'wallet', roles: ['admin'] },
-    { href: '/backoffice/presentacion', label: 'Presentación', icon: 'presentation', roles: ['admin'] },
-    { href: '/backoffice/proyectos', label: 'Proyectos web', icon: 'image', roles: ['admin'] },
-    { href: '/backoffice/usuarios', label: 'Usuarios', icon: 'user', roles: ['admin'] }
+  const sections: { href: string; label: string; icon: string; feature: FeatureKey }[] = [
+    { href: '/backoffice', label: 'Dashboard', icon: 'layout-dashboard', feature: 'dashboard' },
+    { href: '/backoffice/reservas', label: 'Reservaciones', icon: 'calendar', feature: 'reservations' },
+    { href: '/backoffice/soporte', label: 'Soporte', icon: 'headset', feature: 'support' },
+    { href: '/backoffice/mensajes', label: 'Mensajes', icon: 'message-square', feature: 'messages' },
+    { href: '/backoffice/catalogo', label: 'Catálogo', icon: 'package', feature: 'catalog' },
+    { href: '/backoffice/consumibles', label: 'Consumibles', icon: 'wrench', feature: 'consumables' },
+    {
+      href: '/backoffice/inventario',
+      label: 'Proveedores e inventario',
+      icon: 'building-2',
+      feature: 'inventory'
+    },
+    { href: '/backoffice/finanzas', label: 'Finanzas y personal', icon: 'wallet', feature: 'finance' },
+    {
+      href: '/backoffice/presentacion',
+      label: 'Presentación',
+      icon: 'presentation',
+      feature: 'presentation'
+    },
+    { href: '/backoffice/equipo', label: 'Equipo', icon: 'user', feature: 'team' },
+    { href: '/backoffice/proyectos', label: 'Proyectos web', icon: 'image', feature: 'projects' },
+    { href: '/backoffice/usuarios', label: 'Usuarios', icon: 'user', feature: 'users' }
   ];
 
   const user = $derived((data.user as User | null) ?? getAuthUser());
+  // Lectura para que el menú reaccione cuando cargan los grants
+  const permissionTick = $derived(getAuthPermissions());
 
   const visibleSections = $derived(
-    user ? sections.filter((s) => s.roles.includes(user.role)) : []
+    user
+      ? sections.filter((s) => {
+          void permissionTick;
+          return hasFeature(s.feature, 'read');
+        })
+      : []
   );
 
   onMount(async () => {
-    initAuth();
-    const { data } = await supabase.from('company_profile').select('name, logo_url').limit(1).maybeSingle();
-    if (data) {
-      companyName = data.name || 'SOLUX';
-      logoUrl = data.logo_url || '';
+    await initAuth();
+    const { data: company } = await supabase
+      .from('company_profile')
+      .select('name, logo_url')
+      .limit(1)
+      .maybeSingle();
+    if (company) {
+      companyName = company.name || 'SOLUX';
+      logoUrl = company.logo_url || '';
     }
   });
 

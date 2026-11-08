@@ -1,26 +1,30 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
   import type { SitePageContent } from '$infrastructure/data/site-content';
+  import type { TeamMember } from '$infrastructure/data/team-members';
   import { ms, reveal, scrollDepth, spotlight, tilt } from '$infrastructure/ui/util/motion';
-  import Ambient from "$infrastructure/ui/component/Ambient.svelte";
+  import Ambient from '$infrastructure/ui/component/Ambient.svelte';
 
   /* ─────────── Contenido por defecto ─────────── */
   const DEFAULTS = {
     eyebrow: 'Nosotros',
     title: 'Ingeniería, experiencia y pasión por la energía.',
     description:
-            'En SOLUX creemos en el poder de la energía limpia para transformar hogares y negocios. Combinamos criterio técnico, instalación profesional y atención cercana.',
+      'En SOLUX creemos en el poder de la energía limpia para transformar hogares y negocios. Combinamos criterio técnico, instalación profesional y atención cercana.',
     secondary_title: 'Nuestros valores',
     secondary_description: 'Hecho con criterio.',
     image_1:
-            'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1400&q=85'
+      'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1400&q=85',
+    image_2: ''
   };
 
   /** Datos desde /nosotros/+page.ts load (prerender). */
   let {
-    pageContent = {} as SitePageContent
+    pageContent = {} as SitePageContent,
+    team = [] as TeamMember[]
   }: {
     pageContent?: SitePageContent;
+    team?: TeamMember[];
   } = $props();
 
   const eyebrow = $derived(pageContent.eyebrow || DEFAULTS.eyebrow);
@@ -30,6 +34,10 @@
   const valuesEyebrow = $derived(pageContent.secondary_title || DEFAULTS.secondary_title);
   const valuesTitle = $derived(pageContent.secondary_description || DEFAULTS.secondary_description);
   const image = $derived(pageContent.image_1 || DEFAULTS.image_1);
+  /** Foto de grupo del equipo (Presentación → Nosotros → Imagen 2). */
+  const teamPhoto = $derived((pageContent.image_2 || DEFAULTS.image_2).trim());
+  const members = $derived(team ?? []);
+  const showTeam = $derived(Boolean(teamPhoto) || members.length > 0);
 
   /* ─────────── Contenido estático ─────────── */
   const pillars = [
@@ -44,6 +52,19 @@
     { icon: '♥', title: 'Compromiso', text: 'Construimos confianza' },
     { icon: '✦', title: 'Innovación', text: 'Pensamos para el futuro' }
   ];
+
+  function initials(name: string) {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? '')
+      .join('');
+  }
+
+  function memberTitle(member: TeamMember) {
+    return member.role ? `${member.fullName} · ${member.role}` : member.fullName;
+  }
 </script>
 
 <section class="page" use:scrollDepth>
@@ -61,7 +82,7 @@
         <h2 class="headline" aria-label={title}>
           {#each words as word, i}
             <span class="word" aria-hidden="true"
-            ><span class="word-in" style="--w: {i}">{word}</span></span
+              ><span class="word-in" style="--w: {i}">{word}</span></span
             >{' '}
           {/each}
         </h2>
@@ -81,6 +102,63 @@
       {/each}
     </ul>
   </div>
+
+  <!-- ───────── Equipo ───────── -->
+  {#if showTeam}
+    <div class="section-head team-head rv" use:reveal>
+      <div>
+        <div class="eyebrow">Equipo</div>
+        <h2>Personas detrás de cada instalación.</h2>
+      </div>
+      <p>
+        Un equipo cercano de ingeniería y campo, comprometido con resultados claros y un servicio de
+        calidad.
+      </p>
+    </div>
+
+    <div class="team-block rv" use:reveal={80}>
+      {#if teamPhoto}
+        <figure class="team-photo">
+          <img
+            src={teamPhoto}
+            alt="Equipo SOLUX"
+            loading="lazy"
+            decoding="async"
+            width="1200"
+            height="675"
+          />
+        </figure>
+      {/if}
+
+      {#if members.length}
+        <div class="avatar-stack" role="list" aria-label="Miembros del equipo">
+          {#each members as member, i (member.id)}
+            <div class="avatar" role="listitem" style="--i: {i}" title={memberTitle(member)}>
+              {#if member.photoUrl}
+                <img src={member.photoUrl} alt={member.fullName} loading="lazy" decoding="async" />
+              {:else}
+                <span class="initials" aria-hidden="true">{initials(member.fullName)}</span>
+              {/if}
+              <span class="tooltip">
+                <strong>{member.fullName}</strong>
+                {#if member.role}<small>{member.role}</small>{/if}
+              </span>
+            </div>
+          {/each}
+        </div>
+
+        <ul class="team-list">
+          {#each members as member (member.id)}
+            <li>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="name">{member.fullName}</span>
+              {#if member.role}<span class="role">{member.role}</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  {/if}
 
   <!-- ───────── Valores ───────── -->
   <div class="section-head values rv" use:reveal>
@@ -158,9 +236,9 @@
     transform: translateY(28px) scale(0.98);
     filter: blur(6px);
     transition:
-            opacity 0.7s var(--ease),
-            transform 0.7s var(--ease),
-            filter 0.7s var(--ease);
+      opacity 0.7s var(--ease),
+      transform 0.7s var(--ease),
+      filter 0.7s var(--ease);
     transition-delay: var(--delay, 0ms);
   }
   .rv:global(.in) {
@@ -216,8 +294,8 @@
     inset: 0;
     z-index: 1;
     background:
-            linear-gradient(180deg, transparent 40%, rgba(0, 30, 15, 0.55)),
-            linear-gradient(110deg, rgba(0, 55, 30, 0.92), rgba(0, 55, 30, 0.25));
+      linear-gradient(180deg, transparent 40%, rgba(0, 30, 15, 0.55)),
+      linear-gradient(110deg, rgba(0, 55, 30, 0.92), rgba(0, 55, 30, 0.25));
   }
   .hero-glow {
     position: absolute;
@@ -267,9 +345,9 @@
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(12px);
     transition:
-            transform 0.35s var(--ease),
-            background 0.35s var(--ease),
-            border-color 0.35s var(--ease);
+      transform 0.35s var(--ease),
+      background 0.35s var(--ease),
+      border-color 0.35s var(--ease);
   }
   .pillar:hover {
     transform: translateY(-4px);
@@ -281,7 +359,154 @@
   }
   .pillar span {
     font-size: 12px;
-    opacity: 0.8;
+  }
+
+  /* ─── Team ─── */
+  .team-head {
+    margin-top: 56px;
+    margin-bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    gap: 28px;
+    align-items: end;
+  }
+  .team-head p {
+    max-width: 34ch;
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+  .team-block {
+    display: grid;
+    gap: 22px;
+    margin-bottom: 12px;
+    padding: 16px;
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  .team-photo {
+    margin: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+    aspect-ratio: 16 / 9;
+  }
+  .team-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
+  }
+  .avatar-stack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 4px 10px 0;
+  }
+  .avatar {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    margin-left: -12px;
+    border-radius: 50%;
+    border: 3px solid var(--color-surface);
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface-2, #e8eee9));
+    overflow: visible;
+    cursor: default;
+    transition:
+      transform 0.25s var(--ease),
+      z-index 0s;
+    z-index: calc(20 - var(--i, 0));
+  }
+  .avatar:first-child {
+    margin-left: 0;
+  }
+  .avatar:hover,
+  .avatar:focus-within {
+    transform: translateY(-4px) scale(1.06);
+    z-index: 40;
+  }
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+  }
+  .initials {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    border-radius: 50%;
+  }
+  .tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    transform: translateX(-50%) translateY(4px);
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--color-text);
+    color: var(--color-surface);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.2s var(--ease),
+      transform 0.2s var(--ease);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  }
+  .tooltip strong {
+    display: block;
+    font-size: 12px;
+  }
+  .tooltip small {
+    display: block;
+    font-size: 11px;
+    opacity: 0.75;
+    margin-top: 2px;
+  }
+  .avatar:hover .tooltip,
+  .avatar:focus-within .tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .team-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 10px 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px 16px;
+  }
+  .team-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 8px;
+    font-size: 0.875rem;
+  }
+  .team-list .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    flex-shrink: 0;
+  }
+  .team-list .name {
+    font-weight: 700;
+    color: var(--color-text);
+  }
+  .team-list .role {
+    color: var(--color-muted);
+    font-size: 0.8125rem;
   }
 
   .values {
@@ -295,11 +520,11 @@
   .value {
     position: relative;
     transition:
-            transform 0.35s var(--ease),
-            box-shadow 0.35s var(--ease),
-            border-color 0.35s var(--ease),
-            opacity 0.7s var(--ease),
-            filter 0.7s var(--ease);
+      transform 0.35s var(--ease),
+      box-shadow 0.35s var(--ease),
+      border-color 0.35s var(--ease),
+      opacity 0.7s var(--ease),
+      filter 0.7s var(--ease);
   }
   .value::before {
     content: '';
@@ -308,9 +533,9 @@
     border-radius: inherit;
     pointer-events: none;
     background: radial-gradient(
-            260px circle at var(--sx, 50%) var(--sy, 50%),
-            rgba(255, 191, 25, 0.16),
-            transparent 65%
+      260px circle at var(--sx, 50%) var(--sy, 50%),
+      rgba(255, 191, 25, 0.16),
+      transparent 65%
     );
     opacity: 0;
     transition: opacity 0.3s;
@@ -398,6 +623,11 @@
     .pillars {
       grid-template-columns: 1fr;
     }
+    .team-head {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
   }
   @media (max-width: 600px) {
     .hero {
@@ -409,6 +639,14 @@
     }
     .banner .btn {
       margin-top: 18px;
+    }
+    .avatar {
+      width: 48px;
+      height: 48px;
+      margin-left: -10px;
+    }
+    .team-photo {
+      aspect-ratio: 4 / 3;
     }
   }
 
@@ -433,7 +671,8 @@
     .value,
     .value .icon,
     .value::after,
-    .arrow {
+    .arrow,
+    .avatar {
       transition: none;
     }
   }

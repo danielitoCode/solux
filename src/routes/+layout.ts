@@ -14,9 +14,12 @@ const FALLBACK_BRAND: PublicBrand = {
   logoUrl: ''
 };
 
+/** Cache de módulo: el root layout no debe volver a pegarle a Supabase en cada click del menú. */
+let brandCache: { value: PublicBrand; at: number } | null = null;
+const BRAND_TTL_MS = 5 * 60_000;
+
 /**
- * Brand compartido (Header/Footer): una sola lectura de company_profile.
- * En build (prerender) el HTML ya lleva nombre/logo; sin fetch en onMount.
+ * Brand compartido (Header/Footer): una sola lectura de company_profile por TTL.
  */
 export const load = async ({ url }) => {
   if (url.pathname.startsWith('/backoffice')) {
@@ -27,15 +30,21 @@ export const load = async ({ url }) => {
     return { publicBrand: FALLBACK_BRAND };
   }
 
+  const now = Date.now();
+  if (brandCache && now - brandCache.at < BRAND_TTL_MS) {
+    return { publicBrand: brandCache.value };
+  }
+
   try {
     const data = await publicContactUseCases.getCompanyProfile.execute();
-    return {
-      publicBrand: {
-        name: data?.name?.trim() || FALLBACK_BRAND.name,
-        logoUrl: data?.logo_url?.trim() || FALLBACK_BRAND.logoUrl
-      } satisfies PublicBrand
+    const publicBrand: PublicBrand = {
+      name: data?.name?.trim() || FALLBACK_BRAND.name,
+      logoUrl: data?.logo_url?.trim() || FALLBACK_BRAND.logoUrl
     };
+    brandCache = { value: publicBrand, at: now };
+    return { publicBrand };
   } catch {
+    if (brandCache) return { publicBrand: brandCache.value };
     return { publicBrand: FALLBACK_BRAND };
   }
 };

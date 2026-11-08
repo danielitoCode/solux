@@ -1,54 +1,138 @@
-/* SOLUX Design Tokens — extracted from prototype */
+/* SOLUX Design Tokens — Public site foundation
+   Intentional energy brand. Semantic + clear hierarchy.
+   Tuned after feedback: keep presence, avoid flatness and cost. */
+
 :root {
-  /* Color */
-  --color-bg: #f5f8f4;
+  /* ── Color: Surfaces & Text ── */
+  --color-bg: #f4f7f3;
   --color-surface: #ffffff;
-  --color-surface-2: #edf4ee;
-  --color-text: #173d29;
-  --color-muted: #526257;
+  --color-surface-2: #eef3ee;
+  --color-surface-3: #e4ece5;
+  --color-text: #143524;
+  --color-text-secondary: #3d5a48;
+  --color-muted: #5a6f60;
+  --color-border: #d5e0d6;
+  --color-border-strong: #b8c9bb;
+
+  /* ── Brand ── */
   --color-primary: #08783e;
-  --color-primary-2: #35b85a;
   --color-primary-hover: #066331;
-  --color-accent: #ffbf19;
-  --color-border: #dce6dc;
-  --color-shadow: 0 18px 60px rgba(8, 67, 36, 0.1);
+  --color-primary-active: #054f27;
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  --color-primary-2: #2ea84f;
+  --color-accent: #f5b800;
+  --color-accent-hover: #e0a800;
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 16%, transparent);
 
-  /* Radius */
-  --radius-sm: 12px;
+  /* ── Semantic ── */
+  --color-success: #0d8a4a;
+  --color-success-soft: color-mix(in srgb, var(--color-success) 12%, transparent);
+  --color-warning: #c47a00;
+  --color-warning-soft: color-mix(in srgb, var(--color-warning) 12%, transparent);
+  --color-error: #c0392b;
+  --color-error-soft: color-mix(in srgb, var(--color-error) 12%, transparent);
+  --color-info: #1a6bb5;
+  --color-info-soft: color-mix(in srgb, var(--color-info) 12%, transparent);
+  --color-disabled: #9aab9e;
+  --color-disabled-bg: #e8eee9;
+
+  /* ── Elevation ── */
+  --elevation-0: none;
+  --elevation-1: 0 1px 3px rgba(8, 67, 36, 0.05);
+  --elevation-2: 0 6px 16px rgba(8, 67, 36, 0.07);
+  --elevation-3: 0 12px 32px rgba(8, 67, 36, 0.09);
+  --elevation-4: 0 20px 50px rgba(8, 67, 36, 0.11);
+  --color-shadow: var(--elevation-3);
+
+  /* ── Radius — keep some softness, avoid extreme bubble ── */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
   --radius-md: 14px;
-  --radius-lg: 22px;
-  --radius-xl: 28px;
-  --radius-2xl: 32px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
 
-  /* Layout */
-  --max-width: 1180px;
-  --header-height: 74px;
+  /* ── Layout ── */
+  --max-width: 1140px;
+  --header-height: 68px;
+  --space-section: clamp(56px, 8vw, 96px);
+  --space-page-x: clamp(18px, 4vw, 28px);
 
-  /* Typography */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  /* ── Typography ── */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
 
-  /* Motion */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: clamp(1.375rem, 2.2vw, 1.625rem);
+  --text-3xl: clamp(1.75rem, 3.5vw, 2.25rem);
+  --text-4xl: clamp(2.25rem, 5vw, 3.25rem);
+  --text-5xl: clamp(2.75rem, 6.5vw, 4.25rem);
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  --tracking-tight: -0.035em;
+  --tracking-normal: -0.01em;
+  --tracking-wide: 0.06em;
+  --tracking-wider: 0.14em;
+
+  /* ── Motion ── */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --duration-fast: 0.2s;
-  --duration-base: 0.3s;
-  --duration-slow: 0.55s;
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --duration-instant: 0.1s;
+  --duration-fast: 0.18s;
+  --duration-base: 0.28s;
+  --duration-slow: 0.45s;
+  --duration-slower: 0.7s;
 }
 
 [data-theme='dark'] {
-  --color-bg: #101713;
-  --color-surface: #18231c;
-  --color-surface-2: #223128;
-  --color-text: #f1f7f1;
-  --color-muted: #b6c6b9;
-  --color-primary: #35b85a;
-  --color-primary-2: #53cc73;
-  --color-primary-hover: #64d584;
-  --color-accent: #ffcb45;
-  --color-border: #304136;
-  --color-shadow: 0 20px 70px rgba(0, 0, 0, 0.28);
+  --color-bg: #0e1511;
+  --color-surface: #161f1a;
+  --color-surface-2: #1e2a23;
+  --color-surface-3: #26342c;
+  --color-text: #eef5ef;
+  --color-text-secondary: #c5d4c8;
+  --color-muted: #9aaf9f;
+  --color-border: #2a3a30;
+  --color-border-strong: #3a4f42;
+
+  --color-primary: #2fbf5e;
+  --color-primary-hover: #45c96e;
+  --color-primary-active: #5ad480;
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  --color-primary-2: #4cd472;
+  --color-accent: #ffc933;
+  --color-accent-hover: #ffd45c;
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 18%, transparent);
+
+  --color-success: #2fbf5e;
+  --color-success-soft: color-mix(in srgb, var(--color-success) 16%, transparent);
+  --color-warning: #e0a020;
+  --color-warning-soft: color-mix(in srgb, var(--color-warning) 16%, transparent);
+  --color-error: #e05a4e;
+  --color-error-soft: color-mix(in srgb, var(--color-error) 16%, transparent);
+  --color-info: #4a9de0;
+  --color-info-soft: color-mix(in srgb, var(--color-info) 16%, transparent);
+  --color-disabled: #6a7d6f;
+  --color-disabled-bg: #1e2a23;
+
+  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --elevation-2: 0 6px 18px rgba(0, 0, 0, 0.3);
+  --elevation-3: 0 14px 40px rgba(0, 0, 0, 0.34);
+  --elevation-4: 0 24px 60px rgba(0, 0, 0, 0.4);
+  --color-shadow: var(--elevation-3);
 }

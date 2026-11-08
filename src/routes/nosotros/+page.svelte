@@ -4,4 +4,4 @@
   let { data } = $props();
 </script>
 
-<AboutPage pageContent={data.pageContent} />
+<AboutPage pageContent={data.pageContent} team={data.team} />

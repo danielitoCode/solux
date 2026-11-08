@@ -12,11 +12,19 @@ export type SitePageContent = {
   image_4?: string;
 };
 
+const cache = new Map<string, { value: SitePageContent; at: number }>();
+const TTL_MS = 60_000;
+
 export async function loadSiteContent<T extends SitePageContent>(
   pageSlug: string,
   defaults: T
 ): Promise<T> {
   if (!supabaseConfigured) return defaults;
+
+  const hit = cache.get(pageSlug);
+  if (hit && Date.now() - hit.at < TTL_MS) {
+    return { ...defaults, ...hit.value } as T;
+  }
 
   const { data, error } = await supabase
     .from('site_content')
@@ -29,5 +37,7 @@ export async function loadSiteContent<T extends SitePageContent>(
     return defaults;
   }
 
-  return data?.content ? { ...defaults, ...data.content } as T : defaults;
+  const content = (data?.content ?? {}) as SitePageContent;
+  cache.set(pageSlug, { value: content, at: Date.now() });
+  return { ...defaults, ...content } as T;
 }
