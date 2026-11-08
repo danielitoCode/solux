@@ -24,6 +24,7 @@
     { href: '/backoffice/inventario', label: 'Proveedores e inventario', icon: 'building-2', roles: ['admin', 'sales'] },
     { href: '/backoffice/finanzas', label: 'Finanzas y personal', icon: 'wallet', roles: ['admin'] },
     { href: '/backoffice/presentacion', label: 'Presentación', icon: 'presentation', roles: ['admin'] },
+    { href: '/backoffice/equipo', label: 'Equipo', icon: 'user', roles: ['admin'] },
     { href: '/backoffice/proyectos', label: 'Proyectos web', icon: 'image', roles: ['admin'] },
     { href: '/backoffice/usuarios', label: 'Usuarios', icon: 'user', roles: ['admin'] }
   ];
