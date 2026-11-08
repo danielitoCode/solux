@@ -11,7 +11,9 @@
   } from '../stores/presentation.store.svelte';
   import type { PageContent, PageSlug } from '../../domain/entities/page-content';
 
-  const state = getPresentationState();
+  // No usar el nombre `state`: en Svelte 5 choca con el rune $state
+  // y puede disparar store_invalid_shape al interpretar $state como store.
+  const pres = getPresentationState();
 
   type NavKey = PageSlug | 'equipo';
 
@@ -27,7 +29,7 @@
   const imageKey = (index: number): keyof PageContent => `image${index}` as keyof PageContent;
 
   function imageLabel(index: number): string {
-    if (state.selectedSlug === 'nosotros') {
+    if (pres.selectedSlug === 'nosotros') {
       if (index === 1) return 'Imagen 1 — Hero de Nosotros';
       if (index === 2) return 'Imagen 2 — Foto de grupo del equipo';
     }
@@ -35,7 +37,7 @@
   }
 
   function imageHint(index: number): string {
-    if (state.selectedSlug === 'nosotros' && index === 2) {
+    if (pres.selectedSlug === 'nosotros' && index === 2) {
       return 'Se muestra como banner en la sección Equipo de /nosotros.';
     }
     if (index > 1) return 'Opcional; no todas las vistas usan las cuatro imágenes.';
@@ -48,9 +50,13 @@
   }
 
   function selectNav(key: NavKey) {
-    if (state.saving || Object.values(state.uploadingImages).some(Boolean)) return;
+    if (pres.saving || Object.values(pres.uploadingImages).some(Boolean)) return;
     nav = key;
     if (key !== 'equipo') selectPresentationPage(key);
+  }
+
+  function isBusy() {
+    return pres.saving || pres.loading || Object.values(pres.uploadingImages).some(Boolean);
   }
 
   selectPresentationPage('inicio');
@@ -71,7 +77,7 @@
           <button
             class:active={nav === item.slug}
             type="button"
-            disabled={state.saving || state.loading || Object.values(state.uploadingImages).some(Boolean)}
+            disabled={isBusy()}
             onclick={() => selectNav(item.slug)}
           >
             <strong>{item.label}</strong>
@@ -81,7 +87,7 @@
         <button
           class:active={nav === 'equipo'}
           type="button"
-          disabled={state.saving || state.loading || Object.values(state.uploadingImages).some(Boolean)}
+          disabled={isBusy()}
           onclick={() => selectNav('equipo')}
         >
           <strong>Equipo</strong>
@@ -99,22 +105,17 @@
         <header class="editor-header">
           <div>
             <p class="eyebrow">Contenido público</p>
-            <h2>{pages.find((p) => p.slug === state.selectedSlug)?.label}</h2>
+            <h2>{pages.find((p) => p.slug === pres.selectedSlug)?.label}</h2>
           </div>
-          <button
-            class="primary"
-            type="button"
-            onclick={savePresentation}
-            disabled={state.saving || state.loading || Object.values(state.uploadingImages).some(Boolean)}
-          >
-            {state.saving ? 'Guardando…' : 'Guardar cambios'}
+          <button class="primary" type="button" onclick={savePresentation} disabled={isBusy()}>
+            {pres.saving ? 'Guardando…' : 'Guardar cambios'}
           </button>
         </header>
 
-        {#if state.error}<div class="notice error" role="alert">{state.error}</div>{/if}
-        {#if state.success}<div class="notice success" role="status">{state.success}</div>{/if}
+        {#if pres.error}<div class="notice error" role="alert">{pres.error}</div>{/if}
+        {#if pres.success}<div class="notice success" role="status">{pres.success}</div>{/if}
 
-        {#if state.loading}
+        {#if pres.loading}
           <p>Cargando contenido…</p>
         {:else}
           <form
@@ -124,13 +125,13 @@
             }}
           >
             <section class="panel">
-              <h3>{state.selectedSlug === 'proyectos' ? 'Encabezado de proyectos' : 'Textos'}</h3>
+              <h3>{pres.selectedSlug === 'proyectos' ? 'Encabezado de proyectos' : 'Textos'}</h3>
               <label
-                >Antetítulo<input value={state.content.eyebrow} oninput={bindField('eyebrow')} /></label
+                >Antetítulo<input value={pres.content.eyebrow} oninput={bindField('eyebrow')} /></label
               >
               <label
                 >Título principal<input
-                  value={state.content.title}
+                  value={pres.content.title}
                   oninput={bindField('title')}
                   required
                 /></label
@@ -138,28 +139,28 @@
               <label
                 >Descripción principal<textarea
                   rows="4"
-                  value={state.content.description}
+                  value={pres.content.description}
                   oninput={bindField('description')}
                 ></textarea></label
               >
-              {#if state.selectedSlug !== 'proyectos'}
+              {#if pres.selectedSlug !== 'proyectos'}
                 <label
                   >Título secundario<input
-                    value={state.content.secondaryTitle}
+                    value={pres.content.secondaryTitle}
                     oninput={bindField('secondaryTitle')}
                   /></label
                 >
                 <label
                   >Descripción secundaria<textarea
                     rows="4"
-                    value={state.content.secondaryDescription}
+                    value={pres.content.secondaryDescription}
                     oninput={bindField('secondaryDescription')}
                   ></textarea></label
                 >
               {/if}
             </section>
 
-            {#if state.selectedSlug !== 'proyectos'}
+            {#if pres.selectedSlug !== 'proyectos'}
               <section class="panel">
                 <h3>Imágenes</h3>
                 {#if !isPresentationMediaConfigured()}
@@ -175,7 +176,7 @@
                       <input
                         type="url"
                         placeholder="Pega URL https://…"
-                        value={state.content[imageKey(index)]}
+                        value={pres.content[imageKey(index)]}
                         oninput={bindField(imageKey(index))}
                       /></label
                     >
@@ -186,18 +187,18 @@
                         type="file"
                         accept="image/*"
                         disabled={!isPresentationMediaConfigured() ||
-                          state.loading ||
-                          state.saving ||
-                          state.uploadingImages[index]}
+                          pres.loading ||
+                          pres.saving ||
+                          pres.uploadingImages[index]}
                         onchange={(event) =>
                           uploadPresentationImage(index, event.currentTarget.files?.[0])}
                       /></label
                     >
-                    {#if state.uploadingImages[index]}<p class="upload-status">Subiendo imagen…</p>{/if}
-                    {#if state.content[imageKey(index)]}
+                    {#if pres.uploadingImages[index]}<p class="upload-status">Subiendo imagen…</p>{/if}
+                    {#if pres.content[imageKey(index)]}
                       <img
                         class="preview"
-                        src={state.content[imageKey(index)]}
+                        src={pres.content[imageKey(index)]}
                         alt={`Vista previa imagen ${index}`}
                       />
                     {/if}
@@ -207,14 +208,8 @@
             {/if}
 
             <div class="actions">
-              <button
-                class="primary"
-                type="submit"
-                disabled={state.saving ||
-                  state.loading ||
-                  Object.values(state.uploadingImages).some(Boolean)}
-              >
-                {state.saving ? 'Guardando…' : 'Guardar cambios'}
+              <button class="primary" type="submit" disabled={isBusy()}>
+                {pres.saving ? 'Guardando…' : 'Guardar cambios'}
               </button>
             </div>
           </form>
