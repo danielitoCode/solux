@@ -1,4 +1,5 @@
 import { getUsersUseCases } from '$features/users/di';
+import { getAuthUser, refreshAuthPermissions } from '$features/auth/ui/stores/auth.store.svelte';
 import type { UserPermissionGrant } from '$features/auth/domain/entities';
 import type { BackofficeUser } from '../../domain/entities/backoffice-user';
 import type { FeatureCatalogItem } from '../../domain/entities/feature-permission';
@@ -72,6 +73,10 @@ export async function updateUser(
   try {
     const updated = await useCases.update.execute(id, data);
     users = users.map((user) => (user.id === updated.id ? updated : user));
+    // Si el admin se edita a sí mismo (rol/activo), refrescar sesión en caliente
+    if (getAuthUser()?.id === id) {
+      await refreshAuthPermissions();
+    }
     success = 'Usuario actualizado.';
     return updated;
   } catch (e) {
@@ -93,6 +98,10 @@ export async function saveUserPermissions(
   success = '';
   try {
     await useCases.saveUserPermissions.execute(userId, grants, grantedBy);
+    // Misma sesión: aplicar menú al instante. Otras sesiones: Realtime / focus.
+    if (getAuthUser()?.id === userId) {
+      await refreshAuthPermissions();
+    }
     success = 'Permisos actualizados.';
   } catch (e) {
     error = e instanceof Error ? e.message : 'No se pudieron guardar los permisos.';
@@ -110,6 +119,9 @@ export async function toggleUserActive(user: BackofficeUser) {
   try {
     const updated = await useCases.setActive.execute(user.id, !user.isActive);
     users = users.map((item) => (item.id === updated.id ? updated : item));
+    if (getAuthUser()?.id === user.id) {
+      await refreshAuthPermissions();
+    }
     success = user.isActive ? 'Usuario desactivado.' : 'Usuario activado.';
   } catch (e) {
     error = e instanceof Error ? e.message : 'No se pudo cambiar el estado.';
