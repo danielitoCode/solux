@@ -43,7 +43,7 @@
 
   onMount(() => {
     const onScroll = () => {
-      scrolled = window.scrollY > 8;
+      scrolled = window.scrollY > 12;
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -114,15 +114,16 @@
     position: sticky;
     top: 0;
     z-index: 50;
-    background: var(--color-bg);
+    background: transparent;
     border-bottom: 1px solid transparent;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
+  /* Solo presencia sutil al scrollear — no mata la atmósfera del hero */
   .site-header.scrolled {
-    background: var(--color-surface);
-    border-bottom-color: var(--color-border);
-    box-shadow: 0 1px 0 rgba(8, 67, 36, 0.04);
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    border-bottom-color: color-mix(in srgb, var(--color-border) 55%, transparent);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
   }
 
   .header-inner {
@@ -236,11 +237,11 @@
   }
   .desktop-nav a:hover {
     color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
   }
   .desktop-nav a.active {
     color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
     font-weight: 700;
   }
 
@@ -253,7 +254,7 @@
   .theme-toggle,
   .menu-toggle {
     border: 1px solid var(--color-border);
-    background: var(--color-surface);
+    background: color-mix(in srgb, var(--color-surface) 70%, transparent);
     color: var(--color-text);
     width: 36px;
     height: 36px;
@@ -267,7 +268,7 @@
   .menu-toggle:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
   }
   .menu-toggle {
     display: none;
@@ -276,7 +277,7 @@
   .menu-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(10, 18, 14, 0.22);
+    background: rgba(10, 18, 14, 0.28);
     z-index: 40;
   }
 
