@@ -1,7 +1,11 @@
 import type { UserPermissionGrant } from '$features/auth/domain/entities';
 import type { BackofficeUser } from '../entities/backoffice-user';
 import type { FeatureCatalogItem } from '../entities/feature-permission';
-import type { SaveUserPermissionInput, UsersRepository } from '../repository/users-repository';
+import type {
+  CreateUserInput,
+  SaveUserPermissionInput,
+  UsersRepository
+} from '../repository/users-repository';
 
 export class ListUsers {
   constructor(private readonly repository: UsersRepository) {}
@@ -24,6 +28,13 @@ export class SetUserActive {
   constructor(private readonly repository: UsersRepository) {}
   execute(id: string, active: boolean) {
     return this.repository.setActive(id, active);
+  }
+}
+
+export class CreateUser {
+  constructor(private readonly repository: UsersRepository) {}
+  execute(data: CreateUserInput) {
+    return this.repository.create(data);
   }
 }
 
