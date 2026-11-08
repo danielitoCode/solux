@@ -10,6 +10,7 @@
     loadUserPermissions,
     toggleUserActive,
     updateUser,
+    createUser,
     saveUserPermissions
   } from '../stores/users.store.svelte';
 
@@ -25,13 +26,16 @@
   let search = $state('');
   let roleFilter = $state('all');
   let statusFilter = $state('all');
+  let formMode = $state<'create' | 'edit'>('edit');
   let editingId = $state('');
   let fullName = $state('');
+  let email = $state('');
+  let password = $state('');
   let phone = $state('');
   let role = $state<UserRole>('support');
   let isActive = $state(true);
   let showForm = $state(false);
-  let creationNotice = $state('');
+  let formNotice = $state('');
   let loadingPerms = $state(false);
   let permRows = $state<EditableUserPermission[]>([]);
 
@@ -73,14 +77,41 @@
     return d.toISOString();
   }
 
+  function emptyPermRows(): EditableUserPermission[] {
+    return viewState.features.map((f) => ({
+      featureKey: f.key,
+      enabled: false,
+      canRead: true,
+      canWrite: false,
+      expiresAtLocal: ''
+    }));
+  }
+
+  function openCreate() {
+    formMode = 'create';
+    editingId = '';
+    fullName = '';
+    email = '';
+    password = '';
+    phone = '';
+    role = 'support';
+    isActive = true;
+    formNotice = '';
+    permRows = emptyPermRows();
+    showForm = true;
+  }
+
   async function openEdit(user: (typeof viewState.users)[number]) {
+    formMode = 'edit';
     editingId = user.id;
     fullName = user.fullName;
+    email = user.email;
+    password = '';
     phone = user.phone ?? '';
     role = user.role;
     isActive = user.isActive;
     showForm = true;
-    creationNotice = '';
+    formNotice = '';
     loadingPerms = true;
     permRows = [];
     try {
@@ -97,13 +128,7 @@
         };
       });
     } catch {
-      permRows = viewState.features.map((f) => ({
-        featureKey: f.key,
-        enabled: false,
-        canRead: true,
-        canWrite: false,
-        expiresAtLocal: ''
-      }));
+      permRows = emptyPermRows();
     } finally {
       loadingPerms = false;
     }
@@ -146,13 +171,49 @@
     };
   }
 
+  function buildGrants(): SaveUserPermissionInput[] {
+    return permRows
+      .filter((r) => r.enabled && (r.canRead || r.canWrite))
+      .map((r) => ({
+        featureKey: r.featureKey,
+        canRead: r.canRead || r.canWrite,
+        canWrite: r.canWrite,
+        expiresAt: fromLocalInput(r.expiresAtLocal)
+      }));
+  }
+
   async function save(event: SubmitEvent) {
     event.preventDefault();
+    if (viewState.saving) return;
+    formNotice = '';
+
+    if (formMode === 'create') {
+      if (password.trim().length < 8) {
+        formNotice = 'La contraseña debe tener al menos 8 caracteres.';
+        return;
+      }
+      try {
+        await createUser({
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+          fullName: fullName.trim(),
+          phone: phone.trim() || null,
+          role,
+          isActive,
+          permissions: role === 'admin' ? [] : buildGrants()
+        });
+        if (!viewState.error) showForm = false;
+      } catch {
+        /* store */
+      }
+      return;
+    }
+
     const user = viewState.users.find((item) => item.id === editingId);
-    if (!user || viewState.saving) return;
+    if (!user) return;
 
     if (user.id === currentUser?.id && (!isActive || role !== 'admin')) {
-      creationNotice =
+      formNotice =
         'No puedes desactivar tu propia cuenta ni quitarte el rol de administrador.';
       return;
     }
@@ -165,25 +226,15 @@
         isActive
       });
 
-      // Admin no necesita grants (acceso total). Aun así limpiamos si se degradó de admin.
       if (role !== 'admin') {
-        const grants: SaveUserPermissionInput[] = permRows
-          .filter((r) => r.enabled && (r.canRead || r.canWrite))
-          .map((r) => ({
-            featureKey: r.featureKey,
-            canRead: r.canRead || r.canWrite,
-            canWrite: r.canWrite,
-            expiresAt: fromLocalInput(r.expiresAtLocal)
-          }));
-        await saveUserPermissions(user.id, grants, currentUser?.id ?? null);
+        await saveUserPermissions(user.id, buildGrants(), currentUser?.id ?? null);
       } else {
-        // Si es admin, revoca grants explícitos (opcional limpieza)
         await saveUserPermissions(user.id, [], currentUser?.id ?? null);
       }
 
       if (!viewState.error) showForm = false;
     } catch {
-      /* error ya en store */
+      /* store */
     }
   }
 
@@ -259,25 +310,23 @@
         <option value="inactive">Inactivos</option>
       </select>
     </div>
-    <button
-      type="button"
-      onclick={() =>
-        (creationNotice =
-          'La creación de cuentas requiere Edge Function segura de Supabase Auth.')}
-      disabled={viewState.saving}>Nuevo usuario</button
-    >
+    <button type="button" onclick={openCreate} disabled={viewState.saving}>Nuevo usuario</button>
   </div>
 
   {#if viewState.error}<p class="notice error" role="alert">{viewState.error}</p>{/if}
-  {#if creationNotice}<p class="notice error" role="alert">{creationNotice}</p>{/if}
+  {#if formNotice}<p class="notice error" role="alert">{formNotice}</p>{/if}
   {#if viewState.success}<p class="notice success" role="status">{viewState.success}</p>{/if}
 
   {#if showForm}
     <form class="card editor" onsubmit={save}>
       <div class="editor-head">
         <div>
-          <h3>Editar usuario</h3>
-          <p>Perfil, rol y permisos por módulo.</p>
+          <h3>{formMode === 'create' ? 'Nuevo usuario' : 'Editar usuario'}</h3>
+          <p>
+            {formMode === 'create'
+              ? 'Crea cuenta Auth + perfil y permisos iniciales.'
+              : 'Perfil, rol y permisos por módulo.'}
+          </p>
         </div>
         <button type="button" onclick={closeForm} disabled={viewState.saving}>Cancelar</button>
       </div>
@@ -289,8 +338,25 @@
         </div>
         <div>
           <label>Correo</label>
-          <input value={viewState.users.find((u) => u.id === editingId)?.email ?? ''} disabled />
+          {#if formMode === 'create'}
+            <input type="email" bind:value={email} required autocomplete="off" />
+          {:else}
+            <input value={email} disabled />
+          {/if}
         </div>
+        {#if formMode === 'create'}
+          <div>
+            <label>Contraseña temporal</label>
+            <input
+              type="password"
+              bind:value={password}
+              required
+              minlength="8"
+              autocomplete="new-password"
+              placeholder="Mínimo 8 caracteres"
+            />
+          </div>
+        {/if}
         <div>
           <label>Teléfono</label>
           <input bind:value={phone} maxlength="40" />
@@ -383,7 +449,11 @@
 
       <div class="editor-actions">
         <button type="submit" disabled={viewState.saving || loadingPerms}>
-          {viewState.saving ? 'Guardando…' : 'Guardar cambios'}
+          {#if viewState.saving}
+            {formMode === 'create' ? 'Creando…' : 'Guardando…'}
+          {:else}
+            {formMode === 'create' ? 'Crear usuario' : 'Guardar cambios'}
+          {/if}
         </button>
       </div>
     </form>
@@ -742,9 +812,6 @@
     }
     .toolbar .search {
       flex-basis: 100%;
-    }
-    .stats {
-      gap: 8px;
     }
   }
   @media (max-width: 520px) {
