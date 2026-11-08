@@ -3,7 +3,7 @@ import { getAuthUser, refreshAuthPermissions } from '$features/auth/ui/stores/au
 import type { UserPermissionGrant } from '$features/auth/domain/entities';
 import type { BackofficeUser } from '../../domain/entities/backoffice-user';
 import type { FeatureCatalogItem } from '../../domain/entities/feature-permission';
-import type { SaveUserPermissionInput } from '../../domain/repository/users-repository';
+import type { CreateUserInput, SaveUserPermissionInput } from '../../domain/repository/users-repository';
 
 const useCases = getUsersUseCases();
 
@@ -73,7 +73,6 @@ export async function updateUser(
   try {
     const updated = await useCases.update.execute(id, data);
     users = users.map((user) => (user.id === updated.id ? updated : user));
-    // Si el admin se edita a sí mismo (rol/activo), refrescar sesión en caliente
     if (getAuthUser()?.id === id) {
       await refreshAuthPermissions();
     }
@@ -81,6 +80,24 @@ export async function updateUser(
     return updated;
   } catch (e) {
     error = e instanceof Error ? e.message : 'No se pudo guardar el usuario.';
+    throw e;
+  } finally {
+    saving = false;
+  }
+}
+
+export async function createUser(input: CreateUserInput) {
+  if (saving) return;
+  saving = true;
+  error = '';
+  success = '';
+  try {
+    const created = await useCases.create.execute(input);
+    await loadUsers();
+    success = `Usuario ${created.email} creado.`;
+    return created;
+  } catch (e) {
+    error = e instanceof Error ? e.message : 'No se pudo crear el usuario.';
     throw e;
   } finally {
     saving = false;
@@ -98,7 +115,6 @@ export async function saveUserPermissions(
   success = '';
   try {
     await useCases.saveUserPermissions.execute(userId, grants, grantedBy);
-    // Misma sesión: aplicar menú al instante. Otras sesiones: Realtime / focus.
     if (getAuthUser()?.id === userId) {
       await refreshAuthPermissions();
     }
