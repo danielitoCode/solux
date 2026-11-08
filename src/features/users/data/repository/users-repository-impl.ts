@@ -1,7 +1,11 @@
 import type { UserPermissionGrant } from '$features/auth/domain/entities';
 import type { BackofficeUser } from '../../domain/entities/backoffice-user';
 import type { FeatureCatalogItem } from '../../domain/entities/feature-permission';
-import type { SaveUserPermissionInput, UsersRepository } from '../../domain/repository/users-repository';
+import type {
+  CreateUserInput,
+  SaveUserPermissionInput,
+  UsersRepository
+} from '../../domain/repository/users-repository';
 import { UsersRemoteDataSource } from '../datasources/remote/users-remote-datasource';
 import { mapUserDto } from '../mappers/user.mapper';
 
@@ -28,6 +32,10 @@ export class UsersRepositoryImpl implements UsersRepository {
 
   async setActive(id: string, active: boolean) {
     return mapUserDto(await this.remote.setActive(id, active));
+  }
+
+  create(data: CreateUserInput) {
+    return this.remote.create(data);
   }
 
   listFeatures(): Promise<FeatureCatalogItem[]> {
