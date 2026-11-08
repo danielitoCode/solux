@@ -24,13 +24,26 @@
 
   const cloudReady = isCloudinaryConfigured();
 
+  function friendlyError(e: unknown): string {
+    const msg = e instanceof Error ? e.message : String(e ?? '');
+    if (
+      msg.includes('team_members') ||
+      msg.includes('PGRST205') ||
+      msg.includes('schema cache') ||
+      msg.includes('does not exist')
+    ) {
+      return 'Falta aplicar la migración 024_team_members.sql en Supabase. Ejecútala en el SQL Editor y recarga.';
+    }
+    return msg || 'No se pudo cargar el equipo.';
+  }
+
   async function load() {
     loading = true;
     error = '';
     try {
       members = await listTeamMembersAdmin();
     } catch (e) {
-      error = e instanceof Error ? e.message : 'No se pudo cargar el equipo.';
+      error = friendlyError(e);
       members = [];
     } finally {
       loading = false;
@@ -123,7 +136,7 @@
       await load();
       resetForm();
     } catch (e) {
-      error = e instanceof Error ? e.message : 'No se pudo guardar.';
+      error = friendlyError(e);
     } finally {
       saving = false;
     }
@@ -141,7 +154,7 @@
       await load();
       success = 'Miembro eliminado.';
     } catch (e) {
-      error = e instanceof Error ? e.message : 'No se pudo eliminar.';
+      error = friendlyError(e);
     } finally {
       saving = false;
     }
@@ -174,7 +187,7 @@
       <div class="list panel">
         <h3>Miembros ({members.length})</h3>
         {#if !members.length}
-          <p class="empty">Aún no hay miembros. Crea el primero.</p>
+          <p class="empty">Aún no hay miembros. Crea el primero con el formulario de la derecha.</p>
         {:else}
           <ul>
             {#each members as m (m.id)}
