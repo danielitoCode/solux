@@ -43,14 +43,13 @@
 
   onMount(() => {
     const onScroll = () => {
-      scrolled = window.scrollY > 12;
+      scrolled = window.scrollY > 8;
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   });
 
-  // Close menu on escape
   $effect(() => {
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -115,30 +114,25 @@
     position: sticky;
     top: 0;
     z-index: 50;
-    transition:
-      background var(--duration-base) var(--ease-out),
-      box-shadow var(--duration-base) var(--ease-out),
-      border-color var(--duration-base) var(--ease-out);
-    background: color-mix(in srgb, var(--color-bg) 78%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: var(--color-bg);
     border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .site-header.scrolled {
-    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    background: var(--color-surface);
     border-bottom-color: var(--color-border);
-    box-shadow: var(--elevation-1);
+    box-shadow: 0 1px 0 rgba(8, 67, 36, 0.04);
   }
 
   .header-inner {
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 12px var(--space-page-x);
+    padding: 12px var(--space-page-x, 24px);
     display: flex;
     align-items: center;
     gap: 10px;
-    min-height: var(--header-height);
+    min-height: var(--header-height, 68px);
   }
 
   .brand {
@@ -148,21 +142,21 @@
     min-width: 0;
     flex: 0 0 auto;
     max-width: 132px;
-    font-weight: var(--font-weight-extrabold);
-    letter-spacing: var(--tracking-tight);
+    font-weight: 800;
+    letter-spacing: -0.03em;
     color: var(--color-text);
   }
   .brand-name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: var(--text-md);
+    font-size: 1rem;
   }
   .company-logo {
     width: 30px;
     height: 30px;
     object-fit: contain;
-    border-radius: var(--radius-sm);
+    border-radius: 8px;
     flex: 0 0 auto;
   }
   .brand-mark {
@@ -170,7 +164,7 @@
     height: 28px;
     display: grid;
     place-items: center;
-    border-radius: var(--radius-sm);
+    border-radius: 8px;
     background: linear-gradient(145deg, var(--color-primary), var(--color-primary-2));
     position: relative;
     overflow: hidden;
@@ -211,15 +205,13 @@
     align-items: center;
     gap: 5px;
     padding: 7px 8px;
-    border-radius: var(--radius-sm);
+    border-radius: 8px;
     font-size: 12.5px;
-    font-weight: var(--font-weight-semibold);
+    font-weight: 600;
     color: var(--color-muted);
     white-space: nowrap;
     flex: 0 0 auto;
-    transition:
-      color var(--duration-fast) var(--ease-out),
-      background var(--duration-fast) var(--ease-out);
+    transition: color 0.15s ease, background 0.15s ease;
   }
   .desktop-nav .nav-icon {
     display: inline-flex;
@@ -244,12 +236,12 @@
   }
   .desktop-nav a:hover {
     color: var(--color-primary);
-    background: var(--color-primary-soft);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   }
   .desktop-nav a.active {
     color: var(--color-primary);
-    background: var(--color-primary-soft);
-    font-weight: var(--font-weight-bold);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    font-weight: 700;
   }
 
   .header-actions {
@@ -265,20 +257,17 @@
     color: var(--color-text);
     width: 36px;
     height: 36px;
-    border-radius: var(--radius-sm);
+    border-radius: 8px;
     display: inline-grid;
     place-items: center;
     flex: 0 0 auto;
-    transition:
-      border-color var(--duration-fast) var(--ease-out),
-      color var(--duration-fast) var(--ease-out),
-      background var(--duration-fast) var(--ease-out);
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
   }
   .theme-toggle:hover,
   .menu-toggle:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
-    background: var(--color-primary-soft);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   }
   .menu-toggle {
     display: none;
@@ -287,14 +276,8 @@
   .menu-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(10, 18, 14, 0.28);
+    background: rgba(10, 18, 14, 0.22);
     z-index: 40;
-    animation: fadeIn var(--duration-fast) var(--ease-out);
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
   }
 
   @media (max-width: 1180px) {
@@ -316,28 +299,27 @@
       display: none;
       position: absolute;
       top: calc(100% + 6px);
-      left: var(--space-page-x);
-      right: var(--space-page-x);
+      left: 18px;
+      right: 18px;
       background: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
+      border-radius: 14px;
       padding: 8px;
       flex-direction: column;
       align-items: stretch;
       justify-content: flex-start;
       flex-wrap: nowrap;
       overflow: visible;
-      box-shadow: var(--elevation-4);
+      box-shadow: var(--color-shadow);
       z-index: 45;
-      animation: slideDown var(--duration-base) var(--ease-out);
     }
     .desktop-nav.open {
       display: flex;
     }
     .desktop-nav a {
       padding: 12px 14px;
-      font-size: var(--text-sm);
-      border-radius: var(--radius-sm);
+      font-size: 13px;
+      border-radius: 8px;
     }
     .menu-toggle {
       display: inline-grid;
@@ -346,17 +328,6 @@
     .reserve {
       min-height: 36px;
       padding-inline: 12px;
-    }
-
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-8px);
-      }
-      to {
-        opacity: 1;
-        transform: none;
-      }
     }
   }
 
@@ -381,10 +352,6 @@
     .theme-toggle,
     .menu-toggle {
       transition: none;
-    }
-    .menu-backdrop,
-    .desktop-nav.open {
-      animation: none;
     }
   }
 </style>
