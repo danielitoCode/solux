@@ -14,7 +14,8 @@
     secondary_title: 'Nuestros valores',
     secondary_description: 'Hecho con criterio.',
     image_1:
-      'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1400&q=85'
+      'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1400&q=85',
+    image_2: ''
   };
 
   /** Datos desde /nosotros/+page.ts load (prerender). */
@@ -33,7 +34,10 @@
   const valuesEyebrow = $derived(pageContent.secondary_title || DEFAULTS.secondary_title);
   const valuesTitle = $derived(pageContent.secondary_description || DEFAULTS.secondary_description);
   const image = $derived(pageContent.image_1 || DEFAULTS.image_1);
+  /** Foto de grupo del equipo (Presentación → Nosotros → Imagen 2). */
+  const teamPhoto = $derived((pageContent.image_2 || DEFAULTS.image_2).trim());
   const members = $derived(team ?? []);
+  const showTeam = $derived(Boolean(teamPhoto) || members.length > 0);
 
   /* ─────────── Contenido estático ─────────── */
   const pillars = [
@@ -100,7 +104,7 @@
   </div>
 
   <!-- ───────── Equipo ───────── -->
-  {#if members.length}
+  {#if showTeam}
     <div class="section-head team-head rv" use:reveal>
       <div>
         <div class="eyebrow">Equipo</div>
@@ -113,31 +117,46 @@
     </div>
 
     <div class="team-block rv" use:reveal={80}>
-      <div class="avatar-stack" role="list" aria-label="Miembros del equipo">
-        {#each members as member, i (member.id)}
-          <div class="avatar" role="listitem" style="--i: {i}" title={memberTitle(member)}>
-            {#if member.photoUrl}
-              <img src={member.photoUrl} alt={member.fullName} loading="lazy" decoding="async" />
-            {:else}
-              <span class="initials" aria-hidden="true">{initials(member.fullName)}</span>
-            {/if}
-            <span class="tooltip">
-              <strong>{member.fullName}</strong>
-              {#if member.role}<small>{member.role}</small>{/if}
-            </span>
-          </div>
-        {/each}
-      </div>
+      {#if teamPhoto}
+        <figure class="team-photo">
+          <img
+            src={teamPhoto}
+            alt="Equipo SOLUX"
+            loading="lazy"
+            decoding="async"
+            width="1200"
+            height="675"
+          />
+        </figure>
+      {/if}
 
-      <ul class="team-list">
-        {#each members as member (member.id)}
-          <li>
-            <span class="dot" aria-hidden="true"></span>
-            <span class="name">{member.fullName}</span>
-            {#if member.role}<span class="role">{member.role}</span>{/if}
-          </li>
-        {/each}
-      </ul>
+      {#if members.length}
+        <div class="avatar-stack" role="list" aria-label="Miembros del equipo">
+          {#each members as member, i (member.id)}
+            <div class="avatar" role="listitem" style="--i: {i}" title={memberTitle(member)}>
+              {#if member.photoUrl}
+                <img src={member.photoUrl} alt={member.fullName} loading="lazy" decoding="async" />
+              {:else}
+                <span class="initials" aria-hidden="true">{initials(member.fullName)}</span>
+              {/if}
+              <span class="tooltip">
+                <strong>{member.fullName}</strong>
+                {#if member.role}<small>{member.role}</small>{/if}
+              </span>
+            </div>
+          {/each}
+        </div>
+
+        <ul class="team-list">
+          {#each members as member (member.id)}
+            <li>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="name">{member.fullName}</span>
+              {#if member.role}<span class="role">{member.role}</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </div>
   {/if}
 
@@ -362,16 +381,30 @@
     display: grid;
     gap: 22px;
     margin-bottom: 12px;
-    padding: 24px 26px;
+    padding: 16px;
     border-radius: 20px;
     border: 1px solid var(--color-border);
     background: var(--color-surface);
+  }
+  .team-photo {
+    margin: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+    aspect-ratio: 16 / 9;
+  }
+  .team-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
   }
   .avatar-stack {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    padding-left: 8px;
+    padding: 4px 10px 0;
   }
   .avatar {
     position: relative;
@@ -448,7 +481,7 @@
   .team-list {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 0 10px 8px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 8px 16px;
@@ -611,6 +644,9 @@
       width: 48px;
       height: 48px;
       margin-left: -10px;
+    }
+    .team-photo {
+      aspect-ratio: 4 / 3;
     }
   }
 
