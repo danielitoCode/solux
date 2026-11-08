@@ -5,13 +5,15 @@ import { devLog, devError } from '$infrastructure/ui/dev-logger';
 
 export const ssr = false;
 
+/**
+ * Guard de sesión BO.
+ * getSessionUser está cacheado ~45s en el repository para no bloquear cada navegación
+ * con un round-trip a profiles.
+ */
 export const load: LayoutLoad = async ({ url }) => {
   if (url.pathname === '/backoffice/login') {
-    devLog('guard', 'login route — skip auth');
     return { user: null };
   }
-
-  devLog('guard', 'checking session', url.pathname);
 
   const allowedRoles: Record<string, string[]> = {
     '/backoffice': ['admin', 'support', 'sales'],
@@ -23,6 +25,7 @@ export const load: LayoutLoad = async ({ url }) => {
     '/backoffice/inventario': ['admin', 'sales'],
     '/backoffice/finanzas': ['admin'],
     '/backoffice/presentacion': ['admin'],
+    '/backoffice/equipo': ['admin'],
     '/backoffice/proyectos': ['admin'],
     '/backoffice/usuarios': ['admin']
   };
@@ -32,26 +35,21 @@ export const load: LayoutLoad = async ({ url }) => {
     .sort((a, b) => b.length - a.length)
     .find((path) => url.pathname === path || url.pathname.startsWith(path + '/'));
 
-
   try {
     const repo = getAuthRepository();
     const user = await repo.getSessionUser();
 
     if (!user) {
-      devLog('guard', 'no session → redirect login');
       throw redirect(303, `/backoffice/login?redirect=${encodeURIComponent(url.pathname)}`);
     }
 
     const requiredRoles = route ? allowedRoles[route] : allowedRoles['/backoffice'];
     if (!requiredRoles.includes(user.role)) {
-      devLog('guard', 'role not allowed for route', { route: route ?? '/backoffice', role: user.role });
       throw redirect(303, '/backoffice');
     }
 
-    devLog('guard', 'ok', { email: user.email, role: user.role });
     return { user };
   } catch (e) {
-    // redirect throws; rethrow
     if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 303) {
       throw e;
     }
