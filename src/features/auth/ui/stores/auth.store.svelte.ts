@@ -13,6 +13,7 @@ let unsubscribe: (() => void) | null = null;
 let permissionsChannel: RealtimeChannel | null = null;
 let focusHandler: (() => void) | null = null;
 let refreshInFlight: Promise<void> | null = null;
+let lastFocusRefresh = 0;
 
 function repo() {
   return getAuthRepository();
@@ -56,16 +57,17 @@ function setupPermissionsLive(u: User | null) {
   teardownPermissionsLive();
   if (!u || typeof window === 'undefined') return;
 
-  // Releer al volver a la pestaña (caducidad / cambios hechos en otra sesión admin)
+  // No refrescar en cada focus de ventana: solo si pasaron ≥8s (evita jank al cambiar de pestaña)
   focusHandler = () => {
-    if (document.visibilityState === 'visible') {
-      void refreshAuthPermissions();
-    }
+    if (document.visibilityState !== 'visible') return;
+    const now = Date.now();
+    if (now - lastFocusRefresh < 8_000) return;
+    lastFocusRefresh = now;
+    void refreshAuthPermissions();
   };
   document.addEventListener('visibilitychange', focusHandler);
   window.addEventListener('focus', focusHandler);
 
-  // Admin no depende de filas; igual nos suscribimos por si baja de admin en otra sesión
   permissionsChannel = supabase
     .channel(`user-permissions:${u.id}`)
     .on(
@@ -102,7 +104,6 @@ export function isStaff() {
   return user !== null && user.isActive;
 }
 
-/** Comprueba permiso de módulo para el usuario en sesión. */
 export function hasFeature(feature: FeatureKey, access: FeatureAccess = 'read'): boolean {
   if (!user || !user.isActive) return false;
   if (user.role === 'admin') return true;
@@ -112,15 +113,14 @@ export function hasFeature(feature: FeatureKey, access: FeatureAccess = 'read'):
   return grant.canRead || grant.canWrite;
 }
 
-/**
- * Recarga permisos (y perfil) sin cerrar sesión.
- * Útil tras guardar grants o cuando Realtime/focus avisan de un cambio.
- */
 export async function refreshAuthPermissions() {
   if (refreshInFlight) return refreshInFlight;
 
   refreshInFlight = (async () => {
     try {
+      // Forzar perfil fresco al refrescar permisos explícitamente
+      const impl = repo() as { invalidateSessionCache?: () => void };
+      impl.invalidateSessionCache?.();
       const sessionUser = await repo().getSessionUser();
       user = sessionUser;
       await loadPermissionsFor(sessionUser);
