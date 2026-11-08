@@ -26,6 +26,22 @@
 
   const imageKey = (index: number): keyof PageContent => `image${index}` as keyof PageContent;
 
+  function imageLabel(index: number): string {
+    if (state.selectedSlug === 'nosotros') {
+      if (index === 1) return 'Imagen 1 — Hero de Nosotros';
+      if (index === 2) return 'Imagen 2 — Foto de grupo del equipo';
+    }
+    return `Imagen ${index}`;
+  }
+
+  function imageHint(index: number): string {
+    if (state.selectedSlug === 'nosotros' && index === 2) {
+      return 'Se muestra como banner en la sección Equipo de /nosotros.';
+    }
+    if (index > 1) return 'Opcional; no todas las vistas usan las cuatro imágenes.';
+    return '';
+  }
+
   function bindField(field: keyof PageContent) {
     return (event: Event) =>
       updatePresentationField(field, (event.currentTarget as HTMLInputElement | HTMLTextAreaElement).value);
@@ -155,9 +171,7 @@
                 {#each [1, 2, 3, 4] as index}
                   <div class="image-field">
                     <label
-                      >Imagen {index}{#if index > 1}<small
-                          >Opcional; no todas las vistas usan las cuatro imágenes.</small
-                        >{/if}
+                      >{imageLabel(index)}{#if imageHint(index)}<small>{imageHint(index)}</small>{/if}
                       <input
                         type="url"
                         placeholder="Pega URL https://…"
